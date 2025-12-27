@@ -25,11 +25,11 @@ var pullCmd = &cobra.Command{
 }
 
 var (
-	pullProject    string
-	pullApp        string
-	pullVersion    string
-	pullDeployPath string
-	pullConfig     string
+	pullProject string
+	pullApp     string
+	pullVersion string
+	pullPath    string
+	pullConfig  string
 )
 
 func init() {
@@ -38,7 +38,7 @@ func init() {
 	pullCmd.Flags().StringVar(&pullProject, "project", "", "Project name (required)")
 	pullCmd.Flags().StringVar(&pullApp, "app", "", "App name (required)")
 	pullCmd.Flags().StringVar(&pullVersion, "version", "", "Version hash (required)")
-	pullCmd.Flags().StringVar(&pullDeployPath, "deploy-path", ".", "Deployment path")
+	pullCmd.Flags().StringVar(&pullPath, "path", ".", "Path to local directory")
 	pullCmd.Flags().StringVar(&pullConfig, "config", ".kkartifact.yml", "Config file path")
 	
 	pullCmd.MarkFlagRequired("project")
@@ -66,7 +66,7 @@ func runPull(cmd *cobra.Command, args []string) error {
 	}
 
 	// Resolve absolute path
-	absPath, err := filepath.Abs(pullDeployPath)
+	absPath, err := filepath.Abs(pullPath)
 	if err != nil {
 		return fmt.Errorf("failed to resolve path: %w", err)
 	}

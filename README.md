@@ -78,7 +78,7 @@ kkartifact-agent pull \
   --project myproject \
   --app myapp \
   --version v1.0.0 \
-  --deploy-path ./deploy \
+  --path ./deploy \
   --config .kkartifact.yml
 ```
 
