@@ -21,7 +21,7 @@ export interface App {
 export interface Version {
   id: number
   app_id: number
-  hash: string
+  version: string
   created_at: string
 }
 

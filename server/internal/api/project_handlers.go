@@ -31,7 +31,7 @@ type AppResponse struct {
 type VersionResponse struct {
 	ID        int    `json:"id"`
 	AppID     int    `json:"app_id"`
-	Hash      string `json:"hash"`
+	Version   string `json:"version"`    // Version identifier (same as hash in database)
 	CreatedAt string `json:"created_at"` // RFC3339 format
 }
 
@@ -147,11 +147,10 @@ func (h *Handler) handleListVersions(c *gin.Context) {
 		responses[i] = VersionResponse{
 			ID:        v.ID,
 			AppID:     v.AppID,
-			Hash:      v.Hash,
+			Version:   v.Hash, // Map hash field from database to version in API
 			CreatedAt: v.CreatedAt.Format(time.RFC3339),
 		}
 	}
 
 	c.JSON(http.StatusOK, responses)
 }
-

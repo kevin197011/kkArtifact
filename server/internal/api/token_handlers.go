@@ -151,6 +151,9 @@ func (h *Handler) handleCreateToken(c *gin.Context) {
 	}
 	_ = auditRepo.Create("token_create", projectID, appID, "", agentID, metadata)
 
+	// Invalidate token cache when a new token is created
+	h.authenticator.InvalidateTokenCache()
+
 	c.JSON(http.StatusOK, response)
 }
 
@@ -250,6 +253,9 @@ func (h *Handler) handleDeleteToken(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
+
+	// Invalidate token cache when a token is deleted
+	h.authenticator.InvalidateTokenCache()
 
 	// Record audit log for token deletion
 	auditRepo := database.NewAuditRepository(h.db)

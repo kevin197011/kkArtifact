@@ -39,7 +39,7 @@ func main() {
 
 	migrationsPath := os.Getenv("MIGRATIONS_PATH")
 	if migrationsPath == "" {
-		migrationsPath = "migrations/migrations"
+		migrationsPath = "migrations"
 	}
 
 	m, err := migrate.New("file://"+migrationsPath, dbURL)

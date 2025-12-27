@@ -6,6 +6,8 @@ services:
       POSTGRES_DB: ${DB_NAME:-kkartifact}
       POSTGRES_USER: ${DB_USER:-kkartifact}
       POSTGRES_PASSWORD: ${DB_PASSWORD:-kkartifact}
+      # Increase max_connections to handle high concurrency uploads (default is 100)
+      POSTGRES_INITDB_ARGS: "-c max_connections=200"
     ports:
       - "${DB_PORT:-5432}:5432"
     volumes:
@@ -47,8 +49,8 @@ services:
       DB_USER: ${DB_USER:-kkartifact}
       DB_PASSWORD: ${DB_PASSWORD:-kkartifact}
       DB_SSLMODE: ${DB_SSLMODE:-disable}
-      DB_MAX_OPEN_CONNS: ${DB_MAX_OPEN_CONNS:-100}
-      DB_MAX_IDLE_CONNS: ${DB_MAX_IDLE_CONNS:-10}
+      DB_MAX_OPEN_CONNS: ${DB_MAX_OPEN_CONNS:-50}  # Increased to 50 for high concurrency uploads (PostgreSQL max_connections=200)
+      DB_MAX_IDLE_CONNS: ${DB_MAX_IDLE_CONNS:-10}  # Increased to 10 for better connection reuse
       REDIS_HOST: redis
       REDIS_PORT: 6379
       REDIS_PASSWORD: ${REDIS_PASSWORD:-}

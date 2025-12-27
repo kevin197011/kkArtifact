@@ -8,6 +8,7 @@ package database
 import (
 	"database/sql"
 	"fmt"
+	"time"
 
 	_ "github.com/lib/pq"
 	"github.com/kk/kkartifact-server/internal/config"
@@ -38,6 +39,12 @@ func New(cfg *config.DatabaseConfig) (*DB, error) {
 	// Set connection pool settings
 	db.SetMaxOpenConns(cfg.MaxOpenConns)
 	db.SetMaxIdleConns(cfg.MaxIdleConns)
+	// Set connection lifetime to prevent stale connections
+	// Connections older than 5 minutes will be closed and recreated
+	db.SetConnMaxLifetime(5 * time.Minute)
+	// Set connection idle timeout to close idle connections faster
+	// Idle connections older than 1 minute will be closed
+	db.SetConnMaxIdleTime(1 * time.Minute)
 
 	// Test connection
 	if err := db.Ping(); err != nil {

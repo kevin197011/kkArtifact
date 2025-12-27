@@ -41,7 +41,7 @@ func New(cfg *config.Config) (*Server, error) {
 	if os.Getenv("SKIP_MIGRATIONS") != "true" {
 		migrationsPath := os.Getenv("MIGRATIONS_PATH")
 		if migrationsPath == "" {
-			migrationsPath = "./migrations/migrations"
+			migrationsPath = "./migrations"
 		}
 		if err := database.RunMigrations(&cfg.Database, migrationsPath); err != nil {
 			log.Printf("Warning: failed to run migrations: %v", err)

@@ -11,33 +11,62 @@ import (
 	"fmt"
 	"io"
 	"mime/multipart"
+	"net"
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
+	"time"
 )
 
 // Client is the API client
 type Client struct {
-	serverURL string
-	token     string
+	serverURL  string
+	token      string
 	httpClient *http.Client
 }
 
-// New creates a new API client
+// New creates a new API client with optimized HTTP transport for high concurrency
 func New(serverURL, token string) *Client {
+	// Clean token: remove any existing "Bearer " prefix to avoid duplication
+	cleanToken := strings.TrimSpace(token)
+	if strings.HasPrefix(cleanToken, "Bearer ") {
+		cleanToken = strings.TrimPrefix(cleanToken, "Bearer ")
+		cleanToken = strings.TrimSpace(cleanToken)
+	}
+
+	// Configure HTTP transport with connection pooling for better performance
+	transport := &http.Transport{
+		MaxIdleConns:        500,              // Maximum idle connections across all hosts
+		MaxIdleConnsPerHost: 200,              // Maximum idle connections per host (important for concurrent uploads)
+		MaxConnsPerHost:     300,              // Maximum connections per host (prevents overwhelming server)
+		IdleConnTimeout:     90 * time.Second, // How long idle connections are kept
+		DisableCompression:  false,
+		DialContext: (&net.Dialer{
+			Timeout:   30 * time.Second,
+			KeepAlive: 30 * time.Second,
+		}).DialContext,
+		TLSHandshakeTimeout:   10 * time.Second,
+		ExpectContinueTimeout: 1 * time.Second,
+		ResponseHeaderTimeout: 300 * time.Second, // For large file transfers
+	}
+
 	return &Client{
-		serverURL:  serverURL,
-		token:      token,
-		httpClient: &http.Client{},
+		serverURL: serverURL,
+		token:     cleanToken, // Store cleaned token without "Bearer " prefix
+		httpClient: &http.Client{
+			Transport: transport,
+			Timeout:   600 * time.Second, // Total request timeout (10 minutes for large files)
+		},
 	}
 }
 
 // UploadInitRequest represents upload init request
 type UploadInitRequest struct {
-	Project   string   `json:"project"`
-	App       string   `json:"app"`
-	Version   string   `json:"version"`
-	FileCount int      `json:"file_count"`
+	Project   string `json:"project"`
+	App       string `json:"app"`
+	Version   string `json:"version"`
+	FileCount int    `json:"file_count"`
 }
 
 // UploadInitResponse represents upload init response
@@ -65,6 +94,7 @@ func (c *Client) InitUpload(project, app, version string, fileCount int) (*Uploa
 	}
 
 	httpReq.Header.Set("Content-Type", "application/json")
+	// Set Authorization header (token is already cleaned in New(), so we can safely add "Bearer ")
 	httpReq.Header.Set("Authorization", "Bearer "+c.token)
 
 	resp, err := c.httpClient.Do(httpReq)
@@ -74,7 +104,43 @@ func (c *Client) InitUpload(project, app, version string, fileCount int) (*Uploa
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("upload init failed with status %d", resp.StatusCode)
+		body, _ := io.ReadAll(resp.Body)
+
+		// Output detailed request information for debugging
+		fmt.Fprintf(os.Stderr, "\n=== Init Upload Request Details ===\n")
+		fmt.Fprintf(os.Stderr, "URL: %s\n", c.serverURL+"/api/v1/upload/init")
+		fmt.Fprintf(os.Stderr, "Method: %s\n", httpReq.Method)
+		fmt.Fprintf(os.Stderr, "Request Headers:\n")
+		for key, values := range httpReq.Header {
+			for _, value := range values {
+				// Print Authorization header in full for debugging (mask only the actual token value)
+				if key == "Authorization" {
+					// Print full header value to see if there's duplicate "Bearer"
+					// Mask the actual token part (after "Bearer " or "Bearer Bearer ")
+					prefix := ""
+					tokenPart := value
+					if strings.HasPrefix(value, "Bearer Bearer ") {
+						prefix = "Bearer Bearer "
+						tokenPart = value[len("Bearer Bearer "):]
+					} else if strings.HasPrefix(value, "Bearer ") {
+						prefix = "Bearer "
+						tokenPart = value[len("Bearer "):]
+					}
+					if len(tokenPart) > 20 {
+						fmt.Fprintf(os.Stderr, "  %s: %s%s...%s [FULL: %s]\n", key, prefix, tokenPart[:10], tokenPart[len(tokenPart)-10:], value)
+					} else {
+						fmt.Fprintf(os.Stderr, "  %s: %s%s [FULL: %s]\n", key, prefix, tokenPart, value)
+					}
+				} else {
+					fmt.Fprintf(os.Stderr, "  %s: %s\n", key, value)
+				}
+			}
+		}
+		fmt.Fprintf(os.Stderr, "Response Status: %d %s\n", resp.StatusCode, resp.Status)
+		fmt.Fprintf(os.Stderr, "Response Body: %s\n", string(body))
+		fmt.Fprintf(os.Stderr, "====================================\n\n")
+
+		return nil, fmt.Errorf("upload init failed with status %d: %s", resp.StatusCode, string(body))
 	}
 
 	var uploadResp UploadInitResponse
@@ -122,6 +188,11 @@ func (c *Client) UploadFile(project, app, hash, filePath, localPath string) erro
 	}
 
 	httpReq.Header.Set("Content-Type", writer.FormDataContentType())
+	// Ensure token is always set before making request
+	if c.token == "" {
+		return fmt.Errorf("token is empty, cannot upload file")
+	}
+	// Set Authorization header (token is already cleaned in New(), so we can safely add "Bearer ")
 	httpReq.Header.Set("Authorization", "Bearer "+c.token)
 
 	resp, err := c.httpClient.Do(httpReq)
@@ -132,6 +203,50 @@ func (c *Client) UploadFile(project, app, hash, filePath, localPath string) erro
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
+
+		// Output detailed request information for debugging
+		fmt.Fprintf(os.Stderr, "\n=== Upload Request Details ===\n")
+		fmt.Fprintf(os.Stderr, "URL: %s\n", url)
+		fmt.Fprintf(os.Stderr, "Method: %s\n", httpReq.Method)
+		fmt.Fprintf(os.Stderr, "Request Headers:\n")
+		for key, values := range httpReq.Header {
+			for _, value := range values {
+				// Print Authorization header in full for debugging (mask only the actual token value)
+				if key == "Authorization" {
+					// Print full header value to see if there's duplicate "Bearer"
+					// Mask the actual token part (after "Bearer " or "Bearer Bearer ")
+					prefix := ""
+					tokenPart := value
+					if strings.HasPrefix(value, "Bearer Bearer ") {
+						prefix = "Bearer Bearer "
+						tokenPart = value[len("Bearer Bearer "):]
+					} else if strings.HasPrefix(value, "Bearer ") {
+						prefix = "Bearer "
+						tokenPart = value[len("Bearer "):]
+					}
+					if len(tokenPart) > 20 {
+						fmt.Fprintf(os.Stderr, "  %s: %s%s...%s [FULL: %s]\n", key, prefix, tokenPart[:10], tokenPart[len(tokenPart)-10:], value)
+					} else {
+						fmt.Fprintf(os.Stderr, "  %s: %s%s [FULL: %s]\n", key, prefix, tokenPart, value)
+					}
+				} else {
+					fmt.Fprintf(os.Stderr, "  %s: %s\n", key, value)
+				}
+			}
+		}
+		fmt.Fprintf(os.Stderr, "Response Status: %d %s\n", resp.StatusCode, resp.Status)
+		fmt.Fprintf(os.Stderr, "Response Headers:\n")
+		for key, values := range resp.Header {
+			for _, value := range values {
+				fmt.Fprintf(os.Stderr, "  %s: %s\n", key, value)
+			}
+		}
+		fmt.Fprintf(os.Stderr, "Response Body: %s\n", string(body))
+		fmt.Fprintf(os.Stderr, "==============================\n\n")
+
+		if resp.StatusCode == http.StatusUnauthorized {
+			return fmt.Errorf("upload failed with status %d (unauthorized): %s. Please check your token in the config file", resp.StatusCode, string(body))
+		}
 		return fmt.Errorf("upload failed with status %d: %s", resp.StatusCode, string(body))
 	}
 
@@ -151,6 +266,7 @@ func (c *Client) FinishUpload(req interface{}) error {
 	}
 
 	httpReq.Header.Set("Content-Type", "application/json")
+	// Set Authorization header (token is already cleaned in New(), so we can safely add "Bearer ")
 	httpReq.Header.Set("Authorization", "Bearer "+c.token)
 
 	resp, err := c.httpClient.Do(httpReq)
@@ -160,7 +276,43 @@ func (c *Client) FinishUpload(req interface{}) error {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("finish upload failed with status %d", resp.StatusCode)
+		body, _ := io.ReadAll(resp.Body)
+
+		// Output detailed request information for debugging
+		fmt.Fprintf(os.Stderr, "\n=== Finish Upload Request Details ===\n")
+		fmt.Fprintf(os.Stderr, "URL: %s\n", c.serverURL+"/api/v1/upload/finish")
+		fmt.Fprintf(os.Stderr, "Method: %s\n", httpReq.Method)
+		fmt.Fprintf(os.Stderr, "Request Headers:\n")
+		for key, values := range httpReq.Header {
+			for _, value := range values {
+				// Print Authorization header in full for debugging (mask only the actual token value)
+				if key == "Authorization" {
+					// Print full header value to see if there's duplicate "Bearer"
+					// Mask the actual token part (after "Bearer " or "Bearer Bearer ")
+					prefix := ""
+					tokenPart := value
+					if strings.HasPrefix(value, "Bearer Bearer ") {
+						prefix = "Bearer Bearer "
+						tokenPart = value[len("Bearer Bearer "):]
+					} else if strings.HasPrefix(value, "Bearer ") {
+						prefix = "Bearer "
+						tokenPart = value[len("Bearer "):]
+					}
+					if len(tokenPart) > 20 {
+						fmt.Fprintf(os.Stderr, "  %s: %s%s...%s [FULL: %s]\n", key, prefix, tokenPart[:10], tokenPart[len(tokenPart)-10:], value)
+					} else {
+						fmt.Fprintf(os.Stderr, "  %s: %s%s [FULL: %s]\n", key, prefix, tokenPart, value)
+					}
+				} else {
+					fmt.Fprintf(os.Stderr, "  %s: %s\n", key, value)
+				}
+			}
+		}
+		fmt.Fprintf(os.Stderr, "Response Status: %d %s\n", resp.StatusCode, resp.Status)
+		fmt.Fprintf(os.Stderr, "Response Body: %s\n", string(body))
+		fmt.Fprintf(os.Stderr, "======================================\n\n")
+
+		return fmt.Errorf("finish upload failed with status %d: %s", resp.StatusCode, string(body))
 	}
 
 	return nil
@@ -169,7 +321,7 @@ func (c *Client) FinishUpload(req interface{}) error {
 // GetManifest retrieves a manifest
 func (c *Client) GetManifest(project, app, version string) (interface{}, error) {
 	url := fmt.Sprintf("%s/api/v1/manifest/%s/%s/%s", c.serverURL, project, app, version)
-	
+
 	httpReq, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return nil, err
@@ -194,4 +346,3 @@ func (c *Client) GetManifest(project, app, version string) (interface{}, error) 
 
 	return manifest, nil
 }
-

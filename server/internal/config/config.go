@@ -78,8 +78,8 @@ func Load() (*Config, error) {
 			User:         getEnv("DB_USER", "kkartifact"),
 			Password:     getEnv("DB_PASSWORD", ""),
 			SSLMode:      getEnv("DB_SSLMODE", "disable"),
-			MaxOpenConns: getEnvAsInt("DB_MAX_OPEN_CONNS", 100),
-			MaxIdleConns: getEnvAsInt("DB_MAX_IDLE_CONNS", 10),
+			MaxOpenConns: getEnvAsInt("DB_MAX_OPEN_CONNS", 50), // Increased to 50 for high concurrency uploads (PostgreSQL max_connections=200)
+			MaxIdleConns: getEnvAsInt("DB_MAX_IDLE_CONNS", 10),  // Increased to 10 for better connection reuse
 		},
 		Redis: RedisConfig{
 			Host:     getEnv("REDIS_HOST", "localhost"),

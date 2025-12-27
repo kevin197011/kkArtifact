@@ -33,6 +33,7 @@ const VersionsPage: React.FC = () => {
   const [selectedVersion, setSelectedVersion] = useState<string | null>(null)
   const [isManifestVisible, setIsManifestVisible] = useState(false)
   const [manifestPageSize, setManifestPageSize] = useState(10) // Default 10 items per page
+  const [manifestPage, setManifestPage] = useState(1) // Current page for manifest files
   const pageSize = 50
   const queryClient = useQueryClient()
 
@@ -50,8 +51,8 @@ const VersionsPage: React.FC = () => {
   })
 
   const promoteMutation = useMutation({
-    mutationFn: (hash: string) =>
-      versionsApi.promote({ project: project!, app: app!, hash }),
+    mutationFn: (version: string) =>
+      versionsApi.promote({ project: project!, app: app!, version }),
     onSuccess: () => {
       message.success('Version promoted successfully')
       queryClient.invalidateQueries({ queryKey: ['versions', project, app] })
@@ -61,18 +62,19 @@ const VersionsPage: React.FC = () => {
     },
   })
 
-  const handleViewManifest = (hash: string) => {
-    setSelectedVersion(hash)
+  const handleViewManifest = (version: string) => {
+    setSelectedVersion(version)
     setIsManifestVisible(true)
+    setManifestPage(1) // Reset to first page when opening manifest
   }
 
-  const handlePromote = (hash: string) => {
-    promoteMutation.mutate(hash)
+  const handlePromote = (version: string) => {
+    promoteMutation.mutate(version)
   }
 
-  const handleDownloadFile = (hash: string, filePath: string) => {
+  const handleDownloadFile = (version: string, filePath: string) => {
     versionsApi
-      .downloadFile(project!, app!, hash, filePath)
+      .downloadFile(project!, app!, version, filePath)
       .then((response) => {
         const url = window.URL.createObjectURL(new Blob([response.data]))
         const link = document.createElement('a')
@@ -94,13 +96,13 @@ const VersionsPage: React.FC = () => {
 
   const columns: ColumnsType<Version> = [
     {
-      title: 'Version Hash',
-      dataIndex: 'hash',
-      key: 'hash',
+      title: 'Version',
+      dataIndex: 'version',
+      key: 'version',
       width: 300,
-      render: (hash: string) => (
+      render: (version: string) => (
         <Text style={{ fontFamily: 'monospace', fontSize: '12px' }} copyable>
-          {hash}
+          {version}
         </Text>
       ),
     },
@@ -128,7 +130,7 @@ const VersionsPage: React.FC = () => {
               type="link"
               size="small"
               icon={<EyeOutlined />}
-              onClick={() => handleViewManifest(record.hash)}
+              onClick={() => handleViewManifest(record.version)}
             >
               Manifest
             </Button>
@@ -136,7 +138,7 @@ const VersionsPage: React.FC = () => {
           <Tooltip title="Promote Version">
             <Popconfirm
               title="Are you sure to promote this version?"
-              onConfirm={() => handlePromote(record.hash)}
+              onConfirm={() => handlePromote(record.version)}
             >
               <Button type="link" size="small" icon={<StarOutlined />}>
                 Promote
@@ -242,14 +244,20 @@ const VersionsPage: React.FC = () => {
                 pagination={
                   manifest.files && manifest.files.length > 0
                     ? {
+                        current: manifestPage,
                         pageSize: manifestPageSize,
+                        total: manifest.files.length,
                         showSizeChanger: true,
                         showTotal: (total) => `共 ${total} 个文件`,
                         pageSizeOptions: ['10', '20', '50', '100'],
-                        showQuickJumper: manifest.files.length > 50,
+                        showQuickJumper: true,
                         simple: false,
+                        onChange: (page) => {
+                          setManifestPage(page)
+                        },
                         onShowSizeChange: (_current, size) => {
                           setManifestPageSize(size)
+                          setManifestPage(1) // Reset to first page when page size changes
                         },
                       }
                     : false

@@ -17,7 +17,6 @@ type ManifestResponse struct {
 	Project   string                 `json:"project"`
 	App       string                 `json:"app"`
 	Version   string                 `json:"version"`
-	Hash      string                 `json:"hash"`      // Same as version
 	GitCommit string                 `json:"git_commit,omitempty"`
 	BuildTime string                 `json:"build_time"`
 	Builder   string                 `json:"builder"`
@@ -39,7 +38,7 @@ type ManifestFileResponse struct {
 // @Produce      json
 // @Param        project  path      string  true  "Project name"
 // @Param        app      path      string  true  "App name"
-// @Param        hash     path      string  true  "Version hash"
+// @Param        hash     path      string  true  "Version identifier"
 // @Success      200      {object}  ManifestResponse
 // @Failure      401      {object}  ErrorResponse
 // @Failure      404      {object}  ErrorResponse
@@ -106,7 +105,6 @@ func (h *Handler) handleGetManifest(c *gin.Context) {
 		Project:   manifest.Project,
 		App:       manifest.App,
 		Version:   manifest.Version,
-		Hash:      manifest.Version, // Use version as hash for compatibility
 		GitCommit: manifest.GitCommit,
 		BuildTime: manifest.BuildTime,
 		Builder:   manifest.Builder,

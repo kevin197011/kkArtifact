@@ -46,12 +46,13 @@ func (c *Client) DownloadFile(project, app, version, filePath, localPath, expect
 // fullDownload performs a full file download
 func (c *Client) fullDownload(project, app, version, filePath, localPath string) error {
 	url := fmt.Sprintf("%s/api/v1/file/%s/%s/%s?path=%s", c.serverURL, project, app, version, filePath)
-	
+
 	httpReq, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return err
 	}
 
+	// Set Authorization header (token is already cleaned in New(), so we can safely add "Bearer ")
 	httpReq.Header.Set("Authorization", "Bearer "+c.token)
 
 	resp, err := c.httpClient.Do(httpReq)
@@ -87,7 +88,7 @@ func (c *Client) fullDownload(project, app, version, filePath, localPath string)
 // resumeDownload resumes a download from a specific byte position using HTTP Range request
 func (c *Client) resumeDownload(project, app, version, filePath, localPath string, startByte, expectedSize int64) error {
 	url := fmt.Sprintf("%s/api/v1/file/%s/%s/%s?path=%s", c.serverURL, project, app, version, filePath)
-	
+
 	httpReq, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return err
@@ -102,6 +103,7 @@ func (c *Client) resumeDownload(project, app, version, filePath, localPath strin
 		rangeHeader := fmt.Sprintf("bytes=%d-", startByte)
 		httpReq.Header.Set("Range", rangeHeader)
 	}
+	// Set Authorization header (token is already cleaned in New(), so we can safely add "Bearer ")
 	httpReq.Header.Set("Authorization", "Bearer "+c.token)
 
 	resp, err := c.httpClient.Do(httpReq)
@@ -135,12 +137,13 @@ func (c *Client) resumeDownload(project, app, version, filePath, localPath strin
 // CheckFileExists checks if a file exists on the server
 func (c *Client) CheckFileExists(project, app, version, filePath string) (bool, error) {
 	url := fmt.Sprintf("%s/api/v1/file/%s/%s/%s?path=%s", c.serverURL, project, app, version, filePath)
-	
+
 	httpReq, err := http.NewRequest("HEAD", url, nil)
 	if err != nil {
 		return false, err
 	}
 
+	// Set Authorization header (token is already cleaned in New(), so we can safely add "Bearer ")
 	httpReq.Header.Set("Authorization", "Bearer "+c.token)
 
 	resp, err := c.httpClient.Do(httpReq)
@@ -151,4 +154,3 @@ func (c *Client) CheckFileExists(project, app, version, filePath string) (bool, 
 
 	return resp.StatusCode == http.StatusOK, nil
 }
-

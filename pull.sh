@@ -1,6 +1,6 @@
 ./bin/kkartifact-agent pull \
   --project myproject \
-  --app myapp3 \
-  --version test-1766826748 \
-  --path /tmp/myapp3 \
+  --app myapp4 \
+  --version test-1766837035 \
+  --path /tmp/myapp4 \
   --config .kkartifact.yml

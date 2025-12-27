@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
+	"time"
 
 	"github.com/spf13/cobra"
 	"github.com/kk/kkartifact-agent/internal/client"
@@ -18,10 +19,11 @@ import (
 )
 
 var pushCmd = &cobra.Command{
-	Use:   "push [flags]",
-	Short: "Push artifacts to the server",
-	Long:  "Push artifacts from a local directory to the kkArtifact server",
-	RunE:  runPush,
+	Use:          "push [flags]",
+	Short:        "Push artifacts to the server",
+	Long:         "Push artifacts from a local directory to the kkArtifact server",
+	SilenceUsage: true, // Don't show usage on errors
+	RunE:         runPush,
 }
 
 var (
@@ -47,6 +49,8 @@ func init() {
 }
 
 func runPush(cmd *cobra.Command, args []string) error {
+	startTime := time.Now()
+	
 	if pushProject == "" || pushApp == "" || pushVersion == "" {
 		return fmt.Errorf("project, app, and version are required")
 	}
@@ -164,6 +168,8 @@ func runPush(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to finish upload: %w", err)
 	}
 
+	duration := time.Since(startTime)
 	fmt.Printf("Successfully pushed %s/%s:%s\n", pushProject, pushApp, pushVersion)
+	fmt.Printf("Total time: %v\n", duration.Round(time.Second))
 	return nil
 }

@@ -11,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
+	"time"
 
 	"github.com/spf13/cobra"
 	"github.com/kk/kkartifact-agent/internal/client"
@@ -18,10 +19,11 @@ import (
 )
 
 var pullCmd = &cobra.Command{
-	Use:   "pull [flags]",
-	Short: "Pull artifacts from the server",
-	Long:  "Pull artifacts from the kkArtifact server to a local directory",
-	RunE:  runPull,
+	Use:          "pull [flags]",
+	Short:        "Pull artifacts from the server",
+	Long:         "Pull artifacts from the kkArtifact server to a local directory",
+	SilenceUsage: true, // Don't show usage on errors
+	RunE:         runPull,
 }
 
 var (
@@ -47,6 +49,8 @@ func init() {
 }
 
 func runPull(cmd *cobra.Command, args []string) error {
+	startTime := time.Now()
+	
 	if pullProject == "" || pullApp == "" || pullVersion == "" {
 		return fmt.Errorf("project, app, and version are required")
 	}
@@ -180,6 +184,8 @@ func runPull(cmd *cobra.Command, args []string) error {
 		}
 	}
 
+	duration := time.Since(startTime)
 	fmt.Printf("Successfully pulled %s/%s:%s\n", pullProject, pullApp, pullVersion)
+	fmt.Printf("Total time: %v\n", duration.Round(time.Second))
 	return nil
 }

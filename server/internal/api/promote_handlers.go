@@ -15,7 +15,7 @@ import (
 type PromoteRequest struct {
 	Project string `json:"project" binding:"required"`
 	App     string `json:"app" binding:"required"`
-	Hash    string `json:"hash" binding:"required"`
+	Version string `json:"version" binding:"required"`
 }
 
 // handlePromote promotes a version
@@ -25,7 +25,7 @@ type PromoteRequest struct {
 // @Tags         artifacts
 // @Accept       json
 // @Produce      json
-// @Param        request  body      PromoteRequest  true  "Promote request"
+// @Param        request  body      PromoteRequest  true  "Promote request (version field is the version identifier to promote)"
 // @Success      200      {object}  map[string]string
 // @Failure      400      {object}  ErrorResponse
 // @Failure      401      {object}  ErrorResponse
@@ -54,7 +54,7 @@ func (h *Handler) handlePromote(c *gin.Context) {
 	}
 
 	// Verify version exists
-	manifest, err := h.artifactManager.GetManifest(c.Request.Context(), req.Project, req.App, req.Hash)
+	manifest, err := h.artifactManager.GetManifest(c.Request.Context(), req.Project, req.App, req.Version)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "version not found"})
 		return
@@ -66,13 +66,14 @@ func (h *Handler) handlePromote(c *gin.Context) {
 
 	// Publish promote event with context to extract agent ID
 	metadata := make(map[string]interface{})
+	metadata["target_version"] = req.Version
 
 	h.publishEventWithContext(
 		c,
 		"promote",
 		req.Project,
 		req.App,
-		req.Hash,
+		req.Version,
 		"",
 		metadata,
 	)
@@ -81,7 +82,7 @@ func (h *Handler) handlePromote(c *gin.Context) {
 		"status":  "promoted",
 		"project": req.Project,
 		"app":     req.App,
-		"version": req.Hash,
+		"version": req.Version,
 	})
 }
 

@@ -1,6 +1,6 @@
 ./bin/kkArtifact-agent push \
   --project myproject \
-  --app myapp3 \
+  --app myapp4 \
   --version test-$(date +%s) \
-  --path ./server \
+  --path ./web-ui \
   --config .kkartifact.yml
