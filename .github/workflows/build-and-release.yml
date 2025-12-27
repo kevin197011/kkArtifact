@@ -38,9 +38,11 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ github.repository }}/${{ env.SERVER_IMAGE }}
           tags: |
+            type=ref,event=tag
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
             type=semver,pattern={{major}}
+          tags-fallback: latest
 
       - name: Build and push server image
         uses: docker/build-push-action@v5
@@ -79,9 +81,11 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ github.repository }}/${{ env.WEB_UI_IMAGE }}
           tags: |
+            type=ref,event=tag
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
             type=semver,pattern={{major}}
+          tags-fallback: latest
 
       - name: Build and push web-ui image
         uses: docker/build-push-action@v5
