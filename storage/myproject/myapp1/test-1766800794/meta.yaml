@@ -1,0 +1,27 @@
+project: myproject
+app: myapp1
+version: test-1766800794
+build_time: "2025-12-27T01:59:54Z"
+builder: kkartifact-agent
+files:
+    - path: .kkartifact.yml
+      sha256: 4a1c572dd4443d3c73b2fdd4ee9cc535b14007aed513eed2cdaa4f75f6991e1f
+      size: 208
+    - path: conf/config.conf
+      sha256: 7bd233061e64be8e0626b77bd1e0006c08b8f12d40c5d463a87394b7f39fce3d
+      size: 29
+    - path: reset-admin-token.rb
+      sha256: d11054b3d6c74dd62d35f2c60c172cbe4787d2665c76b3952c2880ad25fe2c00
+      size: 1344
+    - path: run-migrations.rb
+      sha256: 2338c8a87164c35fa991c5765d18f0154c3da3e9a9b7ebd3e80b29f4319636ee
+      size: 1608
+    - path: setup-local-env.rb
+      sha256: fa6a43f686dffe419c2faefc4f2d06feecf73705a42d8684cae21787778beb49
+      size: 1673
+    - path: start-local.rb
+      sha256: b7aa8b91f36e2192b83f4954b02eca8b43bd3b4439f7a0edd06bfb723ccd3f8a
+      size: 1118
+    - path: start-server-local.rb
+      sha256: 4abd6a82e38e271d6e4f879f3d2e3cc158212879120ac4b720abede05cccc71c
+      size: 1149
