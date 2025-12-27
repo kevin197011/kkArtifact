@@ -104,6 +104,9 @@ func runPush(cmd *cobra.Command, args []string) error {
 	// Upload files concurrently
 	fmt.Printf("Uploading %d files with concurrency: %d\n", len(m.Files), cfg.Concurrency)
 	
+	// Create progress bar
+	progressBar := NewProgressBar(len(m.Files))
+	
 	type uploadTask struct {
 		index    int
 		file     manifest.ManifestFile
@@ -135,17 +138,22 @@ func runPush(cmd *cobra.Command, args []string) error {
 				// Note: We always upload since server handles overwrite, but we could skip if hash matches
 				// For now, we upload all files as the server already handles overwrite in handleInitUpload
 				
-				fmt.Printf("[%d/%d] Uploading %s...\n", task.index+1, len(m.Files), task.file.Path)
 				if err := apiClient.UploadFile(pushProject, pushApp, pushVersion, task.file.Path, task.localPath); err != nil {
 					errors <- fmt.Errorf("failed to upload file %s: %w", task.file.Path, err)
 					return
 				}
+				// Update progress bar
+				progressBar.Update(1)
 			}
 		}()
 	}
 	
 	// Wait for all workers to finish
 	wg.Wait()
+	
+	// Finish progress bar
+	progressBar.Finish()
+	
 	close(errors)
 	
 	// Check for errors

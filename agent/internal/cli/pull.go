@@ -115,6 +115,9 @@ func runPull(cmd *cobra.Command, args []string) error {
 	// Download files concurrently with resume support
 	fmt.Printf("Downloading %d files with concurrency: %d (resume enabled)\n", len(manifest.Files), cfg.Concurrency)
 	
+	// Create progress bar
+	progressBar := NewProgressBar(len(manifest.Files))
+	
 	type downloadTask struct {
 		index        int
 		filePath     string
@@ -147,34 +150,36 @@ func runPull(cmd *cobra.Command, args []string) error {
 			defer wg.Done()
 			for task := range tasks {
 				// Check if file needs download
-				exists, matches, size, err := client.CheckFileExistsAndMatches(task.localPath, task.expectedHash)
+				exists, matches, _, err := client.CheckFileExistsAndMatches(task.localPath, task.expectedHash)
 				if err != nil {
 					errors <- fmt.Errorf("failed to check file %s: %w", task.filePath, err)
 					return
 				}
 				
 				if exists && matches {
-					fmt.Printf("[%d/%d] Skipping %s (already exists and matches)\n", task.index+1, len(manifest.Files), task.filePath)
+					// Skip file - update progress bar
+					progressBar.Update(1)
 					continue
 				}
 				
-				if exists && size > 0 && task.expectedSize > 0 && size < task.expectedSize {
-					percentage := float64(size) * 100 / float64(task.expectedSize)
-					fmt.Printf("[%d/%d] Resuming %s (%.1f%% complete)\n", task.index+1, len(manifest.Files), task.filePath, percentage)
-				} else {
-					fmt.Printf("[%d/%d] Downloading %s...\n", task.index+1, len(manifest.Files), task.filePath)
-				}
-				
+				// Download file (with resume support if partial file exists)
 				if err := apiClient.DownloadFile(pullProject, pullApp, pullVersion, task.filePath, task.localPath, task.expectedHash, task.expectedSize); err != nil {
 					errors <- fmt.Errorf("failed to download file %s: %w", task.filePath, err)
 					return
 				}
+				
+				// Update progress bar
+				progressBar.Update(1)
 			}
 		}()
 	}
 	
 	// Wait for all workers to finish
 	wg.Wait()
+	
+	// Finish progress bar
+	progressBar.Finish()
+	
 	close(errors)
 	
 	// Check for errors
