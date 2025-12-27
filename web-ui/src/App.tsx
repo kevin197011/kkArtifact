@@ -5,6 +5,7 @@
 
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import AppLayout from './components/Layout'
+import DashboardPage from './pages/Dashboard'
 import ProjectsPage from './pages/Projects'
 import AppsPage from './pages/Apps'
 import VersionsPage from './pages/Versions'
@@ -30,7 +31,17 @@ function App() {
           element={
             <ProtectedRoute>
               <AppLayout>
-                <Navigate to="/projects" replace />
+                <Navigate to="/dashboard" replace />
+              </AppLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/dashboard"
+          element={
+            <ProtectedRoute>
+              <AppLayout>
+                <DashboardPage />
               </AppLayout>
             </ProtectedRoute>
           }

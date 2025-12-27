@@ -60,56 +60,74 @@ const LoginPage: React.FC = () => {
     <div
       style={{
         display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
+        flexDirection: 'column',
         minHeight: '100vh',
         background: '#f0f2f5',
       }}
     >
-      <Card style={{ width: 400, boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
-        <div style={{ textAlign: 'center', marginBottom: 32 }}>
-          <Title level={2}>kkArtifact</Title>
-          <Text type="secondary">Sign in to your account</Text>
-        </div>
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          flex: 1,
+        }}
+      >
+        <Card style={{ width: 400, boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
+          <div style={{ textAlign: 'center', marginBottom: 32 }}>
+            <Title level={2}>kkArtifact</Title>
+            <Text type="secondary">Sign in to your account</Text>
+          </div>
 
-        <Form
-          name="login"
-          onFinish={onFinish}
-          autoComplete="off"
-          size="large"
-          layout="vertical"
-        >
-          <Form.Item
-            label="Username"
-            name="username"
-            rules={[{ required: true, message: 'Please input your username!' }]}
+          <Form
+            name="login"
+            onFinish={onFinish}
+            autoComplete="off"
+            size="large"
+            layout="vertical"
           >
-            <Input
-              prefix={<UserOutlined />}
-              placeholder="Username"
-              autoComplete="username"
-            />
-          </Form.Item>
+            <Form.Item
+              label="Username"
+              name="username"
+              rules={[{ required: true, message: 'Please input your username!' }]}
+            >
+              <Input
+                prefix={<UserOutlined />}
+                placeholder="Username"
+                autoComplete="username"
+              />
+            </Form.Item>
 
-          <Form.Item
-            label="Password"
-            name="password"
-            rules={[{ required: true, message: 'Please input your password!' }]}
-          >
-            <Input.Password
-              prefix={<LockOutlined />}
-              placeholder="Password"
-              autoComplete="current-password"
-            />
-          </Form.Item>
+            <Form.Item
+              label="Password"
+              name="password"
+              rules={[{ required: true, message: 'Please input your password!' }]}
+            >
+              <Input.Password
+                prefix={<LockOutlined />}
+                placeholder="Password"
+                autoComplete="current-password"
+              />
+            </Form.Item>
 
-          <Form.Item>
-            <Button type="primary" htmlType="submit" block loading={loading}>
-              Sign In
-            </Button>
-          </Form.Item>
-        </Form>
-      </Card>
+            <Form.Item>
+              <Button type="primary" htmlType="submit" block loading={loading}>
+                Sign In
+              </Button>
+            </Form.Item>
+          </Form>
+        </Card>
+      </div>
+      <div
+        style={{
+          textAlign: 'center',
+          padding: '16px',
+          background: '#fff',
+          borderTop: '1px solid #f0f0f0',
+        }}
+      >
+        本系统由kk驱动
+      </div>
     </div>
   )
 }

@@ -99,6 +99,24 @@ docker-compose down
 
 #### 安装
 
+**方式一：从 GitHub Releases 下载（推荐）**
+
+访问 [GitHub Releases](https://github.com/kevin197011/kkArtifact/releases) 下载对应平台的二进制文件：
+
+- **Linux (amd64)**: `kkartifact-agent-linux-amd64`
+- **Linux (arm64)**: `kkartifact-agent-linux-arm64`
+- **macOS (amd64)**: `kkartifact-agent-darwin-amd64`
+- **macOS (arm64)**: `kkartifact-agent-darwin-arm64`
+- **Windows (amd64)**: `kkartifact-agent-windows-amd64.exe`
+
+下载后，添加执行权限（Linux/macOS）：
+```bash
+chmod +x kkartifact-agent-linux-amd64
+mv kkartifact-agent-linux-amd64 /usr/local/bin/kkartifact-agent
+```
+
+**方式二：从源码构建**
+
 ```bash
 # 从源码构建
 cd agent
@@ -378,6 +396,68 @@ go run main.go
 cd web-ui
 npm run dev
 ```
+
+## CI/CD 和发布
+
+项目使用 GitHub Actions 实现自动化构建和发布。
+
+### 自动构建和发布
+
+当推送版本标签（格式：`v*`，如 `v1.0.0`）到仓库时，GitHub Actions 会自动：
+
+1. **构建 Docker 镜像**
+   - Server 镜像：推送到 `ghcr.io/<OWNER>/<REPO>/server`
+   - Web UI 镜像：推送到 `ghcr.io/<OWNER>/<REPO>/web-ui`
+   - 使用 GitHub Packages (ghcr.io) 作为容器镜像仓库
+
+2. **构建 Agent 二进制文件**
+   - 支持多平台：Linux、macOS、Windows
+   - 支持多架构：amd64、arm64
+   - 生成 SHA256 校验和文件
+
+3. **创建 GitHub Release**
+   - 自动创建 Release
+   - 上传所有平台的二进制文件
+   - 生成并上传校验和文件
+
+### 使用 Docker 镜像
+
+**从 GitHub Packages 拉取镜像**
+
+```bash
+# 登录 GitHub Packages（需要 Personal Access Token，scope: read:packages）
+echo $GITHUB_TOKEN | docker login ghcr.io -u USERNAME --password-stdin
+
+# 拉取镜像
+docker pull ghcr.io/kevin197011/kkArtifact/server:v1.0.0
+docker pull ghcr.io/kevin197011/kkArtifact/web-ui:v1.0.0
+```
+
+**在 docker-compose.yml 中使用**
+
+```yaml
+services:
+  server:
+    image: ghcr.io/kevin197011/kkArtifact/server:latest
+    # ...
+  web-ui:
+    image: ghcr.io/kevin197011/kkArtifact/web-ui:latest
+    # ...
+```
+
+**注意**：
+- GitHub Packages 镜像默认是私有的（如果是私有仓库）
+- 可以通过仓库的 Packages 页面设置为公开
+- 需要使用 Personal Access Token 进行认证
+
+### 手动触发构建
+
+1. 访问 GitHub 仓库的 Actions 页面
+2. 选择 "Build and Release" 工作流
+3. 点击 "Run workflow" 按钮
+4. 选择分支并点击 "Run workflow"
+
+更多详细信息请参考 [.github/workflows/README.md](.github/workflows/README.md)。
 
 ## 性能优化
 

@@ -8,6 +8,7 @@ import { Layout, Menu, Button, message } from 'antd'
 import { useNavigate, useLocation } from 'react-router-dom'
 import client from '../api/client'
 import {
+  DashboardOutlined,
   ProjectOutlined,
   LinkOutlined,
   SettingOutlined,
@@ -16,7 +17,7 @@ import {
   LogoutOutlined,
 } from '@ant-design/icons'
 
-const { Header, Sider, Content } = Layout
+const { Header, Sider, Content, Footer } = Layout
 
 interface AppLayoutProps {
   children: React.ReactNode
@@ -65,6 +66,11 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
 
   const menuItems = [
     {
+      key: '/dashboard',
+      icon: <DashboardOutlined />,
+      label: 'Dashboard',
+    },
+    {
       key: '/projects',
       icon: <ProjectOutlined />,
       label: 'Projects',
@@ -91,7 +97,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
     },
   ]
 
-  const selectedKey = menuItems.find((item) => location.pathname.startsWith(item.key))?.key || '/projects'
+  const selectedKey = menuItems.find((item) => location.pathname.startsWith(item.key))?.key || '/dashboard'
 
   if (!isAuthenticated) {
     return null // Will redirect to login
@@ -102,7 +108,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
       <Sider collapsible theme="dark">
         <div
           style={{ padding: '16px', color: 'white', fontSize: '18px', fontWeight: 'bold', cursor: 'pointer' }}
-          onClick={() => navigate('/projects')}
+          onClick={() => navigate('/dashboard')}
         >
           kkArtifact
         </div>
@@ -124,6 +130,9 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
         <Content style={{ margin: '24px', padding: '24px', background: '#fff', minHeight: 280 }}>
           {children}
         </Content>
+        <Footer style={{ textAlign: 'center', background: '#fff', borderTop: '1px solid #f0f0f0' }}>
+          本系统由kk驱动
+        </Footer>
       </Layout>
     </Layout>
   )
