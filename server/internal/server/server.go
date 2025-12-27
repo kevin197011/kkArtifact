@@ -90,23 +90,22 @@ func New(cfg *config.Config) (*Server, error) {
 		}
 	}
 
-	// Initialize admin token if enabled (for backward compatibility)
-	if os.Getenv("SKIP_ADMIN_TOKEN") != "true" {
-		adminToken, err := bootstrap.EnsureAdminToken(db)
-		if err != nil {
-			log.Printf("Warning: failed to initialize admin token: %v", err)
-		} else if adminToken != "" {
-			log.Printf("========================================")
-			log.Printf("Admin Token Created/Found:")
-			adminTokenName := os.Getenv("ADMIN_TOKEN_NAME")
-			if adminTokenName == "" {
-				adminTokenName = "admin-initial-token"
-			}
-			log.Printf("  Token: %s", adminToken)
-			log.Printf("  Name: %s", adminTokenName)
-			log.Printf("  Permissions: pull, push, promote, admin")
-			log.Printf("========================================")
+	// Initialize admin token only if ADMIN_TOKEN is set
+	// If ADMIN_TOKEN is not set, skip creation
+	adminToken, err := bootstrap.EnsureAdminToken(db)
+	if err != nil {
+		log.Printf("Warning: failed to initialize admin token: %v", err)
+	} else if adminToken != "" {
+		log.Printf("========================================")
+		log.Printf("Admin Token Created/Found:")
+		adminTokenName := os.Getenv("ADMIN_TOKEN_NAME")
+		if adminTokenName == "" {
+			adminTokenName = "admin-initial-token"
 		}
+		log.Printf("  Token: %s", adminToken)
+		log.Printf("  Name: %s", adminTokenName)
+		log.Printf("  Permissions: pull, push, promote, admin")
+		log.Printf("========================================")
 	}
 
 	// Initialize handler

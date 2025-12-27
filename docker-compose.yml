@@ -65,13 +65,11 @@ services:
       ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-admin123}
       SKIP_ADMIN_USER: ${SKIP_ADMIN_USER:-false}
-      # Admin token configuration (for backward compatibility)
-      # Note: Admin token auto-creation is disabled by default.
-      # Users should create tokens manually via Web UI after login.
-      # To enable auto-creation, set SKIP_ADMIN_TOKEN=false
-      # ADMIN_TOKEN: ${ADMIN_TOKEN:-}
+      # Admin token configuration
+      # Only creates admin token if ADMIN_TOKEN is set
+      # If ADMIN_TOKEN is not set, token creation is skipped
+      ADMIN_TOKEN: ${ADMIN_TOKEN:-}
       ADMIN_TOKEN_NAME: ${ADMIN_TOKEN_NAME:-admin-initial-token}
-      SKIP_ADMIN_TOKEN: ${SKIP_ADMIN_TOKEN:-true}
     ports:
       - "${SERVER_PORT:-8080}:8080"
     depends_on:

@@ -15,12 +15,19 @@ import (
 )
 
 // EnsureAdminToken ensures an admin token exists in the database
-// If ADMIN_TOKEN is set in environment, it will use that token
-// Otherwise, it generates a new token
+// Only creates token if ADMIN_TOKEN is set in environment
+// If ADMIN_TOKEN is not set, skips creation
 // Returns the token string (plain text) for display
 func EnsureAdminToken(db *database.DB) (string, error) {
-	adminTokenEnv := getEnv("ADMIN_TOKEN", "")
+	// Use os.Getenv directly to check if ADMIN_TOKEN is set (not using getEnv with default)
+	adminTokenEnv := os.Getenv("ADMIN_TOKEN")
 	adminTokenName := getEnv("ADMIN_TOKEN_NAME", "admin-initial-token")
+
+	// If ADMIN_TOKEN is not set, skip creation
+	if adminTokenEnv == "" {
+		log.Printf("Skipping admin token creation (ADMIN_TOKEN not set)")
+		return "", nil
+	}
 
 	// Check if admin token already exists
 	tokenRepo := database.NewTokenRepository(db)
@@ -31,32 +38,15 @@ func EnsureAdminToken(db *database.DB) (string, error) {
 		for _, token := range tokens {
 			if token.Name.Valid && token.Name.String == adminTokenName {
 				// Admin token exists
-				if adminTokenEnv != "" {
-					log.Printf("Admin token already exists with name: %s (using provided ADMIN_TOKEN)", adminTokenName)
-					return adminTokenEnv, nil
-				}
-				// Cannot retrieve plain token from database, but token exists
-				log.Printf("Admin token already exists with name: %s", adminTokenName)
-				log.Printf("To use this token, set ADMIN_TOKEN environment variable with the original token value")
-				log.Printf("Or delete the existing token to generate a new one")
-				return "", nil // Return empty to indicate token exists but we can't retrieve it
+				log.Printf("Admin token already exists with name: %s (using provided ADMIN_TOKEN)", adminTokenName)
+				return adminTokenEnv, nil
 			}
 		}
 	}
 
-	// Generate or use provided token
-	var tokenPlain string
-	if adminTokenEnv != "" {
-		tokenPlain = adminTokenEnv
-		log.Printf("Using provided ADMIN_TOKEN from environment")
-	} else {
-		var err error
-		tokenPlain, err = auth.GenerateToken()
-		if err != nil {
-			return "", fmt.Errorf("failed to generate admin token: %w", err)
-		}
-		log.Printf("Generated new admin token")
-	}
+	// Use provided token
+	tokenPlain := adminTokenEnv
+	log.Printf("Creating admin token using provided ADMIN_TOKEN from environment")
 
 	// Hash the token
 	tokenHash, err := auth.HashToken(tokenPlain)
