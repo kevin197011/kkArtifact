@@ -28,9 +28,6 @@ func (h *Handler) publishEvent(eventType events.EventType, project, app, version
 	// For now, just log the event
 	_ = event
 
-	// Get webhooks and trigger them
-	webhookRepo := database.NewWebhookRepository(h.db)
-	
 	// Get project and app IDs
 	projectObj, err := h.projectRepo.CreateOrGet(project)
 	if err != nil {
@@ -42,12 +39,20 @@ func (h *Handler) publishEvent(eventType events.EventType, project, app, version
 	if projectObj != nil {
 		projectID = &projectObj.ID
 		
-		appObj, err := h.appRepo.CreateOrGet(projectObj.ID, app)
-		if err == nil && appObj != nil {
-			appID = &appObj.ID
+		if app != "" {
+			appObj, err := h.appRepo.CreateOrGet(projectObj.ID, app)
+			if err == nil && appObj != nil {
+				appID = &appObj.ID
+			}
 		}
 	}
 
+	// Record audit log
+	auditRepo := database.NewAuditRepository(h.db)
+	_ = auditRepo.Create(string(eventType), projectID, appID, version, agentID, metadata)
+
+	// Get webhooks and trigger them
+	webhookRepo := database.NewWebhookRepository(h.db)
 	webhooks, err := webhookRepo.FindByEventType(string(eventType), projectID, appID)
 	if err != nil {
 		return

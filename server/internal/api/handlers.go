@@ -170,6 +170,25 @@ func (h *Handler) handleGetFile(c *gin.Context) {
 		}
 	}
 	
+	// Record audit log for file download (pull operation)
+	auditRepo := database.NewAuditRepository(h.db)
+	projectObj, err := h.projectRepo.CreateOrGet(project)
+	if err == nil {
+		var projectID *int
+		var appID *int
+		if projectObj != nil {
+			projectID = &projectObj.ID
+			appObj, err := h.appRepo.CreateOrGet(projectObj.ID, app)
+			if err == nil && appObj != nil {
+				appID = &appObj.ID
+			}
+		}
+		metadata := map[string]interface{}{
+			"file_path": filePath,
+		}
+		_ = auditRepo.Create("pull", projectID, appID, hash, "", metadata)
+	}
+
 	// Full file download
 	c.Header("Accept-Ranges", "bytes")
 	c.DataFromReader(http.StatusOK, -1, "application/octet-stream", reader, nil)

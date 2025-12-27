@@ -13,6 +13,67 @@
 - ⚡ **高性能**：支持大规模部署（2000+ 模块，2TB+ 存储）
 - 📊 **审计日志**：完整的操作审计追踪
 
+## 系统架构
+
+```mermaid
+graph TB
+    subgraph "客户端层"
+        WebUI[Web UI<br/>React + TypeScript]
+        Agent[Agent CLI<br/>Go CLI Tool]
+    end
+
+    subgraph "服务层"
+        Server[kkArtifact Server<br/>Go + Gin]
+        API[HTTP API<br/>RESTful]
+    end
+
+    subgraph "数据层"
+        DB[(PostgreSQL<br/>元数据存储)]
+        Redis[(Redis<br/>缓存层)]
+        Storage[存储系统<br/>Local/S3]
+    end
+
+    subgraph "功能模块"
+        Auth[认证模块<br/>Token/JWT]
+        StorageMgr[存储管理<br/>Local/S3]
+        Scheduler[定时任务<br/>版本清理]
+    end
+
+    WebUI -->|HTTP| Server
+    Agent -->|HTTP| Server
+    Server --> API
+    Server --> Auth
+    Server --> StorageMgr
+    Server --> Scheduler
+    Server --> DB
+    Server --> Redis
+    StorageMgr --> Storage
+    Scheduler --> Storage
+    Scheduler --> DB
+
+    style WebUI fill:#e1f5ff
+    style Agent fill:#e1f5ff
+    style Server fill:#fff4e1
+    style API fill:#fff4e1
+    style DB fill:#e8f5e9
+    style Redis fill:#e8f5e9
+    style Storage fill:#e8f5e9
+    style Auth fill:#f3e5f5
+    style StorageMgr fill:#f3e5f5
+    style Scheduler fill:#f3e5f5
+```
+
+### 组件说明
+
+- **Web UI**: 基于 React + TypeScript + Ant Design 的现代化管理界面
+- **Agent CLI**: Go 编写的命令行工具，用于 Push/Pull 操作
+- **Server**: Go + Gin 框架的 HTTP API 服务器
+- **PostgreSQL**: 存储项目、应用、版本、Token、Webhook、审计日志等元数据
+- **Redis**: 缓存层（计划中），用于提升性能
+- **存储系统**: 支持本地文件系统或 S3 兼容的对象存储
+- **认证模块**: 基于 Token 和 JWT 的认证机制
+- **定时任务**: 自动清理超出保留数量的旧版本
+
 ## 快速开始
 
 ### 使用 Docker Compose（推荐）

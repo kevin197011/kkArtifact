@@ -123,6 +123,20 @@ func (h *Handler) handleCreateToken(c *gin.Context) {
 		CreatedAt:   createdToken.CreatedAt.Format(time.RFC3339),
 	}
 
+	// Record audit log for token creation
+	auditRepo := database.NewAuditRepository(h.db)
+	metadata := map[string]interface{}{
+		"token_name": name,
+		"permissions": permissions,
+	}
+	if projectID != nil {
+		metadata["project_id"] = *projectID
+	}
+	if appID != nil {
+		metadata["app_id"] = *appID
+	}
+	_ = auditRepo.Create("token_create", projectID, appID, "", "", metadata)
+
 	c.JSON(http.StatusOK, response)
 }
 
@@ -184,10 +198,51 @@ func (h *Handler) handleDeleteToken(c *gin.Context) {
 	}
 
 	tokenRepo := database.NewTokenRepository(h.db)
+	
+	// Get token info before deleting for audit log
+	// List all tokens and find the one to delete
+	tokens, err := tokenRepo.List()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	
+	var tokenToDelete *database.Token
+	for _, token := range tokens {
+		if token.ID == id {
+			tokenToDelete = token
+			break
+		}
+	}
+	
+	if tokenToDelete == nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "token not found"})
+		return
+	}
+
 	if err := tokenRepo.Revoke(id); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
+
+	// Record audit log for token deletion
+	auditRepo := database.NewAuditRepository(h.db)
+	var projectID, appID *int
+	if tokenToDelete.ProjectID.Valid {
+		pid := int(tokenToDelete.ProjectID.Int64)
+		projectID = &pid
+	}
+	if tokenToDelete.AppID.Valid {
+		aid := int(tokenToDelete.AppID.Int64)
+		appID = &aid
+	}
+	metadata := map[string]interface{}{
+		"token_id": id,
+	}
+	if tokenToDelete.Name.Valid {
+		metadata["token_name"] = tokenToDelete.Name.String
+	}
+	_ = auditRepo.Create("token_delete", projectID, appID, "", "", metadata)
 
 	c.JSON(http.StatusOK, gin.H{"status": "deleted"})
 }
