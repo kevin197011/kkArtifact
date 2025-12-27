@@ -7,8 +7,7 @@ on:
   workflow_dispatch:  # Allow manual trigger
 
 env:
-  REGISTRY: docker.io
-  IMAGE_PREFIX: kkartifact  # Change this to your Docker Hub username/organization
+  REGISTRY: ghcr.io
   SERVER_IMAGE: server
   WEB_UI_IMAGE: web-ui
 
@@ -16,6 +15,9 @@ jobs:
   build-server:
     name: Build and Push Server Image
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -23,17 +25,18 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Log in to Docker Hub
+      - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
         with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Extract metadata
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/${{ env.SERVER_IMAGE }}
+          images: ${{ env.REGISTRY }}/${{ github.repository }}/${{ env.SERVER_IMAGE }}
           tags: |
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
@@ -53,6 +56,9 @@ jobs:
   build-web-ui:
     name: Build and Push Web UI Image
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -60,17 +66,18 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Log in to Docker Hub
+      - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
         with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Extract metadata
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/${{ env.WEB_UI_IMAGE }}
+          images: ${{ env.REGISTRY }}/${{ github.repository }}/${{ env.WEB_UI_IMAGE }}
           tags: |
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
@@ -187,8 +194,8 @@ jobs:
             See `checksums.txt` for SHA256 checksums of all binaries.
 
             ### Docker Images
-            - Server: `${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/${{ env.SERVER_IMAGE }}:${{ github.ref_name }}`
-            - Web UI: `${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/${{ env.WEB_UI_IMAGE }}:${{ github.ref_name }}`
+            - Server: `${{ env.REGISTRY }}/${{ github.repository }}/${{ env.SERVER_IMAGE }}:${{ github.ref_name }}`
+            - Web UI: `${{ env.REGISTRY }}/${{ github.repository }}/${{ env.WEB_UI_IMAGE }}:${{ github.ref_name }}`
           draft: false
           prerelease: ${{ contains(github.ref_name, '-') }}
         env:
