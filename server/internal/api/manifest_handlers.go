@@ -31,6 +31,21 @@ type ManifestFileResponse struct {
 	Size   int64  `json:"size"`
 }
 
+// handleGetManifest godoc
+// @Summary      Get manifest
+// @Description  Get the manifest for a specific version (includes file list, metadata, Git commit info)
+// @Tags         artifacts
+// @Accept       json
+// @Produce      json
+// @Param        project  path      string  true  "Project name"
+// @Param        app      path      string  true  "App name"
+// @Param        hash     path      string  true  "Version hash"
+// @Success      200      {object}  ManifestResponse
+// @Failure      401      {object}  ErrorResponse
+// @Failure      404      {object}  ErrorResponse
+// @Failure      500      {object}  ErrorResponse
+// @Security     Bearer
+// @Router       /manifest/{project}/{app}/{hash} [get]
 func (h *Handler) handleGetManifest(c *gin.Context) {
 	project := c.Param("project")
 	app := c.Param("app")

@@ -26,7 +26,17 @@ type LoginResponse struct {
 	Name  string `json:"name"`  // Username
 }
 
-// handleLogin handles user login with username/password
+// handleLogin godoc
+// @Summary      User login
+// @Description  Login with username and password, returns JWT token for session management
+// @Tags         auth
+// @Accept       json
+// @Produce      json
+// @Param        request  body      LoginRequest  true  "Login credentials"
+// @Success      200      {object}  LoginResponse
+// @Failure      400      {object}  ErrorResponse
+// @Failure      401      {object}  ErrorResponse
+// @Router       /login [post]
 func (h *Handler) handleLogin(c *gin.Context) {
 	var req LoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {

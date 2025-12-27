@@ -19,6 +19,20 @@ type PromoteRequest struct {
 }
 
 // handlePromote promotes a version
+// handlePromote godoc
+// @Summary      Promote version
+// @Description  Promote a version to a new version identifier (create a new version with same content)
+// @Tags         artifacts
+// @Accept       json
+// @Produce      json
+// @Param        request  body      PromoteRequest  true  "Promote request"
+// @Success      200      {object}  map[string]string
+// @Failure      400      {object}  ErrorResponse
+// @Failure      401      {object}  ErrorResponse
+// @Failure      404      {object}  ErrorResponse
+// @Failure      500      {object}  ErrorResponse
+// @Security     Bearer
+// @Router       /promote [post]
 func (h *Handler) handlePromote(c *gin.Context) {
 	var req PromoteRequest
 	if err := c.ShouldBindJSON(&req); err != nil {

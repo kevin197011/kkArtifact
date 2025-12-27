@@ -25,7 +25,19 @@ type CreateWebhookRequest struct {
 	AppID      *int              `json:"app_id,omitempty"`
 }
 
-// handleCreateWebhook creates a new webhook
+// handleCreateWebhook godoc
+// @Summary      Create webhook
+// @Description  Create a new webhook for event notifications (can be global, project-level, or app-level)
+// @Tags         webhooks
+// @Accept       json
+// @Produce      json
+// @Param        request  body      CreateWebhookRequest  true  "Webhook creation request"
+// @Success      201      {object}  WebhookResponse
+// @Failure      400      {object}  ErrorResponse
+// @Failure      401      {object}  ErrorResponse
+// @Failure      500      {object}  ErrorResponse
+// @Security     Bearer
+// @Router       /webhooks [post]
 func (h *Handler) handleCreateWebhook(c *gin.Context) {
 	var req CreateWebhookRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -111,7 +123,17 @@ type WebhookResponse struct {
 	CreatedAt  string  `json:"created_at"`
 }
 
-// handleListWebhooks lists all webhooks
+// handleListWebhooks godoc
+// @Summary      List webhooks
+// @Description  Get a list of all webhooks (including disabled ones)
+// @Tags         webhooks
+// @Accept       json
+// @Produce      json
+// @Success      200  {array}   WebhookResponse
+// @Failure      401  {object}  ErrorResponse
+// @Failure      500  {object}  ErrorResponse
+// @Security     Bearer
+// @Router       /webhooks [get]
 func (h *Handler) handleListWebhooks(c *gin.Context) {
 	webhookRepo := database.NewWebhookRepository(h.db)
 	webhooks, err := webhookRepo.List()
@@ -239,7 +261,21 @@ func (h *Handler) handleGetWebhook(c *gin.Context) {
 	c.JSON(http.StatusOK, response)
 }
 
-// handleUpdateWebhook updates a webhook
+// handleUpdateWebhook godoc
+// @Summary      Update webhook
+// @Description  Update an existing webhook
+// @Tags         webhooks
+// @Accept       json
+// @Produce      json
+// @Param        id       path      int                    true  "Webhook ID"
+// @Param        request  body      CreateWebhookRequest   true  "Webhook update request"
+// @Success      200      {object}  WebhookResponse
+// @Failure      400      {object}  ErrorResponse
+// @Failure      401      {object}  ErrorResponse
+// @Failure      404      {object}  ErrorResponse
+// @Failure      500      {object}  ErrorResponse
+// @Security     Bearer
+// @Router       /webhooks/{id} [put]
 func (h *Handler) handleUpdateWebhook(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.Atoi(idStr)
@@ -326,7 +362,18 @@ func (h *Handler) handleUpdateWebhook(c *gin.Context) {
 	c.JSON(http.StatusOK, updated)
 }
 
-// handleDeleteWebhook deletes a webhook
+// handleDeleteWebhook godoc
+// @Summary      Delete webhook
+// @Description  Delete a webhook by ID
+// @Tags         webhooks
+// @Accept       json
+// @Produce      json
+// @Param        id   path      int  true  "Webhook ID"
+// @Success      200  {object}  map[string]string
+// @Failure      401  {object}  ErrorResponse
+// @Failure      500  {object}  ErrorResponse
+// @Security     Bearer
+// @Router       /webhooks/{id} [delete]
 func (h *Handler) handleDeleteWebhook(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.Atoi(idStr)

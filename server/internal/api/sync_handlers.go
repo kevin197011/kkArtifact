@@ -15,8 +15,25 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// handleSyncStorage syncs database records from storage files
-// It adds records that exist in storage and removes records that don't exist in storage
+// SyncStorageResponse represents the response for sync storage operation
+type SyncStorageResponse struct {
+	Message  string `json:"message"`
+	Projects int    `json:"projects"`
+	Apps     int    `json:"apps"`
+	Versions int    `json:"versions"`
+}
+
+// handleSyncStorage godoc
+// @Summary      Sync storage
+// @Description  Synchronize database with storage (rebuild database records from storage, remove orphaned records)
+// @Tags         admin
+// @Accept       json
+// @Produce      json
+// @Success      200  {object}  SyncStorageResponse
+// @Failure      401  {object}  ErrorResponse
+// @Failure      500  {object}  ErrorResponse
+// @Security     Bearer
+// @Router       /sync-storage [post]
 func (h *Handler) handleSyncStorage(c *gin.Context) {
 	// Only allow sync for local storage
 	if h.storage == nil {
@@ -307,11 +324,11 @@ func (h *Handler) handleSyncStorage(c *gin.Context) {
 		}
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"message": "sync completed",
-		"projects": projectCount,
-		"apps":     appCount,
-		"versions": versionCount,
+	c.JSON(http.StatusOK, SyncStorageResponse{
+		Message:  "sync completed",
+		Projects: projectCount,
+		Apps:     appCount,
+		Versions: versionCount,
 	})
 }
 

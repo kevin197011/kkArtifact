@@ -35,6 +35,19 @@ type VersionResponse struct {
 	CreatedAt string `json:"created_at"` // RFC3339 format
 }
 
+// handleListProjects godoc
+// @Summary      List projects
+// @Description  Get a list of all projects with pagination
+// @Tags         projects
+// @Accept       json
+// @Produce      json
+// @Param        limit   query     int  false  "Limit number of results (default: 50)"
+// @Param        offset  query     int  false  "Offset for pagination (default: 0)"
+// @Success      200     {array}   ProjectResponse
+// @Failure      401     {object}  ErrorResponse
+// @Failure      500     {object}  ErrorResponse
+// @Security     Bearer
+// @Router       /projects [get]
 func (h *Handler) handleListProjects(c *gin.Context) {
 	limit := getIntQuery(c, "limit", 50)
 	offset := getIntQuery(c, "offset", 0)
@@ -89,6 +102,21 @@ func (h *Handler) handleListApps(c *gin.Context) {
 	c.JSON(http.StatusOK, responses)
 }
 
+// handleListVersions godoc
+// @Summary      List versions
+// @Description  Get a list of all versions for a specific app
+// @Tags         projects
+// @Accept       json
+// @Produce      json
+// @Param        project  path      string  true   "Project name"
+// @Param        app      path      string  true   "App name"
+// @Param        limit    query     int     false  "Limit number of results (default: 50)"
+// @Param        offset   query     int     false  "Offset for pagination (default: 0)"
+// @Success      200      {array}   VersionResponse
+// @Failure      401      {object}  ErrorResponse
+// @Failure      500      {object}  ErrorResponse
+// @Security     Bearer
+// @Router       /projects/{project}/apps/{app}/versions [get]
 func (h *Handler) handleListVersions(c *gin.Context) {
 	projectName := c.Param("project")
 	appName := c.Param("app")

@@ -19,6 +19,11 @@ import (
 	"github.com/kk/kkartifact-server/internal/bootstrap"
 	"github.com/kk/kkartifact-server/internal/middleware"
 	"github.com/kk/kkartifact-server/internal/storage"
+	
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
+	
+	_ "github.com/kk/kkartifact-server/docs" // swagger docs
 )
 
 // Server represents the HTTP server
@@ -75,6 +80,11 @@ func New(cfg *config.Config) (*Server, error) {
 	router.Use(gin.Logger(), gin.Recovery())
 	router.Use(middleware.CORS())
 	router.Use(middleware.Gzip())
+	
+	// Swagger documentation route (optional, can be disabled in production)
+	if os.Getenv("ENABLE_SWAGGER") != "false" {
+		router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+	}
 
 	// Initialize admin user if enabled
 	if os.Getenv("SKIP_ADMIN_USER") != "true" {

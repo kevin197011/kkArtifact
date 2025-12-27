@@ -14,6 +14,17 @@ import (
 )
 
 // handleGetConfig gets global configuration
+// handleGetConfig godoc
+// @Summary      Get config
+// @Description  Get the global configuration (e.g., version retention limit)
+// @Tags         config
+// @Accept       json
+// @Produce      json
+// @Success      200  {object}  map[string]interface{}
+// @Failure      401  {object}  ErrorResponse
+// @Failure      500  {object}  ErrorResponse
+// @Security     Bearer
+// @Router       /config [get]
 func (h *Handler) handleGetConfig(c *gin.Context) {
 	configRepo := database.NewConfigRepository(h.db)
 	
@@ -32,6 +43,19 @@ func (h *Handler) handleGetConfig(c *gin.Context) {
 }
 
 // handleUpdateConfig updates global configuration
+// handleUpdateConfig godoc
+// @Summary      Update config
+// @Description  Update the global configuration
+// @Tags         config
+// @Accept       json
+// @Produce      json
+// @Param        request  body      map[string]interface{}  true  "Configuration updates"
+// @Success      200      {object}  map[string]interface{}
+// @Failure      400      {object}  ErrorResponse
+// @Failure      401      {object}  ErrorResponse
+// @Failure      500      {object}  ErrorResponse
+// @Security     Bearer
+// @Router       /config [put]
 func (h *Handler) handleUpdateConfig(c *gin.Context) {
 	var req struct {
 		VersionRetentionLimit *int `json:"version_retention_limit"`

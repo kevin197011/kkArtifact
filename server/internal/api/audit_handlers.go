@@ -27,7 +27,21 @@ type AuditLogResponse struct {
 	CreatedAt   string  `json:"created_at"` // RFC3339 format
 }
 
-// handleListAuditLogs lists audit logs
+// handleListAuditLogs godoc
+// @Summary      List audit logs
+// @Description  Get a list of audit logs with optional filtering by project and app
+// @Tags         audit
+// @Accept       json
+// @Produce      json
+// @Param        project_id  query     int  false  "Filter by project ID"
+// @Param        app_id      query     int  false  "Filter by app ID"
+// @Param        limit       query     int  false  "Limit number of results (default: 50)"
+// @Param        offset      query     int  false  "Offset for pagination (default: 0)"
+// @Success      200         {array}   AuditLogResponse
+// @Failure      401         {object}  ErrorResponse
+// @Failure      500         {object}  ErrorResponse
+// @Security     Bearer
+// @Router       /audit-logs [get]
 func (h *Handler) handleListAuditLogs(c *gin.Context) {
 	projectID := getIntParam(c, "project_id", 0)
 	appID := getIntParam(c, "app_id", 0)

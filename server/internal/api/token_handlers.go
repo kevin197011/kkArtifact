@@ -36,7 +36,17 @@ type TokenResponse struct {
 	CreatedAt   string   `json:"created_at"`
 }
 
-// handleCreateToken creates a new token
+// handleCreateToken godoc
+// @Summary      Create token
+// @Description  Create a new API token with specified permissions and scope (Global/Project/App)
+// @Tags         tokens
+// @Accept       json
+// @Produce      json
+// @Param        request  body      CreateTokenRequest  true  "Token creation request"
+// @Success      201      {object}  TokenResponse
+// @Failure      400      {object}  ErrorResponse
+// @Failure      500      {object}  ErrorResponse
+// @Router       /tokens [post]
 func (h *Handler) handleCreateToken(c *gin.Context) {
 	var req CreateTokenRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -192,7 +202,19 @@ func (h *Handler) handleListTokens(c *gin.Context) {
 	c.JSON(http.StatusOK, responses)
 }
 
-// handleDeleteToken deletes a token
+// handleDeleteToken godoc
+// @Summary      Delete token
+// @Description  Delete an API token by ID
+// @Tags         tokens
+// @Accept       json
+// @Produce      json
+// @Param        id   path      int  true  "Token ID"
+// @Success      200  {object}  map[string]string
+// @Failure      401  {object}  ErrorResponse
+// @Failure      404  {object}  ErrorResponse
+// @Failure      500  {object}  ErrorResponse
+// @Security     Bearer
+// @Router       /tokens/{id} [delete]
 func (h *Handler) handleDeleteToken(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.Atoi(idStr)

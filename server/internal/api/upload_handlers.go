@@ -31,7 +31,27 @@ type UploadInitResponse struct {
 	UploadID string `json:"upload_id"`
 }
 
-// handleInitUpload initializes an upload session
+// FinishUploadRequest represents the finish upload request
+type FinishUploadRequest struct {
+	Project  string            `json:"project" binding:"required"`
+	App      string            `json:"app" binding:"required"`
+	Version  string            `json:"version" binding:"required"`
+	Manifest *storage.Manifest `json:"manifest" binding:"required"`
+}
+
+// handleInitUpload godoc
+// @Summary      Initialize upload
+// @Description  Initialize a new artifact upload session. Returns upload ID for subsequent file uploads.
+// @Tags         artifacts
+// @Accept       json
+// @Produce      json
+// @Param        request  body      UploadInitRequest  true  "Upload initialization request"
+// @Success      200      {object}  UploadInitResponse
+// @Failure      400      {object}  ErrorResponse
+// @Failure      401      {object}  ErrorResponse
+// @Failure      500      {object}  ErrorResponse
+// @Security     Bearer
+// @Router       /upload/init [post]
 func (h *Handler) handleInitUpload(c *gin.Context) {
 	var req UploadInitRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -138,6 +158,19 @@ func (h *Handler) handleUploadFile(c *gin.Context) {
 }
 
 // handleFinishUpload finishes an upload session and creates the version
+// handleFinishUpload godoc
+// @Summary      Finish upload
+// @Description  Complete the artifact upload and create version record
+// @Tags         artifacts
+// @Accept       json
+// @Produce      json
+// @Param        request  body      FinishUploadRequest  true  "Upload completion request"
+// @Success      200      {object}  map[string]string
+// @Failure      400      {object}  ErrorResponse
+// @Failure      401      {object}  ErrorResponse
+// @Failure      500      {object}  ErrorResponse
+// @Security     Bearer
+// @Router       /upload/finish [post]
 func (h *Handler) handleFinishUpload(c *gin.Context) {
 	var req struct {
 		Project   string                  `json:"project" binding:"required"`

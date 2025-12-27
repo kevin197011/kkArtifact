@@ -12,10 +12,11 @@ import (
 )
 
 // ErrorResponse represents an error response
+// @Description Error response structure
 type ErrorResponse struct {
-	Error   string `json:"error"`
-	Message string `json:"message,omitempty"`
-	Code    string `json:"code,omitempty"`
+	Error   string `json:"error" example:"bad_request"`
+	Message string `json:"message,omitempty" example:"Invalid request parameters"`
+	Code    string `json:"code,omitempty" example:"INVALID_INPUT"`
 }
 
 // handleError handles API errors consistently

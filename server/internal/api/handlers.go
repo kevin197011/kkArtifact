@@ -98,6 +98,14 @@ func (h *Handler) RegisterRoutes(router *gin.Engine) {
 	}
 }
 
+// handleHealth godoc
+// @Summary      Health check
+// @Description  Check if the server is running
+// @Tags         health
+// @Accept       json
+// @Produce      json
+// @Success      200  {object}  map[string]string
+// @Router       /health [get]
 func (h *Handler) handleHealth(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"status": "ok"})
 }
@@ -106,6 +114,26 @@ func (h *Handler) handleHealth(c *gin.Context) {
 
 // handleGetManifest is moved to manifest_handlers.go
 
+// handleGetFile godoc
+// @Summary      Download file
+// @Description  Download a file from artifact storage. Supports HTTP Range requests for resumable downloads.
+// @Tags         artifacts
+// @Accept       json
+// @Produce      application/octet-stream
+// @Param        project  path      string  true  "Project name"
+// @Param        app      path      string  true  "App name"
+// @Param        hash     path      string  true  "Version hash"
+// @Param        path     query     string  true  "File path within the artifact"
+// @Header       206      {string}  Content-Range  "Content-Range header for partial content"
+// @Header       200,206  {string}  Accept-Ranges  "bytes"
+// @Success      200      {file}    binary
+// @Success      206      {file}    binary  "Partial content"
+// @Failure      401      {object}  ErrorResponse
+// @Failure      404      {object}  ErrorResponse
+// @Failure      416      {object}  ErrorResponse  "Range not satisfiable"
+// @Failure      500      {object}  ErrorResponse
+// @Security     Bearer
+// @Router       /file/{project}/{app}/{hash} [get]
 func (h *Handler) handleGetFile(c *gin.Context) {
 	project := c.Param("project")
 	app := c.Param("app")
