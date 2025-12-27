@@ -1,9 +1,0 @@
-server_url: http://localhost:3000
-token: GEBxwlhtHHfRostv4znmxkul3swu-_SsZMZGhTC7z-Q=
-concurrency: 8
-chunk_size: 4MB
-retain_versions: 5  # 全局保留最新 5 个版本
-ignore:
-  - logs/
-  - tmp/
-  - '*.log'
