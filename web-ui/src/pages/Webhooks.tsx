@@ -5,8 +5,9 @@
 
 import React, { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Table, Button, Space, Popconfirm, message, Tag, Modal, Form, Input, Switch } from 'antd'
+import { Table, Button, Space, Popconfirm, message, Tag, Modal, Form, Input, Switch, Select } from 'antd'
 import { webhooksApi, Webhook, CreateWebhookRequest } from '../api/webhooks'
+import { projectsApi } from '../api/projects'
 import type { ColumnsType } from 'antd/es/table'
 
 const WebhooksPage: React.FC = () => {
@@ -14,6 +15,20 @@ const WebhooksPage: React.FC = () => {
   const [editingWebhook, setEditingWebhook] = useState<Webhook | null>(null)
   const [form] = Form.useForm()
   const queryClient = useQueryClient()
+  const [selectedProject, setSelectedProject] = useState<string | undefined>(undefined)
+
+  // Fetch projects
+  const { data: projects } = useQuery({
+    queryKey: ['projects'],
+    queryFn: () => projectsApi.list(1000, 0).then((res) => res.data),
+  })
+
+  // Fetch apps for selected project
+  const { data: apps } = useQuery({
+    queryKey: ['apps', selectedProject],
+    queryFn: () => projectsApi.getApps(selectedProject!, 1000, 0).then((res) => res.data),
+    enabled: !!selectedProject,
+  })
 
   const { data, isLoading } = useQuery({
     queryKey: ['webhooks'],
@@ -59,19 +74,38 @@ const WebhooksPage: React.FC = () => {
     },
   })
 
+  const handleProjectChange = (projectId: number | undefined) => {
+    if (projectId && projects) {
+      const project = projects.find((p) => p.id === projectId)
+      setSelectedProject(project?.name)
+    } else {
+      setSelectedProject(undefined)
+    }
+    form.setFieldsValue({ app_id: undefined })
+  }
+
   const handleCreate = () => {
     setEditingWebhook(null)
+    setSelectedProject(undefined)
     form.resetFields()
     setIsModalVisible(true)
   }
 
   const handleEdit = (webhook: Webhook) => {
     setEditingWebhook(webhook)
+    if (webhook.project_id && projects) {
+      const project = projects.find((p) => p.id === webhook.project_id)
+      setSelectedProject(project?.name)
+    } else {
+      setSelectedProject(undefined)
+    }
     form.setFieldsValue({
       name: webhook.name,
       url: webhook.url,
       event_types: webhook.event_types.join(','),
       enabled: webhook.enabled,
+      project_id: webhook.project_id,
+      app_id: webhook.app_id,
     })
     setIsModalVisible(true)
   }
@@ -83,6 +117,8 @@ const WebhooksPage: React.FC = () => {
         url: values.url,
         event_types: values.event_types.split(',').map((s: string) => s.trim()),
         enabled: values.enabled ?? true,
+        project_id: values.project_id,
+        app_id: values.app_id,
       }
 
       if (editingWebhook) {
@@ -103,6 +139,19 @@ const WebhooksPage: React.FC = () => {
       title: 'URL',
       dataIndex: 'url',
       key: 'url',
+    },
+    {
+      title: 'Project / App',
+      key: 'project_app',
+      render: (_: any, record: Webhook) => {
+        if (record.project_name) {
+          if (record.app_name) {
+            return <Tag>{record.project_name} / {record.app_name}</Tag>
+          }
+          return <Tag>{record.project_name}</Tag>
+        }
+        return <Tag color="default">Global</Tag>
+      },
     },
     {
       title: 'Event Types',
@@ -166,6 +215,7 @@ const WebhooksPage: React.FC = () => {
         onCancel={() => {
           setIsModalVisible(false)
           setEditingWebhook(null)
+          setSelectedProject(undefined)
           form.resetFields()
         }}
       >
@@ -175,6 +225,48 @@ const WebhooksPage: React.FC = () => {
           </Form.Item>
           <Form.Item name="url" label="URL" rules={[{ required: true, type: 'url' }]}>
             <Input />
+          </Form.Item>
+          <Form.Item
+            name="project_id"
+            label="Project (optional)"
+            tooltip="Select a project to limit webhook to specific project. Leave empty for global webhook."
+          >
+            <Select
+              placeholder="All projects (global)"
+              allowClear
+              onChange={handleProjectChange}
+              showSearch
+              filterOption={(input, option) =>
+                String(option?.children || '').toLowerCase().includes(input.toLowerCase())
+              }
+            >
+              {projects?.map((project) => (
+                <Select.Option key={project.id} value={project.id}>
+                  {project.name}
+                </Select.Option>
+              ))}
+            </Select>
+          </Form.Item>
+          <Form.Item
+            name="app_id"
+            label="App (optional)"
+            tooltip="Select an app to limit webhook to specific app. Requires a project to be selected."
+          >
+            <Select
+              placeholder="All apps"
+              allowClear
+              disabled={!selectedProject}
+              showSearch
+              filterOption={(input, option) =>
+                String(option?.children || '').toLowerCase().includes(input.toLowerCase())
+              }
+            >
+              {apps?.map((app) => (
+                <Select.Option key={app.id} value={app.id}>
+                  {app.name}
+                </Select.Option>
+              ))}
+            </Select>
           </Form.Item>
           <Form.Item name="event_types" label="Event Types (comma separated)" rules={[{ required: true }]}>
             <Input placeholder="push,pull,promote" />

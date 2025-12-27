@@ -8,6 +8,7 @@ package api
 import (
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/kk/kkartifact-server/internal/database"
@@ -47,7 +48,67 @@ func (h *Handler) handleCreateWebhook(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusCreated, webhook)
+	// Convert to response format with project and app names
+	var projectID, appID *int
+	var projectName, appName *string
+
+	if webhook.ProjectID.Valid {
+		pid := int(webhook.ProjectID.Int64)
+		projectID = &pid
+		// Get project name
+		var name string
+		query := `SELECT name FROM projects WHERE id = $1`
+		if err := h.db.QueryRow(query, pid).Scan(&name); err == nil {
+			projectName = &name
+		}
+	}
+
+	if webhook.AppID.Valid {
+		aid := int(webhook.AppID.Int64)
+		appID = &aid
+		// Get app name
+		var name string
+		query := `SELECT name FROM apps WHERE id = $1`
+		if err := h.db.QueryRow(query, aid).Scan(&name); err == nil {
+			appName = &name
+		}
+	}
+
+	var headers *string
+	if webhook.Headers.Valid {
+		headers = &webhook.Headers.String
+	}
+
+	response := WebhookResponse{
+		ID:          webhook.ID,
+		Name:        webhook.Name,
+		EventTypes:  webhook.EventTypes,
+		URL:         webhook.URL,
+		Headers:     headers,
+		Enabled:     webhook.Enabled,
+		ProjectID:   projectID,
+		AppID:       appID,
+		ProjectName: projectName,
+		AppName:     appName,
+		CreatedAt:   webhook.CreatedAt.Format(time.RFC3339),
+	}
+
+	c.JSON(http.StatusCreated, response)
+}
+
+// WebhookResponse represents a webhook in API response
+type WebhookResponse struct {
+	ID         int     `json:"id"`
+	Name       string  `json:"name"`
+	EventTypes []string `json:"event_types"`
+	URL        string  `json:"url"`
+	Headers    *string `json:"headers,omitempty"`
+	Enabled    bool    `json:"enabled"`
+	ProjectID  *int    `json:"project_id,omitempty"`
+	AppID      *int    `json:"app_id,omitempty"`
+	ProjectName *string `json:"project_name,omitempty"`
+	AppName     *string `json:"app_name,omitempty"`
+	CreatedAt  string  `json:"created_at"`
 }
 
 // handleListWebhooks lists all webhooks
@@ -59,7 +120,55 @@ func (h *Handler) handleListWebhooks(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, webhooks)
+	// Convert to response format with project and app names
+	responses := make([]WebhookResponse, len(webhooks))
+	for i, webhook := range webhooks {
+		var projectID, appID *int
+		var projectName, appName *string
+
+		if webhook.ProjectID.Valid {
+			pid := int(webhook.ProjectID.Int64)
+			projectID = &pid
+			// Get project name
+			var name string
+			query := `SELECT name FROM projects WHERE id = $1`
+			if err := h.db.QueryRow(query, pid).Scan(&name); err == nil {
+				projectName = &name
+			}
+		}
+
+		if webhook.AppID.Valid {
+			aid := int(webhook.AppID.Int64)
+			appID = &aid
+			// Get app name
+			var name string
+			query := `SELECT name FROM apps WHERE id = $1`
+			if err := h.db.QueryRow(query, aid).Scan(&name); err == nil {
+				appName = &name
+			}
+		}
+
+		var headers *string
+		if webhook.Headers.Valid {
+			headers = &webhook.Headers.String
+		}
+
+		responses[i] = WebhookResponse{
+			ID:          webhook.ID,
+			Name:        webhook.Name,
+			EventTypes:  webhook.EventTypes,
+			URL:         webhook.URL,
+			Headers:     headers,
+			Enabled:     webhook.Enabled,
+			ProjectID:   projectID,
+			AppID:       appID,
+			ProjectName: projectName,
+			AppName:     appName,
+			CreatedAt:   webhook.CreatedAt.Format(time.RFC3339),
+		}
+	}
+
+	c.JSON(http.StatusOK, responses)
 }
 
 // handleGetWebhook gets a webhook by ID
@@ -82,7 +191,52 @@ func (h *Handler) handleGetWebhook(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, webhook)
+	// Convert to response format with project and app names
+	var projectID, appID *int
+	var projectName, appName *string
+
+	if webhook.ProjectID.Valid {
+		pid := int(webhook.ProjectID.Int64)
+		projectID = &pid
+		// Get project name
+		var name string
+		query := `SELECT name FROM projects WHERE id = $1`
+		if err := h.db.QueryRow(query, pid).Scan(&name); err == nil {
+			projectName = &name
+		}
+	}
+
+	if webhook.AppID.Valid {
+		aid := int(webhook.AppID.Int64)
+		appID = &aid
+		// Get app name
+		var name string
+		query := `SELECT name FROM apps WHERE id = $1`
+		if err := h.db.QueryRow(query, aid).Scan(&name); err == nil {
+			appName = &name
+		}
+	}
+
+	var headers *string
+	if webhook.Headers.Valid {
+		headers = &webhook.Headers.String
+	}
+
+	response := WebhookResponse{
+		ID:          webhook.ID,
+		Name:        webhook.Name,
+		EventTypes:  webhook.EventTypes,
+		URL:         webhook.URL,
+		Headers:     headers,
+		Enabled:     webhook.Enabled,
+		ProjectID:   projectID,
+		AppID:       appID,
+		ProjectName: projectName,
+		AppName:     appName,
+		CreatedAt:   webhook.CreatedAt.Format(time.RFC3339),
+	}
+
+	c.JSON(http.StatusOK, response)
 }
 
 // handleUpdateWebhook updates a webhook
@@ -100,6 +254,8 @@ func (h *Handler) handleUpdateWebhook(c *gin.Context) {
 		URL        string            `json:"url"`
 		Headers    map[string]string `json:"headers"`
 		Enabled    *bool             `json:"enabled"`
+		ProjectID  *int              `json:"project_id,omitempty"`
+		AppID      *int              `json:"app_id,omitempty"`
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -136,7 +292,27 @@ func (h *Handler) handleUpdateWebhook(c *gin.Context) {
 		enabled = *req.Enabled
 	}
 
-	if err := webhookRepo.Update(id, name, eventTypes, url, req.Headers, enabled); err != nil {
+	var projectID, appID *int
+	if req.ProjectID != nil {
+		projectID = req.ProjectID
+	} else {
+		// Keep existing values if not provided
+		if webhook.ProjectID.Valid {
+			pid := int(webhook.ProjectID.Int64)
+			projectID = &pid
+		}
+	}
+	if req.AppID != nil {
+		appID = req.AppID
+	} else {
+		// Keep existing values if not provided
+		if webhook.AppID.Valid {
+			aid := int(webhook.AppID.Int64)
+			appID = &aid
+		}
+	}
+
+	if err := webhookRepo.Update(id, name, eventTypes, url, req.Headers, enabled, projectID, appID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}

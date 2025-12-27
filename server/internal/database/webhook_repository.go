@@ -126,7 +126,7 @@ func (r *WebhookRepository) GetByID(id int) (*Webhook, error) {
 }
 
 // Update updates a webhook
-func (r *WebhookRepository) Update(id int, name string, eventTypes []string, url string, headers map[string]string, enabled bool) error {
+func (r *WebhookRepository) Update(id int, name string, eventTypes []string, url string, headers map[string]string, enabled bool, projectID, appID *int) error {
 	var headersJSON sql.NullString
 	if headers != nil {
 		headersBytes, err := json.Marshal(headers)
@@ -136,9 +136,9 @@ func (r *WebhookRepository) Update(id int, name string, eventTypes []string, url
 		headersJSON = sql.NullString{String: string(headersBytes), Valid: true}
 	}
 
-	query := `UPDATE webhooks SET name = $1, event_types = $2, url = $3, headers = $4, enabled = $5
-	          WHERE id = $6`
-	_, err := r.db.Exec(query, name, pq.Array(eventTypes), url, headersJSON, enabled, id)
+	query := `UPDATE webhooks SET name = $1, event_types = $2, url = $3, headers = $4, enabled = $5, project_id = $6, app_id = $7
+	          WHERE id = $8`
+	_, err := r.db.Exec(query, name, pq.Array(eventTypes), url, headersJSON, enabled, toNullInt64(projectID), toNullInt64(appID), id)
 	return err
 }
 

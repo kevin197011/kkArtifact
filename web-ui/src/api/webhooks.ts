@@ -14,6 +14,8 @@ export interface Webhook {
   enabled: boolean
   project_id?: number
   app_id?: number
+  project_name?: string
+  app_name?: string
   created_at: string
 }
 
