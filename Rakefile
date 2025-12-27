@@ -254,6 +254,34 @@ task :push do
   end
 
   puts '✅ 推送成功'
+
+  # 创建基于日期的版本标签
+  tag_name = "v#{Time.now.strftime('%Y%m%d%H%M%S')}"
+  
+  # 检查标签是否已存在
+  tag_exists = `git tag -l #{tag_name}`.strip
+  if tag_exists == tag_name
+    puts "⚠️  标签 #{tag_name} 已存在，跳过创建"
+  else
+    # 创建标签
+    tag_message = "Auto-generated tag for #{Time.now.strftime('%Y-%m-%d %H:%M:%S')}"
+    tag_success = system("git tag -a #{tag_name} -m '#{tag_message}'")
+    
+    if tag_success
+      puts "✅ 创建标签: #{tag_name}"
+      
+      # 推送标签到远程
+      tag_push_output = `git push origin #{tag_name} 2>&1`
+      if $?.success?
+        puts "✅ 推送标签成功: #{tag_name}"
+      else
+        puts "⚠️  标签创建成功，但推送失败: #{tag_name}"
+        puts tag_push_output if tag_push_output.length > 0
+      end
+    else
+      puts "⚠️  标签创建失败: #{tag_name}"
+    end
+  end
 end
 
 task :run do
