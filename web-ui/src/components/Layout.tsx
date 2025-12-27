@@ -107,10 +107,18 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
     <Layout style={{ minHeight: '100vh' }}>
       <Sider collapsible theme="dark">
         <div
-          style={{ padding: '16px', color: 'white', fontSize: '18px', fontWeight: 'bold', cursor: 'pointer' }}
+          style={{ 
+            padding: '16px', 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: '12px', 
+            cursor: 'pointer',
+            color: 'white'
+          }}
           onClick={() => navigate('/dashboard')}
         >
-          kkArtifact
+          <img src="/logo-icon.svg" alt="kkArtifact" style={{ width: '32px', height: '32px' }} />
+          <span style={{ fontSize: '18px', fontWeight: 'bold' }}>kkArtifact</span>
         </div>
         <Menu
           theme="dark"

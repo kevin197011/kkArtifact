@@ -118,6 +118,9 @@ const LoginPage: React.FC = () => {
             }}
           >
             <div style={{ textAlign: 'center', marginBottom: 32 }}>
+              <div style={{ marginBottom: 16 }}>
+                <img src="/logo-icon.svg" alt="kkArtifact" style={{ width: '64px', height: '64px' }} />
+              </div>
               <Title level={2} style={{ marginBottom: 8 }}>kkArtifact</Title>
               <Text type="secondary">Sign in to your account</Text>
             </div>
