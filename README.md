@@ -70,6 +70,7 @@ graph TB
 - **Server**: Go + Gin 框架的 HTTP API 服务器
 - **PostgreSQL**: 存储项目、应用、版本、Token、Webhook、审计日志等元数据
 - **Redis**: 缓存层（计划中），用于提升性能
+- **认证缓存**: 内存缓存，大幅减少数据库查询
 - **存储系统**: 支持本地文件系统或 S3 兼容的对象存储
 - **认证模块**: 基于 Token 和 JWT 的认证机制
 - **定时任务**: 自动清理超出保留数量的旧版本
@@ -109,17 +110,20 @@ go build -o kkartifact-agent ./main.go
 创建 `.kkartifact.yml` 文件：
 
 ```yaml
-server_url: http://localhost:8080
-token: YOUR_TOKEN_HERE
-concurrency: 8          # 并发上传/下载数量（默认：8）
-chunk_size: 4MB         # 分块大小（可选）
-retain_versions: 5      # 本地保留版本数（可选）
-ignore:
+server_url: http://localhost:3000  # 服务器地址（使用前端代理时指向前端 URL）
+token: YOUR_TOKEN_HERE             # API Token（从 Web UI 获取）
+concurrency: 300                   # 并发数量（推荐：200-500，默认：8）
+ignore:                            # 忽略的文件/目录模式
   - logs/
   - tmp/
   - '*.log'
   - node_modules/
+  - .DS_Store
 ```
+
+**配置说明：**
+- `server_url`: 应指向前端 URL（如 `http://localhost:3000`）如果使用 Web UI，或直接指向后端（如 `http://localhost:8080`）如果仅使用 API
+- `concurrency`: 根据项目规模调整，大规模项目（20,000+ 文件）推荐使用 300-500
 
 #### Push（上传）
 
@@ -132,6 +136,12 @@ kkartifact-agent push \
   --config .kkartifact.yml
 ```
 
+**特性：**
+- ✅ 并发文件上传（可配置并发数）
+- ✅ 实时动态进度条显示（不滚动屏幕）
+- ✅ 自动文件 hash 验证（跳过已存在文件）
+- ✅ 支持版本覆盖（自动删除旧版本）
+
 #### Pull（下载）
 
 ```bash
@@ -143,6 +153,35 @@ kkartifact-agent pull \
   --config .kkartifact.yml
 ```
 
+**特性：**
+- ✅ 并发文件下载（可配置并发数）
+- ✅ 断点续传支持（自动恢复中断下载）
+- ✅ 实时动态进度条显示（不滚动屏幕）
+- ✅ 自动文件完整性验证（SHA256 校验）
+- ✅ 智能跳过已存在且匹配的文件
+
+#### 进度显示
+
+Push 和 Pull 操作都会显示动态进度条，在同一行更新，不滚动屏幕：
+
+```
+[================================================] 50.0% (1000/2000) | Elapsed: 1:23 | Remaining: 1:23 | Speed: 12.0 files/s
+```
+
+进度条显示内容：
+- 可视化进度条（50 个字符）
+- 完成百分比
+- 文件计数（当前/总计）
+- 已用时间
+- 预计剩余时间
+- 传输速度（文件/秒）
+
+完成后显示摘要：
+```
+Completed: 2000/2000 files in 4:18
+Total time: 4m18s
+```
+
 ## 核心功能
 
 ### 并发传输
@@ -150,12 +189,19 @@ kkartifact-agent pull \
 通过 `concurrency` 参数控制同时上传/下载的文件数量，提升传输速度：
 
 ```yaml
-concurrency: 8  # 默认值，可根据网络和服务器性能调整
+concurrency: 300  # 推荐值：针对大规模文件传输（2000+ 文件）优化
 ```
 
-- 小文件多：可设置更大的并发数（如 16、32）
-- 大文件少：建议使用较小的并发数（如 4）
-- 网络慢：建议使用较小的并发数（如 4-8）
+**推荐配置：**
+- 小型项目（< 1,000 文件）：50-100
+- 中型项目（1,000-10,000 文件）：200-300
+- 大型项目（10,000+ 文件）：300-500
+- 默认值：8（适用于小型测试场景）
+
+**注意事项：**
+- 更高的并发数需要更多网络连接和服务器资源
+- 服务器端已优化数据库连接池和 Token 认证缓存，支持高并发
+- 建议根据实际网络带宽和服务器性能调整
 
 ### 断点续传
 
@@ -163,13 +209,15 @@ concurrency: 8  # 默认值，可根据网络和服务器性能调整
 
 - **下载断点续传**：
   - 自动检查本地文件是否存在且 hash 匹配
-  - 文件完整则跳过下载
-  - 文件不完整则使用 HTTP Range 请求继续下载
-  - 文件 hash 不匹配则删除后重新下载
-  - 显示下载进度百分比
+  - 文件完整则跳过下载（节省时间和带宽）
+  - 文件不完整则使用 HTTP Range 请求从断点继续下载
+  - 文件 hash 不匹配则自动删除后重新下载
+  - 支持大文件（>1GB）的可靠传输
 
 - **上传优化**：
-  - 服务器支持版本覆盖，避免重复上传
+  - 服务器支持版本覆盖，自动删除旧版本数据
+  - 自动检查文件 hash，跳过已上传的文件
+  - 支持并发上传，大幅提升传输速度
 
 ### Web UI 功能
 
@@ -218,9 +266,13 @@ concurrency: 8  # 默认值，可根据网络和服务器性能调整
 | `ADMIN_USERNAME` | admin | 管理员用户名 |
 | `ADMIN_PASSWORD` | admin123 | 管理员密码 |
 | `SKIP_ADMIN_USER` | false | 是否跳过创建管理员用户 |
-| `SKIP_ADMIN_TOKEN` | true | 是否跳过创建管理员 Token |
+| `ADMIN_TOKEN` | - | 如果设置，使用此值创建管理员 Token；如果未设置，跳过创建 |
+| `ADMIN_TOKEN_NAME` | admin-initial-token | 管理员 Token 名称 |
+| `DB_MAX_OPEN_CONNS` | 50 | 最大数据库连接数（高并发场景） |
+| `DB_MAX_IDLE_CONNS` | 10 | 最大空闲数据库连接数 |
 | `JWT_SECRET` | - | JWT 密钥（不设置则随机生成） |
 | `VERSION_RETENTION_LIMIT` | 5 | 版本保留数量 |
+| `ENABLE_SWAGGER` | true | 是否启用 Swagger UI |
 
 #### Web UI
 
@@ -230,6 +282,16 @@ concurrency: 8  # 默认值，可根据网络和服务器性能调整
 | `VITE_API_URL` | / | API 地址（使用 Nginx 代理时为 /） |
 
 ## API 文档
+
+系统提供完整的 Swagger API 文档，可通过 Web UI 访问：
+
+**Swagger UI**: http://localhost:3000/swagger/index.html
+
+Swagger UI 包含：
+- 完整的 API 端点文档
+- 请求/响应 Schema 定义
+- 认证要求说明
+- 交互式 API 测试功能
 
 ### 认证
 
@@ -319,10 +381,24 @@ npm run dev
 
 ## 性能优化
 
-- ✅ 并发上传/下载
-- ✅ HTTP Range 请求支持（断点续传）
-- ✅ 数据库索引优化
-- ✅ API 分页
+### 客户端优化
+- ✅ 并发上传/下载（可配置并发数，推荐 200-500）
+- ✅ HTTP 连接池优化（复用连接，减少握手开销）
+- ✅ HTTP Range 请求支持（断点续传，节省带宽）
+- ✅ 动态进度条显示（减少输出，提升终端性能）
+
+### 服务端优化
+- ✅ Token 认证缓存（减少 99%+ 数据库查询）
+  - 已验证 Token 缓存（5 分钟 TTL）
+  - Token 列表缓存（1 分钟刷新）
+- ✅ 数据库连接池优化
+  - 最大连接数：50（可配置）
+  - 最大空闲连接：10（可配置）
+  - 连接生命周期：5 分钟
+  - 空闲连接超时：1 分钟
+- ✅ PostgreSQL 连接数优化（`max_connections=200`）
+- ✅ 数据库索引优化（加速查询）
+- ✅ API 分页（减少数据传输）
 - ✅ 响应压缩（Gzip）
 - ✅ Redis 缓存（计划中）
 
