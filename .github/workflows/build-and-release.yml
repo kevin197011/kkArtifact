@@ -1,0 +1,196 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - 'v*'  # Trigger on version tags (e.g., v1.0.0)
+  workflow_dispatch:  # Allow manual trigger
+
+env:
+  REGISTRY: docker.io
+  IMAGE_PREFIX: kkartifact  # Change this to your Docker Hub username/organization
+  SERVER_IMAGE: server
+  WEB_UI_IMAGE: web-ui
+
+jobs:
+  build-server:
+    name: Build and Push Server Image
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/${{ env.SERVER_IMAGE }}
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
+
+      - name: Build and push server image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./server
+          file: ./server/Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  build-web-ui:
+    name: Build and Push Web UI Image
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/${{ env.WEB_UI_IMAGE }}
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
+
+      - name: Build and push web-ui image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./web-ui
+          file: ./web-ui/Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  build-agent:
+    name: Build and Release Agent Binary
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - goos: linux
+            goarch: amd64
+          - goos: linux
+            goarch: arm64
+          - goos: darwin
+            goarch: amd64
+          - goos: darwin
+            goarch: arm64
+          - goos: windows
+            goarch: amd64
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'
+          cache-dependency-path: './agent/go.sum'
+
+      - name: Get version from tag
+        id: version
+        run: |
+          if [[ "${{ github.ref }}" == refs/tags/* ]]; then
+            VERSION=${GITHUB_REF#refs/tags/v}
+          else
+            VERSION=$(date +%Y%m%d%H%M%S)-${GITHUB_SHA::8}
+          fi
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "tag=${{ github.ref_name }}" >> $GITHUB_OUTPUT
+
+      - name: Build agent binary
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          CGO_ENABLED: 0
+        run: |
+          cd agent
+          OUTPUT_NAME="kkartifact-agent-${{ matrix.goos }}-${{ matrix.goarch }}"
+          if [ "${{ matrix.goos }}" == "windows" ]; then
+            OUTPUT_NAME="${OUTPUT_NAME}.exe"
+          fi
+          go build -trimpath -ldflags="-s -w" -o ${OUTPUT_NAME} ./main.go
+          mkdir -p ../release
+          mv ${OUTPUT_NAME} ../release/
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: agent-${{ matrix.goos }}-${{ matrix.goarch }}
+          path: release/*
+          retention-days: 7
+
+  release:
+    name: Create GitHub Release
+    needs: [build-agent]
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: release
+
+      - name: Generate checksums
+        run: |
+          cd release
+          find . -type f -name "kkartifact-agent*" -exec shasum -a 256 {} \; > checksums.txt || \
+          find . -type f -name "kkartifact-agent*" -exec sha256sum {} \; > checksums.txt
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: release/*
+          name: Release ${{ github.ref_name }}
+          body: |
+            ## kkArtifact Agent ${{ github.ref_name }}
+
+            ### Downloads
+            - **Linux (amd64)**: `kkartifact-agent-linux-amd64`
+            - **Linux (arm64)**: `kkartifact-agent-linux-arm64`
+            - **macOS (amd64)**: `kkartifact-agent-darwin-amd64`
+            - **macOS (arm64)**: `kkartifact-agent-darwin-arm64`
+            - **Windows (amd64)**: `kkartifact-agent-windows-amd64.exe`
+
+            ### Checksums
+            See `checksums.txt` for SHA256 checksums of all binaries.
+
+            ### Docker Images
+            - Server: `${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/${{ env.SERVER_IMAGE }}:${{ github.ref_name }}`
+            - Web UI: `${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/${{ env.WEB_UI_IMAGE }}:${{ github.ref_name }}`
+          draft: false
+          prerelease: ${{ contains(github.ref_name, '-') }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
