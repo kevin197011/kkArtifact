@@ -9,6 +9,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/kk/kkartifact-server/internal/database"
 )
 
 // ManifestResponse represents a manifest in API response
@@ -39,6 +40,41 @@ func (h *Handler) handleGetManifest(c *gin.Context) {
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 		return
+	}
+
+	// Record audit log for pull operation (one record per version)
+	// This is called when agent starts pulling a version, before downloading files
+	auditRepo := database.NewAuditRepository(h.db)
+	projectObj, err := h.projectRepo.CreateOrGet(project)
+	if err == nil {
+		var projectID *int
+		var appID *int
+		if projectObj != nil {
+			projectID = &projectObj.ID
+			appObj, err := h.appRepo.CreateOrGet(projectObj.ID, app)
+			if err == nil && appObj != nil {
+				appID = &appObj.ID
+			}
+		}
+		agentID := getAgentIDFromRequest(c)
+		metadata := map[string]interface{}{
+			"file_count": len(manifest.Files),
+		}
+		var totalSize int64
+		for _, file := range manifest.Files {
+			totalSize += file.Size
+		}
+		metadata["total_size"] = totalSize
+		if manifest.GitCommit != "" {
+			metadata["git_commit"] = manifest.GitCommit
+		}
+		if manifest.BuildTime != "" {
+			metadata["build_time"] = manifest.BuildTime
+		}
+		if manifest.Builder != "" {
+			metadata["builder"] = manifest.Builder
+		}
+		_ = auditRepo.Create("pull", projectID, appID, hash, agentID, metadata)
 	}
 
 	// Convert to response format

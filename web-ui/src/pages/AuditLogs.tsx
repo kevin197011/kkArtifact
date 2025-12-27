@@ -33,8 +33,16 @@ const AuditLogsPage: React.FC = () => {
       title: 'Version Hash',
       dataIndex: 'version_hash',
       key: 'version_hash',
-      render: (hash?: string) =>
-        hash ? <Tag style={{ fontFamily: 'monospace' }}>{hash.substring(0, 12)}...</Tag> : '-',
+      render: (hash: string | undefined, record: AuditLog) => {
+        if (!hash) return '-'
+        // Display as project_app_version format if project_name and app_name are available
+        if (record.project_name && record.app_name) {
+          const displayText = `${record.project_name}_${record.app_name}_${hash}`
+          return <Tag style={{ fontFamily: 'monospace' }}>{displayText}</Tag>
+        }
+        // Fallback to just the hash
+        return <Tag style={{ fontFamily: 'monospace' }}>{hash}</Tag>
+      },
     },
     {
       title: 'Agent ID',

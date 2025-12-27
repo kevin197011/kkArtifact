@@ -256,7 +256,7 @@ kkArtifact-agent pull \
   --project myproject \
   --app myapp \
   --version 1.0.0 \
-  --deploy-path /opt/apps/myproject/myapp \
+  --path /opt/apps/myproject/myapp \
   --config .kkartifact.yml
 ```
 

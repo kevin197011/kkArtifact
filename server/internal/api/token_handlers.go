@@ -125,6 +125,7 @@ func (h *Handler) handleCreateToken(c *gin.Context) {
 
 	// Record audit log for token creation
 	auditRepo := database.NewAuditRepository(h.db)
+	agentID := getAgentIDFromRequest(c)
 	metadata := map[string]interface{}{
 		"token_name": name,
 		"permissions": permissions,
@@ -135,7 +136,10 @@ func (h *Handler) handleCreateToken(c *gin.Context) {
 	if appID != nil {
 		metadata["app_id"] = *appID
 	}
-	_ = auditRepo.Create("token_create", projectID, appID, "", "", metadata)
+	if expiresAtStr != nil {
+		metadata["expires_at"] = *expiresAtStr
+	}
+	_ = auditRepo.Create("token_create", projectID, appID, "", agentID, metadata)
 
 	c.JSON(http.StatusOK, response)
 }
@@ -227,6 +231,7 @@ func (h *Handler) handleDeleteToken(c *gin.Context) {
 
 	// Record audit log for token deletion
 	auditRepo := database.NewAuditRepository(h.db)
+	agentID := getAgentIDFromRequest(c)
 	var projectID, appID *int
 	if tokenToDelete.ProjectID.Valid {
 		pid := int(tokenToDelete.ProjectID.Int64)
@@ -242,7 +247,7 @@ func (h *Handler) handleDeleteToken(c *gin.Context) {
 	if tokenToDelete.Name.Valid {
 		metadata["token_name"] = tokenToDelete.Name.String
 	}
-	_ = auditRepo.Create("token_delete", projectID, appID, "", "", metadata)
+	_ = auditRepo.Create("token_delete", projectID, appID, "", agentID, metadata)
 
 	c.JSON(http.StatusOK, gin.H{"status": "deleted"})
 }

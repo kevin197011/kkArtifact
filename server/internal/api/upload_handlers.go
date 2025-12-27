@@ -188,14 +188,32 @@ func (h *Handler) handleFinishUpload(c *gin.Context) {
 		// TODO: Consider using INSERT ... ON CONFLICT DO NOTHING or similar for idempotency
 	}
 
-	// Publish push event
-	h.publishEvent(
+	// Publish push event with context to extract agent ID and metadata
+	metadata := make(map[string]interface{})
+	metadata["file_count"] = len(req.Manifest.Files)
+	var totalSize int64
+	for _, file := range req.Manifest.Files {
+		totalSize += file.Size
+	}
+	metadata["total_size"] = totalSize
+	if req.Manifest.GitCommit != "" {
+		metadata["git_commit"] = req.Manifest.GitCommit
+	}
+	if req.Manifest.BuildTime != "" {
+		metadata["build_time"] = req.Manifest.BuildTime
+	}
+	if req.Manifest.Builder != "" {
+		metadata["builder"] = req.Manifest.Builder
+	}
+
+	h.publishEventWithContext(
+		c,
 		"push",
 		req.Project,
 		req.App,
 		req.Version,
-		"", // agent ID can be extracted from request if needed
-		nil,
+		"",
+		metadata,
 	)
 
 	c.JSON(http.StatusOK, gin.H{

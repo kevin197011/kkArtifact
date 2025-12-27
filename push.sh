@@ -2,5 +2,5 @@
   --project myproject \
   --app myapp3 \
   --version test-$(date +%s) \
-  --path ./scripts \
+  --path ./server \
   --config .kkartifact.yml

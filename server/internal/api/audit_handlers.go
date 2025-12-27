@@ -19,6 +19,8 @@ type AuditLogResponse struct {
 	Operation   string  `json:"operation"`
 	ProjectID   *int    `json:"project_id,omitempty"`
 	AppID       *int    `json:"app_id,omitempty"`
+	ProjectName *string `json:"project_name,omitempty"`
+	AppName     *string `json:"app_name,omitempty"`
 	VersionHash *string `json:"version_hash,omitempty"`
 	AgentID     *string `json:"agent_id,omitempty"`
 	Metadata    *string `json:"metadata,omitempty"`
@@ -51,13 +53,28 @@ func (h *Handler) handleListAuditLogs(c *gin.Context) {
 	responses := make([]AuditLogResponse, len(logs))
 	for i, log := range logs {
 		var projectID, appID *int
+		var projectName, appName *string
+		
 		if log.ProjectID.Valid {
 			pid := int(log.ProjectID.Int64)
 			projectID = &pid
+			// Get project name by querying database directly
+			var name string
+			query := `SELECT name FROM projects WHERE id = $1`
+			if err := h.db.QueryRow(query, pid).Scan(&name); err == nil {
+				projectName = &name
+			}
 		}
+		
 		if log.AppID.Valid {
 			aid := int(log.AppID.Int64)
 			appID = &aid
+			// Get app name by querying database directly
+			var name string
+			query := `SELECT name FROM apps WHERE id = $1`
+			if err := h.db.QueryRow(query, aid).Scan(&name); err == nil {
+				appName = &name
+			}
 		}
 
 		var versionHash, agentID, metadata *string
@@ -76,6 +93,8 @@ func (h *Handler) handleListAuditLogs(c *gin.Context) {
 			Operation:   log.Operation,
 			ProjectID:   projectID,
 			AppID:       appID,
+			ProjectName: projectName,
+			AppName:     appName,
 			VersionHash: versionHash,
 			AgentID:     agentID,
 			Metadata:    metadata,

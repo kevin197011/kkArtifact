@@ -10,6 +10,8 @@ export interface AuditLog {
   operation: string
   project_id?: number
   app_id?: number
+  project_name?: string
+  app_name?: string
   version_hash?: string
   agent_id?: string
   metadata?: string

@@ -8,12 +8,27 @@ package api
 import (
 	"time"
 
+	"github.com/gin-gonic/gin"
 	"github.com/kk/kkartifact-server/internal/database"
 	"github.com/kk/kkartifact-server/internal/events"
 )
 
 // publishEvent publishes an event and triggers webhooks
 func (h *Handler) publishEvent(eventType events.EventType, project, app, version, agentID string, metadata map[string]interface{}) {
+	h.publishEventWithContext(nil, eventType, project, app, version, agentID, metadata)
+}
+
+// publishEventWithContext publishes an event with context for extracting client information
+func (h *Handler) publishEventWithContext(c *gin.Context, eventType events.EventType, project, app, version, agentID string, metadata map[string]interface{}) {
+	// Extract agent ID from context if not provided
+	if agentID == "" && c != nil {
+		agentID = getAgentIDFromRequest(c)
+	}
+
+	if metadata == nil {
+		metadata = make(map[string]interface{})
+	}
+
 	event := &events.Event{
 		Type:      eventType,
 		Project:   project,

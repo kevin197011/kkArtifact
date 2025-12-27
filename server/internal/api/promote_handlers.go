@@ -50,14 +50,17 @@ func (h *Handler) handlePromote(c *gin.Context) {
 	// For now, just return success
 	_ = manifest
 
-	// Publish promote event
-	h.publishEvent(
+	// Publish promote event with context to extract agent ID
+	metadata := make(map[string]interface{})
+
+	h.publishEventWithContext(
+		c,
 		"promote",
 		req.Project,
 		req.App,
 		req.Hash,
 		"",
-		nil,
+		metadata,
 	)
 
 	c.JSON(http.StatusOK, gin.H{
