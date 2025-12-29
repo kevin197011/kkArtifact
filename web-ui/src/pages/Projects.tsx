@@ -44,27 +44,27 @@ const ProjectsPage: React.FC = () => {
   }
 
   if (error) {
-    message.error('Failed to load projects')
+    message.error('加载项目失败')
   }
 
   const columns: ColumnsType<Project> = [
     {
-      title: 'Name',
+      title: '名称',
       dataIndex: 'name',
       key: 'name',
     },
     {
-      title: 'Created At',
+      title: '创建时间',
       dataIndex: 'created_at',
       key: 'created_at',
-      render: (date: string) => new Date(date).toLocaleString(),
+      render: (date: string) => new Date(date).toLocaleString('zh-CN'),
     },
     {
-      title: 'Actions',
+      title: '操作',
       key: 'actions',
       render: (_, record) => (
         <Button type="link" onClick={() => navigate(`/projects/${record.name}/apps`)}>
-          View Apps
+          查看应用
         </Button>
       ),
     },
@@ -73,7 +73,7 @@ const ProjectsPage: React.FC = () => {
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-        <h2 style={{ margin: 0 }}>Projects</h2>
+        <h2 style={{ margin: 0 }}>项目</h2>
         <Space>
           <Button
             icon={<ReloadOutlined />}
@@ -104,7 +104,7 @@ const ProjectsPage: React.FC = () => {
           onChange: setPage,
         }}
         locale={{
-          emptyText: <Empty description="No projects found" />,
+          emptyText: <Empty description="暂无项目" />,
         }}
       />
     </div>

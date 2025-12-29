@@ -24,30 +24,30 @@ const AppsPage: React.FC = () => {
   })
 
   if (error) {
-    message.error('Failed to load apps')
+    message.error('加载应用失败')
   }
 
   const columns: ColumnsType<App> = [
     {
-      title: 'Name',
+      title: '名称',
       dataIndex: 'name',
       key: 'name',
     },
     {
-      title: 'Created At',
+      title: '创建时间',
       dataIndex: 'created_at',
       key: 'created_at',
-      render: (date: string) => new Date(date).toLocaleString(),
+      render: (date: string) => new Date(date).toLocaleString('zh-CN'),
     },
     {
-      title: 'Actions',
+      title: '操作',
       key: 'actions',
       render: (_, record) => (
         <Button
           type="link"
           onClick={() => navigate(`/projects/${project}/apps/${record.name}/versions`)}
         >
-          View Versions
+          查看版本
         </Button>
       ),
     },
@@ -57,11 +57,11 @@ const AppsPage: React.FC = () => {
     <div>
       <Breadcrumb style={{ marginBottom: 16 }}>
         <Breadcrumb.Item>
-          <a onClick={() => navigate('/projects')}>Projects</a>
+          <a onClick={() => navigate('/projects')}>项目</a>
         </Breadcrumb.Item>
         <Breadcrumb.Item>{project}</Breadcrumb.Item>
       </Breadcrumb>
-      <h2>Apps - {project}</h2>
+      <h2>应用 - {project}</h2>
       <Table
         columns={columns}
         dataSource={data}

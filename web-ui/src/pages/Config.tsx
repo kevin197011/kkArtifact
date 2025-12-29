@@ -27,10 +27,10 @@ const ConfigPage: React.FC = () => {
     mutationFn: (data: { version_retention_limit: number }) => configApi.update(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['config'] })
-      message.success('Configuration updated successfully')
+      message.success('配置更新成功')
     },
     onError: () => {
-      message.error('Failed to update configuration')
+      message.error('配置更新失败')
     },
   })
 
@@ -40,7 +40,7 @@ const ConfigPage: React.FC = () => {
 
   return (
     <div>
-      <h2>Global Configuration</h2>
+      <h2>全局配置</h2>
       <Card style={{ maxWidth: 600 }}>
         <Form
           form={form}
@@ -50,10 +50,10 @@ const ConfigPage: React.FC = () => {
         >
           <Form.Item
             name="version_retention_limit"
-            label="Version Retention Limit"
+            label="版本保留限制"
             rules={[
-              { required: true, message: 'Please input version retention limit' },
-              { type: 'number', min: 1, message: 'Must be at least 1' },
+              { required: true, message: '请输入版本保留限制' },
+              { type: 'number', min: 1, message: '必须至少为 1' },
             ]}
           >
             <InputNumber min={1} style={{ width: '100%' }} />
@@ -61,9 +61,9 @@ const ConfigPage: React.FC = () => {
           <Form.Item>
             <Space>
               <Button type="primary" htmlType="submit" loading={updateMutation.isPending}>
-                Save
+                保存
               </Button>
-              <Button onClick={() => form.resetFields()}>Reset</Button>
+              <Button onClick={() => form.resetFields()}>重置</Button>
             </Space>
           </Form.Item>
         </Form>

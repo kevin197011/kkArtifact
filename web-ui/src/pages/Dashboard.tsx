@@ -49,7 +49,7 @@ const Dashboard: React.FC = () => {
   // Audit logs columns
   const auditColumns: ColumnType<AuditLog>[] = [
     {
-      title: 'Time',
+      title: '时间',
       dataIndex: 'created_at',
       key: 'created_at',
       width: 180,
@@ -59,7 +59,7 @@ const Dashboard: React.FC = () => {
       },
     },
     {
-      title: 'Operation',
+      title: '操作',
       dataIndex: 'operation',
       key: 'operation',
       width: 120,
@@ -71,18 +71,25 @@ const Dashboard: React.FC = () => {
           token_create: 'purple',
           token_delete: 'red',
         }
-        return <span style={{ color: colors[text] || 'default' }}>{text}</span>
+        const labels: Record<string, string> = {
+          push: '推送',
+          pull: '拉取',
+          promote: '提升',
+          token_create: '创建令牌',
+          token_delete: '删除令牌',
+        }
+        return <span style={{ color: colors[text] || 'default' }}>{labels[text] || text}</span>
       },
     },
     {
-      title: 'Agent ID',
+      title: '代理ID',
       dataIndex: 'agent_id',
       key: 'agent_id',
       width: 200,
       ellipsis: true,
     },
     {
-      title: 'Version',
+      title: '版本',
       dataIndex: 'version_hash',
       key: 'version_hash',
       width: 200,
@@ -98,13 +105,13 @@ const Dashboard: React.FC = () => {
 
   return (
     <div>
-      <Title level={2}>Dashboard</Title>
+      <Title level={2}>仪表盘</Title>
 
       <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
         <Col xs={24} sm={12} lg={6}>
           <Card loading={isLoading}>
             <Statistic
-              title="Projects"
+              title="项目数"
               value={projectsCount}
               prefix={<ProjectOutlined />}
               valueStyle={{ color: '#1890ff' }}
@@ -114,7 +121,7 @@ const Dashboard: React.FC = () => {
         <Col xs={24} sm={12} lg={6}>
           <Card loading={isLoading}>
             <Statistic
-              title="Total Apps"
+              title="应用总数"
               value={appsCount}
               prefix={<AppstoreOutlined />}
               valueStyle={{ color: '#52c41a' }}
@@ -124,19 +131,19 @@ const Dashboard: React.FC = () => {
         <Col xs={24} sm={12} lg={6}>
           <Card>
             <Statistic
-              title="Recent Activities"
+              title="最近活动"
               value={auditLogsData?.length || 0}
               prefix={<ClockCircleOutlined />}
               valueStyle={{ color: '#fa8c16' }}
-              suffix="last 10"
+              suffix="最近10条"
             />
           </Card>
         </Col>
         <Col xs={24} sm={12} lg={6}>
           <Card>
             <Statistic
-              title="System Status"
-              value="Running"
+              title="系统状态"
+              value="运行中"
               prefix={<FileOutlined />}
               valueStyle={{ color: '#52c41a' }}
             />
@@ -144,7 +151,7 @@ const Dashboard: React.FC = () => {
         </Col>
       </Row>
 
-      <Card title="Recent Activities" style={{ marginBottom: 24 }}>
+      <Card title="最近活动" style={{ marginBottom: 24 }}>
         {auditLogsLoading ? (
           <div style={{ textAlign: 'center', padding: '40px' }}>
             <Spin size="large" />

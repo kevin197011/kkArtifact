@@ -112,7 +112,7 @@ const TokensPage: React.FC = () => {
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text)
-    message.success('Token copied to clipboard')
+    message.success('令牌已复制到剪贴板')
   }
 
   const toggleTokenVisibility = (id: number) => {
@@ -134,12 +134,12 @@ const TokensPage: React.FC = () => {
 
   const columns: ColumnsType<Token> = [
     {
-      title: 'Name',
+      title: '名称',
       dataIndex: 'name',
       key: 'name',
     },
     {
-      title: 'Token',
+      title: '令牌',
       key: 'token',
       width: 400,
       render: (_, record) => {
@@ -150,7 +150,7 @@ const TokensPage: React.FC = () => {
           ? isVisible
             ? storedToken
             : maskToken(storedToken)
-          : 'Token not available'
+          : '令牌不可用'
 
         return (
           <Space.Compact style={{ width: '100%' }}>
@@ -164,7 +164,7 @@ const TokensPage: React.FC = () => {
                 <Button
                   icon={isVisible ? <EyeInvisibleOutlined /> : <EyeOutlined />}
                   onClick={() => toggleTokenVisibility(record.id)}
-                  title={isVisible ? 'Hide token' : 'Show token'}
+                  title={isVisible ? '隐藏令牌' : '显示令牌'}
                 />
                 <Button
                   icon={<CopyOutlined />}
@@ -173,7 +173,7 @@ const TokensPage: React.FC = () => {
                       copyToClipboard(storedToken)
                     }
                   }}
-                  title="Copy token"
+                  title="复制令牌"
                 />
               </>
             )}
@@ -182,40 +182,45 @@ const TokensPage: React.FC = () => {
       },
     },
     {
-      title: 'Permissions',
+      title: '权限',
       dataIndex: 'permissions',
       key: 'permissions',
       render: (permissions: string[]) => (
         <Space>
-          {permissions.map((perm) => (
-            <Tag key={perm}>{perm}</Tag>
-          ))}
+          {permissions.map((perm) => {
+            const labels: Record<string, string> = {
+              pull: '拉取',
+              push: '推送',
+              promote: '提升',
+            }
+            return <Tag key={perm}>{labels[perm] || perm}</Tag>
+          })}
         </Space>
       ),
     },
     {
-      title: 'Expires At',
+      title: '过期时间',
       dataIndex: 'expires_at',
       key: 'expires_at',
-      render: (expiresAt?: string) => expiresAt ? new Date(expiresAt).toLocaleString() : 'Never',
+      render: (expiresAt?: string) => expiresAt ? new Date(expiresAt).toLocaleString('zh-CN') : '永不过期',
     },
     {
-      title: 'Created At',
+      title: '创建时间',
       dataIndex: 'created_at',
       key: 'created_at',
-      render: (date: string) => new Date(date).toLocaleString(),
+      render: (date: string) => new Date(date).toLocaleString('zh-CN'),
     },
     {
-      title: 'Actions',
+      title: '操作',
       key: 'actions',
       render: (_, record) => (
         <Space>
           <Popconfirm
-            title="Are you sure to delete this token?"
+            title="确定要删除此令牌吗？"
             onConfirm={() => deleteMutation.mutate(record.id)}
           >
             <Button type="link" size="small" danger icon={<DeleteOutlined />}>
-              Delete
+              删除
             </Button>
           </Popconfirm>
         </Space>
@@ -226,14 +231,14 @@ const TokensPage: React.FC = () => {
   return (
     <div>
       <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between' }}>
-        <h2>Tokens</h2>
+        <h2>令牌</h2>
         <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate}>
-          Create Token
+          创建令牌
         </Button>
       </div>
       {error && (
         <div style={{ marginBottom: 16, padding: 16, background: '#fff1f0', border: '1px solid #ffccc7', borderRadius: 4 }}>
-          Failed to load tokens. Please try again.
+          加载令牌失败，请重试。
         </div>
       )}
       <Table
@@ -243,7 +248,7 @@ const TokensPage: React.FC = () => {
         rowKey="id"
       />
       <Modal
-        title="Create Token"
+        title="创建令牌"
         open={isModalVisible}
         onOk={handleSubmit}
         onCancel={() => {
@@ -251,14 +256,14 @@ const TokensPage: React.FC = () => {
           setCreatedToken(null)
           form.resetFields()
         }}
-        okText="Create"
-        cancelText="Cancel"
+        okText="创建"
+        cancelText="取消"
         confirmLoading={createMutation.isPending}
       >
         {createdToken ? (
           <div>
-            <p><strong>Token created successfully!</strong></p>
-            <p>Please copy this token now. You won't be able to see it again:</p>
+            <p><strong>令牌创建成功！</strong></p>
+            <p>请立即复制此令牌。您将无法再次查看它：</p>
             <Input.Group compact>
               <Input
                 style={{ width: 'calc(100% - 100px)' }}
@@ -269,7 +274,7 @@ const TokensPage: React.FC = () => {
                 icon={<CopyOutlined />}
                 onClick={() => copyToClipboard(createdToken)}
               >
-                Copy
+                复制
               </Button>
             </Input.Group>
             <Button
@@ -279,29 +284,29 @@ const TokensPage: React.FC = () => {
                 setIsModalVisible(false)
               }}
             >
-              Done
+              完成
             </Button>
           </div>
         ) : (
           <Form form={form} layout="vertical">
             <Form.Item
               name="name"
-              label="Name"
-              rules={[{ required: true, message: 'Please input token name!' }]}
+              label="名称"
+              rules={[{ required: true, message: '请输入令牌名称！' }]}
             >
-              <Input placeholder="e.g., web-ui-token" />
+              <Input placeholder="例如：web-ui-token" />
             </Form.Item>
             <Form.Item
               name="permissions"
-              label="Permissions"
-              rules={[{ required: true, message: 'Please select permissions!' }]}
+              label="权限"
+              rules={[{ required: true, message: '请选择权限！' }]}
               initialValue={['pull', 'push', 'promote']}
             >
-              <Select mode="multiple" placeholder="Select permissions">
-                <Option value="pull">Pull</Option>
-                <Option value="push">Push</Option>
-                <Option value="promote">Promote</Option>
-                <Option value="admin">Admin</Option>
+              <Select mode="multiple" placeholder="选择权限">
+                <Option value="pull">拉取</Option>
+                <Option value="push">推送</Option>
+                <Option value="promote">提升</Option>
+                <Option value="admin">管理员</Option>
               </Select>
             </Form.Item>
           </Form>

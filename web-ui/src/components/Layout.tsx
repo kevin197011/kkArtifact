@@ -48,7 +48,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
           localStorage.removeItem('kkartifact_token')
           setIsAuthenticated(false)
           navigate('/login', { replace: true })
-          message.warning('Your session has expired. Please login again.')
+          message.warning('您的会话已过期，请重新登录')
         }
       }
     }
@@ -62,19 +62,19 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   const handleLogout = () => {
     localStorage.removeItem('kkartifact_token')
     navigate('/login', { replace: true })
-    message.success('Logged out successfully')
+      message.success('退出登录成功')
   }
 
   const menuItems = [
     {
       key: '/dashboard',
       icon: <DashboardOutlined />,
-      label: 'Dashboard',
+      label: '仪表盘',
     },
     {
       key: '/projects',
       icon: <ProjectOutlined />,
-      label: 'Projects',
+      label: '项目',
     },
     {
       key: '/webhooks',
@@ -84,17 +84,17 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
     {
       key: '/tokens',
       icon: <KeyOutlined />,
-      label: 'Tokens',
+      label: '令牌',
     },
     {
       key: '/audit-logs',
       icon: <FileTextOutlined />,
-      label: 'Audit Logs',
+      label: '审计日志',
     },
     {
       key: '/config',
       icon: <SettingOutlined />,
-      label: 'Configuration',
+      label: '配置',
     },
   ]
 
@@ -131,13 +131,13 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
       </Sider>
       <Layout>
         <Header style={{ background: '#fff', padding: '0 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <h1 style={{ margin: 0, fontSize: '20px' }}>Artifact Management</h1>
+          <h1 style={{ margin: 0, fontSize: '20px' }}>制品管理</h1>
           <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
             <Button type="default" icon={<HomeOutlined />} onClick={() => navigate('/')}>
               查看版本清单
             </Button>
             <Button type="text" icon={<LogoutOutlined />} onClick={handleLogout}>
-              Logout
+              退出登录
             </Button>
           </div>
         </Header>
@@ -145,7 +145,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
           {children}
         </Content>
         <Footer style={{ textAlign: 'center', background: '#fff', borderTop: '1px solid #f0f0f0' }}>
-          本系统由kk驱动
+          本系统由系统部驱动
         </Footer>
       </Layout>
     </Layout>

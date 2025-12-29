@@ -80,14 +80,14 @@ const LoginPage: React.FC = () => {
 
       // Store token
       localStorage.setItem('kkartifact_token', response.data.token)
-      message.success(`Welcome, ${response.data.name}!`)
+      message.success(`欢迎，${response.data.name}！`)
 
       // Redirect to the specified page or dashboard
       const redirect = searchParams.get('redirect')
       navigate(redirect || '/dashboard', { replace: true })
     } catch (error: any) {
       const errorMessage =
-        error.response?.data?.error || 'Login failed. Please check your credentials.'
+        error.response?.data?.error || '登录失败，请检查您的凭据。'
       message.error(errorMessage)
     } finally {
       setLoading(false)
@@ -118,49 +118,50 @@ const LoginPage: React.FC = () => {
               backdropFilter: 'blur(10px)',
               border: '1px solid rgba(255, 255, 255, 0.3)',
             }}
+            bodyStyle={{ padding: '24px' }}
           >
-            <div style={{ textAlign: 'center', marginBottom: 32 }}>
-              <div style={{ marginBottom: 16 }}>
-                <img src="/logo-icon.svg" alt="kkArtifact" style={{ width: '64px', height: '64px' }} />
+            <div style={{ textAlign: 'center', marginBottom: 20 }}>
+              <div style={{ marginBottom: 8 }}>
+                <img src="/logo-icon.svg" alt="kkArtifact" style={{ width: '48px', height: '48px' }} />
               </div>
-              <Title level={2} style={{ marginBottom: 8 }}>kkArtifact</Title>
-              <Text type="secondary">Sign in to your account</Text>
+              <Title level={3} style={{ marginBottom: 4, fontSize: '20px' }}>kkArtifact</Title>
+              <Text type="secondary" style={{ fontSize: '13px' }}>登录您的账户</Text>
             </div>
 
             <Form
               name="login"
               onFinish={onFinish}
               autoComplete="off"
-              size="large"
+              size="middle"
               layout="vertical"
             >
               <Form.Item
-                label="Username"
+                label="用户名"
                 name="username"
-                rules={[{ required: true, message: 'Please input your username!' }]}
+                rules={[{ required: true, message: '请输入用户名！' }]}
               >
                 <Input
                   prefix={<UserOutlined />}
-                  placeholder="Username"
+                  placeholder="用户名"
                   autoComplete="username"
                 />
               </Form.Item>
 
               <Form.Item
-                label="Password"
+                label="密码"
                 name="password"
-                rules={[{ required: true, message: 'Please input your password!' }]}
+                rules={[{ required: true, message: '请输入密码！' }]}
               >
                 <Input.Password
                   prefix={<LockOutlined />}
-                  placeholder="Password"
+                  placeholder="密码"
                   autoComplete="current-password"
                 />
               </Form.Item>
 
               <Form.Item>
                 <Button type="primary" htmlType="submit" block loading={loading}>
-                  Sign In
+                  登录
                 </Button>
               </Form.Item>
             </Form>
@@ -176,7 +177,7 @@ const LoginPage: React.FC = () => {
             borderTop: '1px solid rgba(255, 255, 255, 0.3)',
           }}
         >
-          本系统由kk驱动
+          本系统由系统部驱动
         </div>
       </div>
     </div>

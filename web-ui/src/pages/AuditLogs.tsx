@@ -19,18 +19,27 @@ const AuditLogsPage: React.FC = () => {
   })
 
   if (error) {
-    message.error('Failed to load audit logs')
+    message.error('加载审计日志失败')
   }
 
   const columns: ColumnsType<AuditLog> = [
     {
-      title: 'Operation',
+      title: '操作',
       dataIndex: 'operation',
       key: 'operation',
-      render: (op: string) => <Tag color="blue">{op}</Tag>,
+      render: (op: string) => {
+        const labels: Record<string, string> = {
+          push: '推送',
+          pull: '拉取',
+          promote: '提升',
+          token_create: '创建令牌',
+          token_delete: '删除令牌',
+        }
+        return <Tag color="blue">{labels[op] || op}</Tag>
+      },
     },
     {
-      title: 'Version Hash',
+      title: '版本哈希',
       dataIndex: 'version_hash',
       key: 'version_hash',
       render: (hash: string | undefined, record: AuditLog) => {
@@ -45,13 +54,13 @@ const AuditLogsPage: React.FC = () => {
       },
     },
     {
-      title: 'Agent ID',
+      title: '代理ID',
       dataIndex: 'agent_id',
       key: 'agent_id',
       render: (id?: string) => id || '-',
     },
     {
-      title: 'Metadata',
+      title: '元数据',
       dataIndex: 'metadata',
       key: 'metadata',
       render: (meta?: string) => {
@@ -65,17 +74,17 @@ const AuditLogsPage: React.FC = () => {
       },
     },
     {
-      title: 'Created At',
+      title: '创建时间',
       dataIndex: 'created_at',
       key: 'created_at',
-      render: (date: string) => new Date(date).toLocaleString(),
+      render: (date: string) => new Date(date).toLocaleString('zh-CN'),
       width: 200,
     },
   ]
 
   return (
     <div>
-      <h2>Audit Logs</h2>
+      <h2>审计日志</h2>
       <Table
         columns={columns}
         dataSource={data}

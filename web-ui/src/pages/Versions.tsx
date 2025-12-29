@@ -91,12 +91,12 @@ const VersionsPage: React.FC = () => {
   }
 
   if (error) {
-    message.error('Failed to load versions')
+    message.error('加载版本失败')
   }
 
   const columns: ColumnsType<Version> = [
     {
-      title: 'Version',
+      title: '版本',
       dataIndex: 'version',
       key: 'version',
       width: 300,
@@ -107,7 +107,7 @@ const VersionsPage: React.FC = () => {
       ),
     },
     {
-      title: 'Created At',
+      title: '创建时间',
       dataIndex: 'created_at',
       key: 'created_at',
       width: 180,
@@ -121,27 +121,27 @@ const VersionsPage: React.FC = () => {
       }),
     },
     {
-      title: 'Actions',
+      title: '操作',
       key: 'actions',
       render: (_, record) => (
         <Space>
-          <Tooltip title="View Manifest">
+          <Tooltip title="查看清单">
             <Button
               type="link"
               size="small"
               icon={<EyeOutlined />}
               onClick={() => handleViewManifest(record.version)}
             >
-              Manifest
+              清单
             </Button>
           </Tooltip>
-          <Tooltip title="Promote Version">
+          <Tooltip title="提升版本">
             <Popconfirm
-              title="Are you sure to promote this version?"
+              title="确定要提升此版本吗？"
               onConfirm={() => handlePromote(record.version)}
             >
               <Button type="link" size="small" icon={<StarOutlined />}>
-                Promote
+                提升
               </Button>
             </Popconfirm>
           </Tooltip>
@@ -154,7 +154,7 @@ const VersionsPage: React.FC = () => {
     <div>
       <Breadcrumb style={{ marginBottom: 16 }}>
         <Breadcrumb.Item>
-          <a onClick={() => navigate('/projects')}>Projects</a>
+          <a onClick={() => navigate('/projects')}>项目</a>
         </Breadcrumb.Item>
         <Breadcrumb.Item>
           <a onClick={() => navigate(`/projects/${project}/apps`)}>{project}</a>
@@ -162,7 +162,7 @@ const VersionsPage: React.FC = () => {
         <Breadcrumb.Item>{app}</Breadcrumb.Item>
       </Breadcrumb>
       <h2>
-        Versions - {project}/{app}
+        版本 - {project}/{app}
       </h2>
       <Table
         columns={columns}
@@ -182,7 +182,7 @@ const VersionsPage: React.FC = () => {
       <Modal
         title={
           <span>
-            Manifest Details - {selectedVersion && (
+            清单详情 - {selectedVersion && (
               <Text style={{ fontFamily: 'monospace' }} copyable>{selectedVersion}</Text>
             )}
           </span>
@@ -196,7 +196,7 @@ const VersionsPage: React.FC = () => {
         width={1000}
       >
         {isManifestLoading ? (
-          <div>Loading...</div>
+          <div>加载中...</div>
         ) : manifest ? (
           <div>
             <Descriptions bordered column={1} size="small">
@@ -231,12 +231,12 @@ const VersionsPage: React.FC = () => {
                   second: '2-digit',
                 })}
               </Descriptions.Item>
-              <Descriptions.Item label="Files Count">
+              <Descriptions.Item label="文件数量">
                 <Tag color="blue">{manifest.files?.length || 0}</Tag>
               </Descriptions.Item>
             </Descriptions>
             <div style={{ marginTop: 16 }}>
-              <h4>Files:</h4>
+              <h4>文件列表：</h4>
               <Table
                 dataSource={manifest.files}
                 rowKey="path"
@@ -265,14 +265,14 @@ const VersionsPage: React.FC = () => {
                 scroll={{ x: 'max-content' }}
                 columns={[
                   {
-                    title: 'File Path',
+                    title: '文件路径',
                     dataIndex: 'path',
                     key: 'path',
                     width: 300,
                     ellipsis: true,
                   },
                   {
-                    title: 'Size',
+                    title: '大小',
                     dataIndex: 'size',
                     key: 'size',
                     width: 120,
@@ -287,7 +287,7 @@ const VersionsPage: React.FC = () => {
                     },
                   },
                   {
-                    title: 'SHA256 Hash',
+                    title: 'SHA256 哈希',
                     dataIndex: 'hash',
                     key: 'hash',
                     width: 300,
@@ -298,7 +298,7 @@ const VersionsPage: React.FC = () => {
                     ),
                   },
                   {
-                    title: 'Actions',
+                    title: '操作',
                     key: 'actions',
                     render: (_, record) => (
                       <Button
@@ -307,7 +307,7 @@ const VersionsPage: React.FC = () => {
                         icon={<DownloadOutlined />}
                         onClick={() => handleDownloadFile(selectedVersion!, record.path)}
                       >
-                        Download
+                        下载
                       </Button>
                     ),
                   },
@@ -316,7 +316,7 @@ const VersionsPage: React.FC = () => {
             </div>
           </div>
         ) : (
-          <div>No manifest data</div>
+          <div>无清单数据</div>
         )}
       </Modal>
     </div>

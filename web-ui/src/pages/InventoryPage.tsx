@@ -3,13 +3,14 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
-import React, { useState, useMemo, useCallback, useEffect } from 'react'
+import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Tree, Input, Empty, Spin, Button, Typography } from 'antd'
 import { SearchOutlined, FolderOutlined, AppstoreOutlined, FileOutlined, LoginOutlined } from '@ant-design/icons'
 import { useNavigate } from 'react-router-dom'
 import { publicProjectsApi, Project, App, Version } from '../api/projects'
 import type { DataNode } from 'antd/es/tree'
+import styles from './InventoryPage.module.css'
 
 const { Title } = Typography
 
@@ -44,6 +45,26 @@ const InventoryPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('')
   const debouncedSearchTerm = useDebounce(searchTerm, 300)
   const [expandedKeys, setExpandedKeys] = useState<React.Key[]>([])
+  const particlesRef = useRef<HTMLDivElement>(null)
+
+  // Create subtle particle effects
+  useEffect(() => {
+    if (particlesRef.current) {
+      const particles = particlesRef.current
+      particles.innerHTML = ''
+
+      // Create fewer particles with slower animation for subtle effect
+      for (let i = 0; i < 12; i++) {
+        const particle = document.createElement('div')
+        particle.className = styles.particle
+        particle.style.left = `${Math.random() * 100}%`
+        particle.style.width = particle.style.height = `${Math.random() * 3 + 2}px`
+        particle.style.animationDelay = `${Math.random() * 20}s`
+        particle.style.animationDuration = `${Math.random() * 15 + 20}s`
+        particles.appendChild(particle)
+      }
+    }
+  }, [])
 
   // Fetch all projects
   const { data: allProjects, isLoading: projectsLoading } = useQuery({
@@ -179,19 +200,14 @@ const InventoryPage: React.FC = () => {
             key: `version-${version.id}`,
             title: (
               <span
-                style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}
+                className={styles.treeNode}
                 onClick={(e) => {
                   e.stopPropagation()
-                  const token = localStorage.getItem('kkartifact_token')
-                  if (token) {
-                    navigate(`/projects/${project.name}/apps/${app.name}/versions`)
-                  } else {
-                    navigate(`/login?redirect=/projects/${project.name}/apps/${app.name}/versions`)
-                  }
+                  // Public inventory page - no navigation, just display information
                 }}
               >
-                <FileOutlined />
-                <span style={{ fontFamily: 'monospace', fontSize: '12px' }}>{version.version}</span>
+                <FileOutlined className={styles.treeNodeIcon} />
+                <span className={styles.treeNodeTextVersion}>{version.version}</span>
               </span>
             ),
             isLeaf: true,
@@ -205,19 +221,14 @@ const InventoryPage: React.FC = () => {
             key: appKey,
             title: (
               <span
-                style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}
+                className={styles.treeNode}
                 onClick={(e) => {
                   e.stopPropagation()
-                  const token = localStorage.getItem('kkartifact_token')
-                  if (token) {
-                    navigate(`/projects/${project.name}/apps/${app.name}/versions`)
-                  } else {
-                    navigate(`/login?redirect=/projects/${project.name}/apps/${app.name}/versions`)
-                  }
+                  // Public inventory page - no navigation, just display information
                 }}
               >
-                <AppstoreOutlined />
-                {app.name}
+                <AppstoreOutlined className={styles.treeNodeIcon} />
+                <span className={styles.treeNodeText}>{app.name}</span>
               </span>
             ),
             children: versionNodes.length > 0 ? versionNodes : undefined,
@@ -232,19 +243,14 @@ const InventoryPage: React.FC = () => {
           key: projectKey,
           title: (
             <span
-              style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}
+              className={styles.treeNode}
               onClick={(e) => {
                 e.stopPropagation()
-                const token = localStorage.getItem('kkartifact_token')
-                if (token) {
-                  navigate(`/projects/${project.name}/apps`)
-                } else {
-                  navigate(`/login?redirect=/projects/${project.name}/apps`)
-                }
+                // Public inventory page - no navigation, just display information
               }}
             >
-              <FolderOutlined />
-              {project.name}
+              <FolderOutlined className={styles.treeNodeIcon} />
+              <span className={styles.treeNodeText}>{project.name}</span>
             </span>
           ),
           children: appNodes.length > 0 ? appNodes : undefined,
@@ -289,67 +295,92 @@ const InventoryPage: React.FC = () => {
   const isLoading = projectsLoading
 
   const emptyText = debouncedSearchTerm.trim()
-    ? `No projects, apps, or versions match "${debouncedSearchTerm}". Try a different term.`
-    : 'No projects found.'
-
-  const hasToken = !!localStorage.getItem('kkartifact_token')
+    ? `没有匹配 "${debouncedSearchTerm}" 的项目、应用或版本。请尝试其他关键词。`
+    : '暂无项目'
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#f0f2f5', padding: '24px' }}>
-      {/* Simple header */}
-      <div
-        style={{
-          backgroundColor: '#fff',
-          padding: '16px 24px',
-          marginBottom: '24px',
-          borderRadius: '8px',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-          <Title level={3} style={{ margin: 0 }}>
-            Artifact Inventory
+    <div className={styles.inventoryContainer}>
+      {/* DevOps style background effects */}
+      <div className={styles.gridBackground}></div>
+      <div className={styles.particles} ref={particlesRef}></div>
+
+      {/* Content wrapper */}
+      <div className={styles.contentWrapper}>
+        {/* Enhanced header */}
+        <div className={styles.header}>
+        <div className={styles.headerContent}>
+          <Title level={2} className={styles.title}>
+            制品清单
           </Title>
         </div>
-        {!hasToken && (
-          <Button type="primary" icon={<LoginOutlined />} onClick={() => navigate('/login')}>
-            Login
-          </Button>
-        )}
+        <Button
+          type="primary"
+          icon={<LoginOutlined />}
+          onClick={() => navigate('/login')}
+          size="large"
+          style={{
+            background: 'rgba(255, 255, 255, 0.25)',
+            borderColor: 'rgba(255, 255, 255, 0.4)',
+            color: '#ffffff',
+            fontWeight: 500,
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = 'rgba(255, 255, 255, 0.35)'
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = 'rgba(255, 255, 255, 0.25)'
+          }}
+        >
+          登录后台
+        </Button>
       </div>
 
       {/* Main content */}
-      <div style={{ backgroundColor: '#fff', padding: '24px', borderRadius: '8px' }}>
-        <div style={{ marginBottom: 16 }}>
+      <div className={styles.contentCard}>
+        <div className={styles.searchContainer}>
           <Input
-            placeholder="Search projects, apps, and versions..."
+            placeholder="搜索项目、应用和版本..."
             prefix={<SearchOutlined />}
             value={searchTerm}
             onChange={handleSearchChange}
             allowClear
             size="large"
-            style={{ maxWidth: 400 }}
+            className={styles.searchInput}
+            style={{
+              borderRadius: '8px',
+            }}
           />
         </div>
 
         {isLoading ? (
-          <div style={{ textAlign: 'center', padding: '40px' }}>
+          <div className={styles.loadingContainer}>
             <Spin size="large" />
           </div>
         ) : treeData.length === 0 ? (
-          <Empty description={emptyText} />
+          <div className={styles.emptyContainer}>
+            <Empty description={emptyText} />
+          </div>
         ) : (
-          <Tree
-            treeData={treeData}
-            expandedKeys={expandedKeys}
-            onExpand={setExpandedKeys}
-            showLine={false}
-            showIcon={false}
-            blockNode
-          />
+          <div className={styles.treeContainer}>
+            <Tree
+              treeData={treeData}
+              expandedKeys={expandedKeys}
+              onExpand={setExpandedKeys}
+              showLine={false}
+              showIcon={false}
+              blockNode
+              style={{
+                backgroundColor: 'transparent',
+              }}
+            />
+          </div>
         )}
+      </div>
+      </div>
+
+      {/* Footer */}
+      <div className={styles.footer}>
+        本系统由系统部驱动
       </div>
     </div>
   )

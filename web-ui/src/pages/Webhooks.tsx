@@ -41,10 +41,10 @@ const WebhooksPage: React.FC = () => {
       queryClient.invalidateQueries({ queryKey: ['webhooks'] })
       setIsModalVisible(false)
       form.resetFields()
-      message.success('Webhook created successfully')
+      message.success('Webhook 创建成功')
     },
     onError: () => {
-      message.error('Failed to create webhook')
+      message.error('Webhook 创建失败')
     },
   })
 
@@ -56,10 +56,10 @@ const WebhooksPage: React.FC = () => {
       setIsModalVisible(false)
       setEditingWebhook(null)
       form.resetFields()
-      message.success('Webhook updated successfully')
+      message.success('Webhook 更新成功')
     },
     onError: () => {
-      message.error('Failed to update webhook')
+      message.error('Webhook 更新失败')
     },
   })
 
@@ -67,10 +67,10 @@ const WebhooksPage: React.FC = () => {
     mutationFn: (id: number) => webhooksApi.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['webhooks'] })
-      message.success('Webhook deleted successfully')
+      message.success('Webhook 删除成功')
     },
     onError: () => {
-      message.error('Failed to delete webhook')
+      message.error('Webhook 删除失败')
     },
   })
 
@@ -131,7 +131,7 @@ const WebhooksPage: React.FC = () => {
 
   const columns: ColumnsType<Webhook> = [
     {
-      title: 'Name',
+      title: '名称',
       dataIndex: 'name',
       key: 'name',
     },
@@ -141,7 +141,7 @@ const WebhooksPage: React.FC = () => {
       key: 'url',
     },
     {
-      title: 'Project / App',
+      title: '项目 / 应用',
       key: 'project_app',
       render: (_: any, record: Webhook) => {
         if (record.project_name) {
@@ -150,11 +150,11 @@ const WebhooksPage: React.FC = () => {
           }
           return <Tag>{record.project_name}</Tag>
         }
-        return <Tag color="default">Global</Tag>
+        return <Tag color="default">全局</Tag>
       },
     },
     {
-      title: 'Event Types',
+      title: '事件类型',
       dataIndex: 'event_types',
       key: 'event_types',
       render: (types: string[]) => (
@@ -166,27 +166,27 @@ const WebhooksPage: React.FC = () => {
       ),
     },
     {
-      title: 'Status',
+      title: '状态',
       dataIndex: 'enabled',
       key: 'enabled',
       render: (enabled: boolean) => (
-        <Tag color={enabled ? 'green' : 'red'}>{enabled ? 'Enabled' : 'Disabled'}</Tag>
+        <Tag color={enabled ? 'green' : 'red'}>{enabled ? '启用' : '禁用'}</Tag>
       ),
     },
     {
-      title: 'Actions',
+      title: '操作',
       key: 'actions',
       render: (_, record) => (
         <Space>
           <Button type="link" size="small" onClick={() => handleEdit(record)}>
-            Edit
+            编辑
           </Button>
           <Popconfirm
-            title="Are you sure to delete this webhook?"
+            title="确定要删除此 Webhook 吗？"
             onConfirm={() => deleteMutation.mutate(record.id)}
           >
             <Button type="link" size="small" danger>
-              Delete
+              删除
             </Button>
           </Popconfirm>
         </Space>
@@ -209,7 +209,7 @@ const WebhooksPage: React.FC = () => {
         rowKey="id"
       />
       <Modal
-        title={editingWebhook ? 'Edit Webhook' : 'Create Webhook'}
+        title={editingWebhook ? '编辑 Webhook' : '创建 Webhook'}
         open={isModalVisible}
         onOk={handleSubmit}
         onCancel={() => {
@@ -220,7 +220,7 @@ const WebhooksPage: React.FC = () => {
         }}
       >
         <Form form={form} layout="vertical">
-          <Form.Item name="name" label="Name" rules={[{ required: true }]}>
+          <Form.Item name="name" label="名称" rules={[{ required: true }]}>
             <Input />
           </Form.Item>
           <Form.Item name="url" label="URL" rules={[{ required: true, type: 'url' }]}>
@@ -228,11 +228,11 @@ const WebhooksPage: React.FC = () => {
           </Form.Item>
           <Form.Item
             name="project_id"
-            label="Project (optional)"
-            tooltip="Select a project to limit webhook to specific project. Leave empty for global webhook."
+            label="项目（可选）"
+            tooltip="选择一个项目以限制 Webhook 到特定项目。留空则为全局 Webhook。"
           >
             <Select
-              placeholder="All projects (global)"
+              placeholder="所有项目（全局）"
               allowClear
               onChange={handleProjectChange}
               showSearch
@@ -249,11 +249,11 @@ const WebhooksPage: React.FC = () => {
           </Form.Item>
           <Form.Item
             name="app_id"
-            label="App (optional)"
-            tooltip="Select an app to limit webhook to specific app. Requires a project to be selected."
+            label="应用（可选）"
+            tooltip="选择一个应用以限制 Webhook 到特定应用。需要先选择一个项目。"
           >
             <Select
-              placeholder="All apps"
+              placeholder="所有应用"
               allowClear
               disabled={!selectedProject}
               showSearch
@@ -268,10 +268,10 @@ const WebhooksPage: React.FC = () => {
               ))}
             </Select>
           </Form.Item>
-          <Form.Item name="event_types" label="Event Types (comma separated)" rules={[{ required: true }]}>
+          <Form.Item name="event_types" label="事件类型（逗号分隔）" rules={[{ required: true }]}>
             <Input placeholder="push,pull,promote" />
           </Form.Item>
-          <Form.Item name="enabled" label="Enabled" valuePropName="checked" initialValue={true}>
+          <Form.Item name="enabled" label="启用" valuePropName="checked" initialValue={true}>
             <Switch />
           </Form.Item>
         </Form>

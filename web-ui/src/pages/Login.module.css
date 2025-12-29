@@ -3,9 +3,9 @@
 .loginContainer {
   position: relative;
   min-height: 100vh;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 25%, #f093fb 50%, #4facfe 75%, #00f2fe 100%);
+  background: linear-gradient(135deg, #e8edf2 0%, #d1d9e6 25%, #e0e7f0 50%, #d4deeb 75%, #e8f0f5 100%);
   background-size: 400% 400%;
-  animation: gradientShift 15s ease infinite;
+  animation: gradientShift 20s ease infinite;
   overflow: hidden;
 }
 
