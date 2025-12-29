@@ -1,0 +1,1011 @@
+basePath: /api/v1
+definitions:
+  api.AuditLogResponse:
+    properties:
+      agent_id:
+        type: string
+      app_id:
+        type: integer
+      app_name:
+        type: string
+      created_at:
+        description: RFC3339 format
+        type: string
+      id:
+        type: integer
+      metadata:
+        type: string
+      operation:
+        type: string
+      project_id:
+        type: integer
+      project_name:
+        type: string
+      version_hash:
+        type: string
+    type: object
+  api.CreateTokenRequest:
+    properties:
+      app_id:
+        type: integer
+      expires_at:
+        description: ISO 8601 format
+        type: string
+      name:
+        type: string
+      permissions:
+        items:
+          type: string
+        type: array
+      project_id:
+        type: integer
+    type: object
+  api.CreateWebhookRequest:
+    properties:
+      app_id:
+        type: integer
+      enabled:
+        type: boolean
+      event_types:
+        items:
+          type: string
+        type: array
+      headers:
+        additionalProperties:
+          type: string
+        type: object
+      name:
+        type: string
+      project_id:
+        type: integer
+      url:
+        type: string
+    required:
+    - event_types
+    - name
+    - url
+    type: object
+  api.ErrorResponse:
+    description: Error response structure
+    properties:
+      code:
+        example: INVALID_INPUT
+        type: string
+      error:
+        example: bad_request
+        type: string
+      message:
+        example: Invalid request parameters
+        type: string
+    type: object
+  api.FinishUploadRequest:
+    properties:
+      app:
+        type: string
+      manifest:
+        $ref: '#/definitions/storage.Manifest'
+      project:
+        type: string
+      version:
+        type: string
+    required:
+    - app
+    - manifest
+    - project
+    - version
+    type: object
+  api.LoginRequest:
+    properties:
+      password:
+        type: string
+      username:
+        type: string
+    required:
+    - password
+    - username
+    type: object
+  api.LoginResponse:
+    properties:
+      name:
+        description: Username
+        type: string
+      token:
+        description: JWT token for session
+        type: string
+    type: object
+  api.ManifestFileResponse:
+    properties:
+      hash:
+        description: SHA256 hash
+        type: string
+      path:
+        type: string
+      size:
+        type: integer
+    type: object
+  api.ManifestResponse:
+    properties:
+      app:
+        type: string
+      build_time:
+        type: string
+      builder:
+        type: string
+      files:
+        items:
+          $ref: '#/definitions/api.ManifestFileResponse'
+        type: array
+      git_commit:
+        type: string
+      hash:
+        description: Same as version
+        type: string
+      project:
+        type: string
+      version:
+        type: string
+    type: object
+  api.ProjectResponse:
+    properties:
+      created_at:
+        description: RFC3339 format
+        type: string
+      id:
+        type: integer
+      name:
+        type: string
+    type: object
+  api.PromoteRequest:
+    properties:
+      app:
+        type: string
+      hash:
+        type: string
+      project:
+        type: string
+    required:
+    - app
+    - hash
+    - project
+    type: object
+  api.SyncStorageResponse:
+    properties:
+      apps:
+        type: integer
+      message:
+        type: string
+      projects:
+        type: integer
+      versions:
+        type: integer
+    type: object
+  api.TokenResponse:
+    properties:
+      app_id:
+        type: integer
+      created_at:
+        type: string
+      expires_at:
+        type: string
+      id:
+        type: integer
+      name:
+        type: string
+      permissions:
+        items:
+          type: string
+        type: array
+      project_id:
+        type: integer
+      token:
+        description: Only returned on creation
+        type: string
+    type: object
+  api.UploadInitRequest:
+    properties:
+      app:
+        type: string
+      file_count:
+        type: integer
+      files:
+        items:
+          type: string
+        type: array
+      project:
+        type: string
+      version:
+        type: string
+    required:
+    - app
+    - project
+    - version
+    type: object
+  api.UploadInitResponse:
+    properties:
+      upload_id:
+        type: string
+    type: object
+  api.VersionResponse:
+    properties:
+      app_id:
+        type: integer
+      created_at:
+        description: RFC3339 format
+        type: string
+      hash:
+        type: string
+      id:
+        type: integer
+    type: object
+  api.WebhookResponse:
+    properties:
+      app_id:
+        type: integer
+      app_name:
+        type: string
+      created_at:
+        type: string
+      enabled:
+        type: boolean
+      event_types:
+        items:
+          type: string
+        type: array
+      headers:
+        type: string
+      id:
+        type: integer
+      name:
+        type: string
+      project_id:
+        type: integer
+      project_name:
+        type: string
+      url:
+        type: string
+    type: object
+  storage.Manifest:
+    properties:
+      app:
+        type: string
+      buildTime:
+        type: string
+      builder:
+        type: string
+      files:
+        items:
+          $ref: '#/definitions/storage.ManifestFile'
+        type: array
+      gitCommit:
+        type: string
+      project:
+        type: string
+      version:
+        type: string
+    type: object
+  storage.ManifestFile:
+    properties:
+      path:
+        type: string
+      sha256:
+        type: string
+      size:
+        type: integer
+    type: object
+host: localhost:8080
+info:
+  contact:
+    name: kk
+    url: https://opensource.org/licenses/MIT
+  description: |-
+    kkArtifact is a modern artifact management and synchronization system designed to replace rsync + SSH deployment workflows.
+    The system provides multi-project and multi-app artifact storage with hash-based versioning, HTTP-based API for artifact upload, download, and management.
+    Token-based authentication with fine-grained permissions (Global/Project/App scopes).
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+  title: kkArtifact API
+  version: "1.0"
+paths:
+  /audit-logs:
+    get:
+      consumes:
+      - application/json
+      description: Get a list of audit logs with optional filtering by project and
+        app
+      parameters:
+      - description: Filter by project ID
+        in: query
+        name: project_id
+        type: integer
+      - description: Filter by app ID
+        in: query
+        name: app_id
+        type: integer
+      - description: 'Limit number of results (default: 50)'
+        in: query
+        name: limit
+        type: integer
+      - description: 'Offset for pagination (default: 0)'
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/api.AuditLogResponse'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: List audit logs
+      tags:
+      - audit
+  /config:
+    get:
+      consumes:
+      - application/json
+      description: Get the global configuration (e.g., version retention limit)
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Get config
+      tags:
+      - config
+    put:
+      consumes:
+      - application/json
+      description: Update the global configuration
+      parameters:
+      - description: Configuration updates
+        in: body
+        name: request
+        required: true
+        schema:
+          additionalProperties: true
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Update config
+      tags:
+      - config
+  /file/{project}/{app}/{hash}:
+    get:
+      consumes:
+      - application/json
+      description: Download a file from artifact storage. Supports HTTP Range requests
+        for resumable downloads.
+      parameters:
+      - description: Project name
+        in: path
+        name: project
+        required: true
+        type: string
+      - description: App name
+        in: path
+        name: app
+        required: true
+        type: string
+      - description: Version hash
+        in: path
+        name: hash
+        required: true
+        type: string
+      - description: File path within the artifact
+        in: query
+        name: path
+        required: true
+        type: string
+      produces:
+      - application/octet-stream
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: file
+        "206":
+          description: Partial content
+          schema:
+            type: file
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+        "416":
+          description: Range not satisfiable
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Download file
+      tags:
+      - artifacts
+  /health:
+    get:
+      consumes:
+      - application/json
+      description: Check if the server is running
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Health check
+      tags:
+      - health
+  /login:
+    post:
+      consumes:
+      - application/json
+      description: Login with username and password, returns JWT token for session
+        management
+      parameters:
+      - description: Login credentials
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/api.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.LoginResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+      summary: User login
+      tags:
+      - auth
+  /manifest/{project}/{app}/{hash}:
+    get:
+      consumes:
+      - application/json
+      description: Get the manifest for a specific version (includes file list, metadata,
+        Git commit info)
+      parameters:
+      - description: Project name
+        in: path
+        name: project
+        required: true
+        type: string
+      - description: App name
+        in: path
+        name: app
+        required: true
+        type: string
+      - description: Version hash
+        in: path
+        name: hash
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.ManifestResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Get manifest
+      tags:
+      - artifacts
+  /projects:
+    get:
+      consumes:
+      - application/json
+      description: Get a list of all projects with pagination
+      parameters:
+      - description: 'Limit number of results (default: 50)'
+        in: query
+        name: limit
+        type: integer
+      - description: 'Offset for pagination (default: 0)'
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/api.ProjectResponse'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: List projects
+      tags:
+      - projects
+  /projects/{project}/apps/{app}/versions:
+    get:
+      consumes:
+      - application/json
+      description: Get a list of all versions for a specific app
+      parameters:
+      - description: Project name
+        in: path
+        name: project
+        required: true
+        type: string
+      - description: App name
+        in: path
+        name: app
+        required: true
+        type: string
+      - description: 'Limit number of results (default: 50)'
+        in: query
+        name: limit
+        type: integer
+      - description: 'Offset for pagination (default: 0)'
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/api.VersionResponse'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: List versions
+      tags:
+      - projects
+  /promote:
+    post:
+      consumes:
+      - application/json
+      description: Promote a version to a new version identifier (create a new version
+        with same content)
+      parameters:
+      - description: Promote request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/api.PromoteRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Promote version
+      tags:
+      - artifacts
+  /sync-storage:
+    post:
+      consumes:
+      - application/json
+      description: Synchronize database with storage (rebuild database records from
+        storage, remove orphaned records)
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.SyncStorageResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Sync storage
+      tags:
+      - admin
+  /tokens:
+    post:
+      consumes:
+      - application/json
+      description: Create a new API token with specified permissions and scope (Global/Project/App)
+      parameters:
+      - description: Token creation request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/api.CreateTokenRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/api.TokenResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+      summary: Create token
+      tags:
+      - tokens
+  /tokens/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Delete an API token by ID
+      parameters:
+      - description: Token ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Delete token
+      tags:
+      - tokens
+  /upload/finish:
+    post:
+      consumes:
+      - application/json
+      description: Complete the artifact upload and create version record
+      parameters:
+      - description: Upload completion request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/api.FinishUploadRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Finish upload
+      tags:
+      - artifacts
+  /upload/init:
+    post:
+      consumes:
+      - application/json
+      description: Initialize a new artifact upload session. Returns upload ID for
+        subsequent file uploads.
+      parameters:
+      - description: Upload initialization request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/api.UploadInitRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.UploadInitResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Initialize upload
+      tags:
+      - artifacts
+  /webhooks:
+    get:
+      consumes:
+      - application/json
+      description: Get a list of all webhooks (including disabled ones)
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/api.WebhookResponse'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: List webhooks
+      tags:
+      - webhooks
+    post:
+      consumes:
+      - application/json
+      description: Create a new webhook for event notifications (can be global, project-level,
+        or app-level)
+      parameters:
+      - description: Webhook creation request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/api.CreateWebhookRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/api.WebhookResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Create webhook
+      tags:
+      - webhooks
+  /webhooks/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Delete a webhook by ID
+      parameters:
+      - description: Webhook ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Delete webhook
+      tags:
+      - webhooks
+    put:
+      consumes:
+      - application/json
+      description: Update an existing webhook
+      parameters:
+      - description: Webhook ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Webhook update request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/api.CreateWebhookRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.WebhookResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Update webhook
+      tags:
+      - webhooks
+securityDefinitions:
+  Bearer:
+    description: 'Type "Bearer" followed by a space and JWT token. Example: "Bearer
+      eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."'
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

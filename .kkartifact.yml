@@ -1,0 +1,10 @@
+server_url: http://localhost:3000
+token: 1GBbhCSvI03drASeGsf0TtLCFGUPjVQONMicuCBR_K0=
+concurrency: 300  # 针对2万+文件优化：300并发（可根据服务器能力调整到200-500）
+chunk_size: 4MB
+retain_versions: 5  # 全局保留最新 5 个版本
+ignore:
+  - logs/
+  - tmp/
+  - '*.log'
+  - run-migrations.rb
