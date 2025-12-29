@@ -5,7 +5,7 @@
 
 import React, { useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Form, Input, Button, Card, message, Space } from 'antd'
+import { Form, InputNumber, Button, Card, message, Space } from 'antd'
 import { configApi } from '../api/config'
 
 const ConfigPage: React.FC = () => {
@@ -56,7 +56,7 @@ const ConfigPage: React.FC = () => {
               { type: 'number', min: 1, message: 'Must be at least 1' },
             ]}
           >
-            <Input type="number" min={1} />
+            <InputNumber min={1} style={{ width: '100%' }} />
           </Form.Item>
           <Form.Item>
             <Space>

@@ -263,7 +263,7 @@ kkArtifact-agent pull \
 ### 7.5 Agent 配置示例
 
 ```yaml
-server: https://repo.example.com
+server_url: https://repo.example.com
 token: xxx
 concurrency: 8
 chunk_size: 4MB

@@ -86,6 +86,6 @@ CREATE INDEX IF NOT EXISTS idx_audit_logs_project_id ON audit_logs(project_id);
 CREATE INDEX IF NOT EXISTS idx_audit_logs_app_id ON audit_logs(app_id);
 
 -- Insert default config
-INSERT INTO config (key, value) VALUES ('version_retention_limit', '5')
+INSERT INTO config (key, value) VALUES ('version_retention_limit', '30')
 ON CONFLICT (key) DO NOTHING;
 
