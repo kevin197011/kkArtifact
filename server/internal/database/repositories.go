@@ -6,6 +6,7 @@
 package database
 
 import (
+	"database/sql"
 	"fmt"
 )
 
@@ -111,10 +112,33 @@ func NewVersionRepository(db *DB) *VersionRepository {
 func (r *VersionRepository) Create(appID int, hash string) (*Version, error) {
 	var version Version
 	query := `INSERT INTO versions (app_id, hash) VALUES ($1, $2)
+	          ON CONFLICT (app_id, hash) DO UPDATE SET app_id = EXCLUDED.app_id
 	          RETURNING id, app_id, hash, created_at`
 	err := r.db.QueryRow(query, appID, hash).Scan(&version.ID, &version.AppID, &version.Hash, &version.CreatedAt)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create version: %w", err)
+	}
+	return &version, nil
+}
+
+// CreateOrGet creates a version or returns existing one (idempotent)
+func (r *VersionRepository) CreateOrGet(appID int, hash string) (*Version, error) {
+	var version Version
+	query := `INSERT INTO versions (app_id, hash) VALUES ($1, $2)
+	          ON CONFLICT (app_id, hash) DO NOTHING
+	          RETURNING id, app_id, hash, created_at`
+	err := r.db.QueryRow(query, appID, hash).Scan(&version.ID, &version.AppID, &version.Hash, &version.CreatedAt)
+	if err != nil {
+		// If no row returned (conflict), fetch existing version
+		if err == sql.ErrNoRows {
+			query := `SELECT id, app_id, hash, created_at FROM versions WHERE app_id = $1 AND hash = $2`
+			err := r.db.QueryRow(query, appID, hash).Scan(&version.ID, &version.AppID, &version.Hash, &version.CreatedAt)
+			if err != nil {
+				return nil, fmt.Errorf("failed to get existing version: %w", err)
+			}
+			return &version, nil
+		}
+		return nil, fmt.Errorf("failed to create or get version: %w", err)
 	}
 	return &version, nil
 }

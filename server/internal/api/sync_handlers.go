@@ -213,9 +213,9 @@ func (h *Handler) handleSyncStorage(c *gin.Context) {
 				return nil
 			}
 
-			_, err = h.versionRepo.Create(app.ID, versionHash)
+			_, err = h.versionRepo.CreateOrGet(app.ID, versionHash)
 			if err != nil {
-				// Version might already exist, ignore error
+				log.Printf("Warning: failed to create/get version %s/%s/%s: %v", projectName, appName, versionHash, err)
 			} else {
 				versionCount++
 				log.Printf("    Added version: %s/%s/%s", projectName, appName, versionHash)
