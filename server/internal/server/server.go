@@ -6,6 +6,7 @@
 package server
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"os"
@@ -18,6 +19,7 @@ import (
 	"github.com/kk/kkartifact-server/internal/database"
 	"github.com/kk/kkartifact-server/internal/bootstrap"
 	"github.com/kk/kkartifact-server/internal/middleware"
+	"github.com/kk/kkartifact-server/internal/scheduler"
 	"github.com/kk/kkartifact-server/internal/storage"
 	
 	swaggerFiles "github.com/swaggo/files"
@@ -131,12 +133,20 @@ func New(cfg *config.Config) (*Server, error) {
 		cache:   cacheBackend,
 	}
 
-	// TODO: Initialize scheduler and cleanup task
-	// scheduler := scheduler.New()
-	// artifactManager := storage.NewArtifactManager(storageBackend)
-	// cleanupTask := scheduler.NewCleanupTask(db, artifactManager)
-	// scheduler.AddTask(cleanupTask)
-	// go scheduler.Start(context.Background())
+	// Initialize scheduler and cleanup tasks
+	sched := scheduler.New()
+	artifactManager := storage.NewArtifactManager(storageBackend)
+	
+	// Add version cleanup task
+	cleanupTask := scheduler.NewCleanupTask(db, artifactManager)
+	sched.AddTask(cleanupTask)
+	
+	// Add audit log cleanup task
+	auditCleanupTask := scheduler.NewAuditCleanupTask(db)
+	sched.AddTask(auditCleanupTask)
+	
+	go sched.Start(context.Background())
+	log.Printf("Scheduler started: cleanup tasks will run daily at 3 AM")
 
 	return server, nil
 }

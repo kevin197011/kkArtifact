@@ -94,6 +94,20 @@ func (r *AuditRepository) List(projectID, appID *int, limit, offset int) ([]*Aud
 	return logs, rows.Err()
 }
 
+// DeleteOldLogs deletes audit logs older than the specified number of days
+func (r *AuditRepository) DeleteOldLogs(days int) (int64, error) {
+	query := `DELETE FROM audit_logs WHERE created_at < NOW() - INTERVAL '1 day' * $1`
+	result, err := r.db.Exec(query, days)
+	if err != nil {
+		return 0, fmt.Errorf("failed to delete old audit logs: %w", err)
+	}
+	deletedCount, err := result.RowsAffected()
+	if err != nil {
+		return 0, fmt.Errorf("failed to get deleted count: %w", err)
+	}
+	return deletedCount, nil
+}
+
 func toNullString(s string) sql.NullString {
 	if s == "" {
 		return sql.NullString{Valid: false}

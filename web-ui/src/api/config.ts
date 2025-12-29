@@ -7,6 +7,7 @@ import client from './client'
 
 export interface Config {
   version_retention_limit: number
+  audit_log_retention_days: number
 }
 
 export const configApi = {

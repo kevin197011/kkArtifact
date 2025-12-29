@@ -37,8 +37,18 @@ func (h *Handler) handleGetConfig(c *gin.Context) {
 
 	limit, _ := strconv.Atoi(retentionLimit)
 	
+	// Get audit log retention days
+	auditRetentionDays, err := configRepo.Get("audit_log_retention_days")
+	if err != nil {
+		// If not set, use default
+		auditRetentionDays = "90"
+	}
+	
+	auditDays, _ := strconv.Atoi(auditRetentionDays)
+	
 	c.JSON(http.StatusOK, gin.H{
 		"version_retention_limit": limit,
+		"audit_log_retention_days": auditDays,
 	})
 }
 
@@ -59,6 +69,7 @@ func (h *Handler) handleGetConfig(c *gin.Context) {
 func (h *Handler) handleUpdateConfig(c *gin.Context) {
 	var req struct {
 		VersionRetentionLimit *int `json:"version_retention_limit"`
+		AuditLogRetentionDays *int `json:"audit_log_retention_days"`
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -74,6 +85,17 @@ func (h *Handler) handleUpdateConfig(c *gin.Context) {
 			return
 		}
 		if err := configRepo.Set("version_retention_limit", strconv.Itoa(*req.VersionRetentionLimit)); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+	}
+
+	if req.AuditLogRetentionDays != nil {
+		if *req.AuditLogRetentionDays < 1 {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "audit_log_retention_days must be at least 1"})
+			return
+		}
+		if err := configRepo.Set("audit_log_retention_days", strconv.Itoa(*req.AuditLogRetentionDays)); err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
