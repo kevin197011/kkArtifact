@@ -15,6 +15,7 @@ import {
   KeyOutlined,
   FileTextOutlined,
   LogoutOutlined,
+  HomeOutlined,
 } from '@ant-design/icons'
 
 const { Header, Sider, Content, Footer } = Layout
@@ -131,9 +132,14 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
       <Layout>
         <Header style={{ background: '#fff', padding: '0 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <h1 style={{ margin: 0, fontSize: '20px' }}>Artifact Management</h1>
-          <Button type="text" icon={<LogoutOutlined />} onClick={handleLogout}>
-            Logout
-          </Button>
+          <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
+            <Button type="default" icon={<HomeOutlined />} onClick={() => navigate('/')}>
+              查看版本清单
+            </Button>
+            <Button type="text" icon={<LogoutOutlined />} onClick={handleLogout}>
+              Logout
+            </Button>
+          </div>
         </Header>
         <Content style={{ margin: '24px', padding: '24px', background: '#fff', minHeight: 280 }}>
           {children}

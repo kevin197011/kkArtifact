@@ -25,6 +25,17 @@ const client = axios.create({
   },
 })
 
+// Create a public client that doesn't add auth token or redirect on 401
+export const publicClient = axios.create({
+  baseURL: baseURL,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+})
+
+// Public client should not redirect on 401 errors - it's expected for public endpoints
+// No response interceptor needed for public client
+
 // Add auth token interceptor
 client.interceptors.request.use((config) => {
   const token = localStorage.getItem('kkartifact_token')

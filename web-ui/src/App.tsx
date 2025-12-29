@@ -3,7 +3,7 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import AppLayout from './components/Layout'
 import DashboardPage from './pages/Dashboard'
 import ProjectsPage from './pages/Projects'
@@ -14,6 +14,7 @@ import ConfigPage from './pages/Config'
 import TokensPage from './pages/Tokens'
 import AuditLogsPage from './pages/AuditLogs'
 import LoginPage from './pages/Login'
+import InventoryPage from './pages/InventoryPage'
 import ProtectedRoute from './components/ProtectedRoute'
 
 function App() {
@@ -26,16 +27,7 @@ function App() {
     >
       <Routes>
         <Route path="/login" element={<LoginPage />} />
-        <Route
-          path="/"
-          element={
-            <ProtectedRoute>
-              <AppLayout>
-                <Navigate to="/dashboard" replace />
-              </AppLayout>
-            </ProtectedRoute>
-          }
-        />
+        <Route path="/" element={<InventoryPage />} />
         <Route
           path="/dashboard"
           element={

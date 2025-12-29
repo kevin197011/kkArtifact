@@ -154,3 +154,21 @@ func (h *Handler) handleListVersions(c *gin.Context) {
 
 	c.JSON(http.StatusOK, responses)
 }
+
+// handlePublicListProjects is a public (unauthenticated) version of handleListProjects
+// It provides the same functionality but doesn't require authentication
+func (h *Handler) handlePublicListProjects(c *gin.Context) {
+	h.handleListProjects(c)
+}
+
+// handlePublicListApps is a public (unauthenticated) version of handleListApps
+// It provides the same functionality but doesn't require authentication
+func (h *Handler) handlePublicListApps(c *gin.Context) {
+	h.handleListApps(c)
+}
+
+// handlePublicListVersions is a public (unauthenticated) version of handleListVersions
+// It provides the same functionality but doesn't require authentication
+func (h *Handler) handlePublicListVersions(c *gin.Context) {
+	h.handleListVersions(c)
+}

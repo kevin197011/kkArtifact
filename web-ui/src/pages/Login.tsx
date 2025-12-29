@@ -4,7 +4,7 @@
 // https://opensource.org/licenses/MIT
 
 import React, { useState, useEffect, useRef } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Form, Input, Button, Card, message, Typography } from 'antd'
 import { UserOutlined, LockOutlined } from '@ant-design/icons'
 import { authApi } from '../api/auth'
@@ -15,6 +15,7 @@ const { Title, Text } = Typography
 
 const LoginPage: React.FC = () => {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const [loading, setLoading] = useState(false)
   const particlesRef = useRef<HTMLDivElement>(null)
   const connectionsRef = useRef<HTMLDivElement>(null)
@@ -81,8 +82,9 @@ const LoginPage: React.FC = () => {
       localStorage.setItem('kkartifact_token', response.data.token)
       message.success(`Welcome, ${response.data.name}!`)
 
-      // Redirect to dashboard page
-      navigate('/dashboard')
+      // Redirect to the specified page or dashboard
+      const redirect = searchParams.get('redirect')
+      navigate(redirect || '/dashboard', { replace: true })
     } catch (error: any) {
       const errorMessage =
         error.response?.data?.error || 'Login failed. Please check your credentials.'

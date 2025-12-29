@@ -14,6 +14,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/kk/kkartifact-server/internal/auth"
 	"github.com/kk/kkartifact-server/internal/database"
+	"github.com/kk/kkartifact-server/internal/services"
 	"github.com/kk/kkartifact-server/internal/storage"
 )
 
@@ -26,18 +27,24 @@ type Handler struct {
 	projectRepo     *database.ProjectRepository
 	appRepo         *database.AppRepository
 	versionRepo     *database.VersionRepository
+	inventoryService *services.InventoryService
 }
 
 // NewHandler creates a new API handler
 func NewHandler(db *database.DB, storageBackend storage.Storage, authenticator *auth.TokenAuthenticator) *Handler {
+	projectRepo := database.NewProjectRepository(db)
+	appRepo := database.NewAppRepository(db)
+	versionRepo := database.NewVersionRepository(db)
+	
 	return &Handler{
 		db:              db,
 		storage:         storageBackend,
 		artifactManager: storage.NewArtifactManager(storageBackend),
 		authenticator:   authenticator,
-		projectRepo:     database.NewProjectRepository(db),
-		appRepo:         database.NewAppRepository(db),
-		versionRepo:     database.NewVersionRepository(db),
+		projectRepo:     projectRepo,
+		appRepo:         appRepo,
+		versionRepo:     versionRepo,
+		inventoryService: services.NewInventoryService(projectRepo, appRepo, versionRepo),
 	}
 }
 
@@ -55,6 +62,14 @@ func (h *Handler) RegisterRoutes(router *gin.Engine) {
 	// Token creation endpoint (public for initial setup, consider protecting in production)
 	// Register BEFORE protected routes to avoid conflicts
 	api.POST("/tokens", h.handleCreateToken)
+	
+	// Public read-only endpoints for inventory (no authentication required)
+	public := api.Group("/public")
+	{
+		public.GET("/projects", h.handlePublicListProjects)
+		public.GET("/projects/:project/apps", h.handlePublicListApps)
+		public.GET("/projects/:project/apps/:app/versions", h.handlePublicListVersions)
+	}
 	
 	// Protected routes
 	protected := api.Group("")
@@ -95,6 +110,14 @@ func (h *Handler) RegisterRoutes(router *gin.Engine) {
 		
 		// Storage sync endpoint (admin only - rebuilds database from storage)
 		protected.POST("/sync-storage", h.handleSyncStorage)
+		
+		// Admin inventory endpoints (require authentication)
+		admin := protected.Group("/admin")
+		{
+			admin.GET("/inventory", h.handleGetInventory)
+			admin.GET("/inventory/:project", h.handleGetProjectInventory)
+			admin.GET("/inventory/summary", h.handleGetInventorySummary)
+		}
 	}
 }
 

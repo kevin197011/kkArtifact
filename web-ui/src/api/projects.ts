@@ -3,7 +3,7 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
-import client from './client'
+import client, { publicClient } from './client'
 
 export interface Project {
   id: number
@@ -39,6 +39,20 @@ export const projectsApi = {
   
   getVersions: (project: string, app: string, limit = 50, offset = 0) =>
     client.get<Version[]>(`/projects/${project}/apps/${app}/versions`, {
+      params: { limit, offset },
+    }),
+}
+
+// Public API (no authentication required)
+export const publicProjectsApi = {
+  list: (limit = 50, offset = 0) =>
+    publicClient.get<Project[]>('/public/projects', { params: { limit, offset } }),
+  
+  getApps: (project: string, limit = 50, offset = 0) =>
+    publicClient.get<App[]>(`/public/projects/${project}/apps`, { params: { limit, offset } }),
+  
+  getVersions: (project: string, app: string, limit = 50, offset = 0) =>
+    publicClient.get<Version[]>(`/public/projects/${project}/apps/${app}/versions`, {
       params: { limit, offset },
     }),
 }
