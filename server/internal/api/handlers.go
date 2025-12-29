@@ -79,6 +79,11 @@ func (h *Handler) RegisterRoutes(router *gin.Engine) {
 		protected.GET("/projects", h.handleListProjects)
 		protected.GET("/projects/:project/apps", h.handleListApps)
 		protected.GET("/projects/:project/apps/:app/versions", h.handleListVersions)
+		
+		// Delete endpoints
+		protected.DELETE("/projects/:project", h.handleDeleteProject)
+		protected.DELETE("/projects/:project/apps/:app", h.handleDeleteApp)
+		protected.DELETE("/projects/:project/apps/:app/versions/:version", h.handleDeleteVersion)
 		protected.GET("/manifest/:project/:app/:hash", h.handleGetManifest)
 		protected.GET("/file/:project/:app/:hash", h.handleGetFile)
 		

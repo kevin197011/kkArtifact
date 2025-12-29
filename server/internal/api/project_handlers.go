@@ -6,10 +6,12 @@
 package api
 
 import (
+	"fmt"
 	"net/http"
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/kk/kkartifact-server/internal/database"
 )
 
 // ProjectResponse represents a project in API response
@@ -171,4 +173,160 @@ func (h *Handler) handlePublicListApps(c *gin.Context) {
 // It provides the same functionality but doesn't require authentication
 func (h *Handler) handlePublicListVersions(c *gin.Context) {
 	h.handleListVersions(c)
+}
+
+// handleDeleteProject godoc
+// @Summary      Delete project
+// @Description  Delete a project and all its apps and versions (cascade delete)
+// @Tags         projects
+// @Accept       json
+// @Produce      json
+// @Param        project  path      string  true   "Project name"
+// @Success      200      {object}  map[string]string
+// @Failure      401      {object}  ErrorResponse
+// @Failure      500      {object}  ErrorResponse
+// @Security     Bearer
+// @Router       /projects/{project} [delete]
+func (h *Handler) handleDeleteProject(c *gin.Context) {
+	projectName := c.Param("project")
+
+	// Get project to verify it exists
+	project, err := h.projectRepo.CreateOrGet(projectName)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Delete project from database (cascade will delete apps and versions)
+	if err := h.projectRepo.Delete(projectName); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("failed to delete project: %v", err)})
+		return
+	}
+
+	// Delete project from storage
+	if err := h.artifactManager.DeleteProject(c.Request.Context(), projectName); err != nil {
+		// Log error but don't fail - database is already deleted
+		// This is a best-effort cleanup
+		_ = err
+	}
+
+	// Create audit log
+	auditRepo := database.NewAuditRepository(h.db)
+	projectID := project.ID
+	_ = auditRepo.Create("project_delete", &projectID, nil, "", "", map[string]interface{}{
+		"project_name": projectName,
+	})
+
+	c.JSON(http.StatusOK, gin.H{"status": "deleted"})
+}
+
+// handleDeleteApp godoc
+// @Summary      Delete app
+// @Description  Delete an app and all its versions (cascade delete)
+// @Tags         projects
+// @Accept       json
+// @Produce      json
+// @Param        project  path      string  true   "Project name"
+// @Param        app      path      string  true   "App name"
+// @Success      200      {object}  map[string]string
+// @Failure      401      {object}  ErrorResponse
+// @Failure      500      {object}  ErrorResponse
+// @Security     Bearer
+// @Router       /projects/{project}/apps/{app} [delete]
+func (h *Handler) handleDeleteApp(c *gin.Context) {
+	projectName := c.Param("project")
+	appName := c.Param("app")
+
+	// Get project and app to verify they exist
+	project, err := h.projectRepo.CreateOrGet(projectName)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	app, err := h.appRepo.CreateOrGet(project.ID, appName)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Delete app from database (cascade will delete versions)
+	if err := h.appRepo.Delete(project.ID, appName); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("failed to delete app: %v", err)})
+		return
+	}
+
+	// Delete app from storage
+	if err := h.artifactManager.DeleteApp(c.Request.Context(), projectName, appName); err != nil {
+		// Log error but don't fail - database is already deleted
+		_ = err
+	}
+
+	// Create audit log
+	auditRepo := database.NewAuditRepository(h.db)
+	projectID := project.ID
+	appID := app.ID
+	_ = auditRepo.Create("app_delete", &projectID, &appID, "", "", map[string]interface{}{
+		"project_name": projectName,
+		"app_name":      appName,
+	})
+
+	c.JSON(http.StatusOK, gin.H{"status": "deleted"})
+}
+
+// handleDeleteVersion godoc
+// @Summary      Delete version
+// @Description  Delete a version
+// @Tags         projects
+// @Accept       json
+// @Produce      json
+// @Param        project  path      string  true   "Project name"
+// @Param        app      path      string  true   "App name"
+// @Param        version  path      string  true   "Version hash"
+// @Success      200      {object}  map[string]string
+// @Failure      401      {object}  ErrorResponse
+// @Failure      500      {object}  ErrorResponse
+// @Security     Bearer
+// @Router       /projects/{project}/apps/{app}/versions/{version} [delete]
+func (h *Handler) handleDeleteVersion(c *gin.Context) {
+	projectName := c.Param("project")
+	appName := c.Param("app")
+	versionHash := c.Param("version")
+
+	// Get project and app to verify they exist
+	project, err := h.projectRepo.CreateOrGet(projectName)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	app, err := h.appRepo.CreateOrGet(project.ID, appName)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Delete version from database
+	if err := h.versionRepo.Delete(app.ID, versionHash); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("failed to delete version: %v", err)})
+		return
+	}
+
+	// Delete version from storage
+	if err := h.artifactManager.DeleteVersion(c.Request.Context(), projectName, appName, versionHash); err != nil {
+		// Log error but don't fail - database is already deleted
+		_ = err
+	}
+
+	// Create audit log
+	auditRepo := database.NewAuditRepository(h.db)
+	projectID := project.ID
+	appID := app.ID
+	_ = auditRepo.Create("version_delete", &projectID, &appID, versionHash, "", map[string]interface{}{
+		"project_name": projectName,
+		"app_name":      appName,
+		"version":       versionHash,
+	})
+
+	c.JSON(http.StatusOK, gin.H{"status": "deleted"})
 }

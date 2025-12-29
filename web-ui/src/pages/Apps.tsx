@@ -4,8 +4,9 @@
 // https://opensource.org/licenses/MIT
 
 import React, { useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
-import { Table, Button, Breadcrumb, message } from 'antd'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { Table, Button, Breadcrumb, message, Space, Popconfirm } from 'antd'
+import { DeleteOutlined } from '@ant-design/icons'
 import { useParams, useNavigate } from 'react-router-dom'
 import { projectsApi, App } from '../api/projects'
 import type { ColumnsType } from 'antd/es/table'
@@ -15,12 +16,25 @@ const AppsPage: React.FC = () => {
   const navigate = useNavigate()
   const [page, setPage] = useState(1)
   const pageSize = 50
+  const queryClient = useQueryClient()
 
-  const { data, isLoading, error } = useQuery({
+  const { data, isLoading, error, refetch } = useQuery({
     queryKey: ['apps', project, page],
     queryFn: () =>
       projectsApi.getApps(project!, pageSize, (page - 1) * pageSize).then((res) => res.data),
     enabled: !!project,
+  })
+
+  const deleteMutation = useMutation({
+    mutationFn: (appName: string) => projectsApi.deleteApp(project!, appName),
+    onSuccess: () => {
+      message.success('应用删除成功')
+      queryClient.invalidateQueries({ queryKey: ['apps', project] })
+      refetch()
+    },
+    onError: (error: any) => {
+      message.error(`删除应用失败：${error.response?.data?.error || error.message}`)
+    },
   })
 
   if (error) {
@@ -43,12 +57,26 @@ const AppsPage: React.FC = () => {
       title: '操作',
       key: 'actions',
       render: (_, record) => (
-        <Button
-          type="link"
-          onClick={() => navigate(`/projects/${project}/apps/${record.name}/versions`)}
-        >
-          查看版本
-        </Button>
+        <Space>
+          <Button
+            type="link"
+            onClick={() => navigate(`/projects/${project}/apps/${record.name}/versions`)}
+          >
+            查看版本
+          </Button>
+          <Popconfirm
+            title="确定要删除此应用吗？"
+            description="删除应用将同时删除该应用下的所有版本，此操作不可恢复！"
+            onConfirm={() => deleteMutation.mutate(record.name)}
+            okText="确定"
+            cancelText="取消"
+            okButtonProps={{ danger: true }}
+          >
+            <Button type="link" danger icon={<DeleteOutlined />}>
+              删除
+            </Button>
+          </Popconfirm>
+        </Space>
       ),
     },
   ]

@@ -137,3 +137,14 @@ func (am *ArtifactManager) appPath(project, app string) string {
 	return filepath.Join(project, app)
 }
 
+// DeleteApp deletes an app and all its versions from storage
+func (am *ArtifactManager) DeleteApp(ctx context.Context, project, app string) error {
+	appPath := am.appPath(project, app)
+	return am.storage.Delete(ctx, appPath)
+}
+
+// DeleteProject deletes a project and all its apps and versions from storage
+func (am *ArtifactManager) DeleteProject(ctx context.Context, project string) error {
+	return am.storage.Delete(ctx, project)
+}
+

@@ -53,6 +53,13 @@ func (r *ProjectRepository) List(limit, offset int) ([]*Project, error) {
 	return projects, rows.Err()
 }
 
+// Delete deletes a project by name (cascade will delete apps and versions)
+func (r *ProjectRepository) Delete(name string) error {
+	query := `DELETE FROM projects WHERE name = $1`
+	_, err := r.db.Exec(query, name)
+	return err
+}
+
 // AppRepository handles app database operations
 type AppRepository struct {
 	db *DB
@@ -95,6 +102,13 @@ func (r *AppRepository) ListByProject(projectID int, limit, offset int) ([]*App,
 		apps = append(apps, &a)
 	}
 	return apps, rows.Err()
+}
+
+// Delete deletes an app by project ID and name (cascade will delete versions)
+func (r *AppRepository) Delete(projectID int, name string) error {
+	query := `DELETE FROM apps WHERE project_id = $1 AND name = $2`
+	_, err := r.db.Exec(query, projectID, name)
+	return err
 }
 
 // VersionRepository handles version database operations

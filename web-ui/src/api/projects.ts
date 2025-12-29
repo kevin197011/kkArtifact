@@ -41,6 +41,15 @@ export const projectsApi = {
     client.get<Version[]>(`/projects/${project}/apps/${app}/versions`, {
       params: { limit, offset },
     }),
+  
+  deleteProject: (project: string) =>
+    client.delete(`/projects/${project}`),
+  
+  deleteApp: (project: string, app: string) =>
+    client.delete(`/projects/${project}/apps/${app}`),
+  
+  deleteVersion: (project: string, app: string, version: string) =>
+    client.delete(`/projects/${project}/apps/${app}/versions/${version}`),
 }
 
 // Public API (no authentication required)

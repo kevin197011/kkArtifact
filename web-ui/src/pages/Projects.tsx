@@ -5,8 +5,8 @@
 
 import React, { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Table, Button, message, Empty, Space } from 'antd'
-import { ReloadOutlined } from '@ant-design/icons'
+import { Table, Button, message, Empty, Space, Popconfirm } from 'antd'
+import { ReloadOutlined, DeleteOutlined } from '@ant-design/icons'
 import { useNavigate } from 'react-router-dom'
 import { projectsApi, Project } from '../api/projects'
 import { storageApi } from '../api/storage'
@@ -39,6 +39,18 @@ const ProjectsPage: React.FC = () => {
     },
   })
 
+  const deleteMutation = useMutation({
+    mutationFn: (projectName: string) => projectsApi.deleteProject(projectName),
+    onSuccess: () => {
+      message.success('项目删除成功')
+      queryClient.invalidateQueries({ queryKey: ['projects'] })
+      refetch()
+    },
+    onError: (error: any) => {
+      message.error(`删除项目失败：${error.response?.data?.error || error.message}`)
+    },
+  })
+
   const handleSyncStorage = () => {
     syncMutation.mutate()
   }
@@ -63,9 +75,23 @@ const ProjectsPage: React.FC = () => {
       title: '操作',
       key: 'actions',
       render: (_, record) => (
-        <Button type="link" onClick={() => navigate(`/projects/${record.name}/apps`)}>
-          查看应用
-        </Button>
+        <Space>
+          <Button type="link" onClick={() => navigate(`/projects/${record.name}/apps`)}>
+            查看应用
+          </Button>
+          <Popconfirm
+            title="确定要删除此项目吗？"
+            description="删除项目将同时删除该项目下的所有应用和版本，此操作不可恢复！"
+            onConfirm={() => deleteMutation.mutate(record.name)}
+            okText="确定"
+            cancelText="取消"
+            okButtonProps={{ danger: true }}
+          >
+            <Button type="link" danger icon={<DeleteOutlined />}>
+              删除
+            </Button>
+          </Popconfirm>
+        </Space>
       ),
     },
   ]

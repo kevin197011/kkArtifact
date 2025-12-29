@@ -1,6 +1,6 @@
 ./bin/kkartifact-agent pull \
-  --project myproject \
-  --app myapp4 \
-  --version test-1766837035 \
-  --path /tmp/myapp4 \
+  --project video \
+  --app srs \
+  --version test-1766992486 \
+  --path /tmp/srs \
   --config .kkartifact.yml

@@ -22,7 +22,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { projectsApi, Version } from '../api/projects'
 import { versionsApi } from '../api/versions'
 import type { ColumnsType } from 'antd/es/table'
-import { EyeOutlined, StarOutlined, DownloadOutlined } from '@ant-design/icons'
+import { EyeOutlined, StarOutlined, DownloadOutlined, DeleteOutlined } from '@ant-design/icons'
 
 const { Text } = Typography
 
@@ -37,7 +37,7 @@ const VersionsPage: React.FC = () => {
   const pageSize = 50
   const queryClient = useQueryClient()
 
-  const { data, isLoading, error } = useQuery({
+  const { data, isLoading, error, refetch } = useQuery({
     queryKey: ['versions', project, app, page],
     queryFn: () =>
       projectsApi.getVersions(project!, app!, pageSize, (page - 1) * pageSize).then((res) => res.data),
@@ -54,11 +54,23 @@ const VersionsPage: React.FC = () => {
     mutationFn: (version: string) =>
       versionsApi.promote({ project: project!, app: app!, version }),
     onSuccess: () => {
-      message.success('Version promoted successfully')
+      message.success('版本提升成功')
       queryClient.invalidateQueries({ queryKey: ['versions', project, app] })
     },
     onError: () => {
-      message.error('Failed to promote version')
+      message.error('提升版本失败')
+    },
+  })
+
+  const deleteMutation = useMutation({
+    mutationFn: (version: string) => projectsApi.deleteVersion(project!, app!, version),
+    onSuccess: () => {
+      message.success('版本删除成功')
+      queryClient.invalidateQueries({ queryKey: ['versions', project, app] })
+      refetch()
+    },
+    onError: (error: any) => {
+      message.error(`删除版本失败：${error.response?.data?.error || error.message}`)
     },
   })
 
@@ -142,6 +154,20 @@ const VersionsPage: React.FC = () => {
             >
               <Button type="link" size="small" icon={<StarOutlined />}>
                 提升
+              </Button>
+            </Popconfirm>
+          </Tooltip>
+          <Tooltip title="删除版本">
+            <Popconfirm
+              title="确定要删除此版本吗？"
+              description="删除版本将永久删除该版本的所有文件，此操作不可恢复！"
+              onConfirm={() => deleteMutation.mutate(record.version)}
+              okText="确定"
+              cancelText="取消"
+              okButtonProps={{ danger: true }}
+            >
+              <Button type="link" size="small" danger icon={<DeleteOutlined />}>
+                删除
               </Button>
             </Popconfirm>
           </Tooltip>
