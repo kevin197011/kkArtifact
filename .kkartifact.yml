@@ -1,0 +1,10 @@
+server_url: https://packages.slileisure.com/
+token: EpqQfkoT52yRNClG30KtokZljRxELHxopHYiYK5p_RE=
+concurrency: 50  # 并发数：50（本地连接建议30-50，远程连接可适当提高）
+chunk_size: 4MB
+retain_versions: 5  # 全局保留最新 5 个版本
+ignore: []
+  # - logs/
+  # - tmp/
+  # - '*.log'
+  # - run-migrations.rb
