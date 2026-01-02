@@ -27,7 +27,7 @@ interface AppLayoutProps {
 const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   const navigate = useNavigate()
   const location = useLocation()
-  const [isAuthenticated, setIsAuthenticated] = useState(true)
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null) // null means checking
 
   // Verify authentication on mount and periodically
   useEffect(() => {
@@ -99,6 +99,11 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   ]
 
   const selectedKey = menuItems.find((item) => location.pathname.startsWith(item.key))?.key || '/dashboard'
+
+  // Show loading state while checking authentication
+  if (isAuthenticated === null) {
+    return null // Or return a loading spinner
+  }
 
   if (!isAuthenticated) {
     return null // Will redirect to login
