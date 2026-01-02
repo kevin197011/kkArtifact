@@ -31,6 +31,8 @@ WORKDIR /app
 # Copy binary from builder
 COPY --from=builder /build/kkartifact-server .
 COPY --from=builder /build/migrations ./migrations
+# Copy static files (agent binaries)
+COPY --from=builder /build/static ./static
 
 # Verify binary exists in final image
 RUN ls -la kkartifact-server && chmod +x kkartifact-server

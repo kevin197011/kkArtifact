@@ -33,10 +33,15 @@ puts "📦 存储路径: #{storage_path}"
 puts "🌐 服务器地址: #{ENV['SERVER_HOST'] || '0.0.0.0'}:#{ENV['SERVER_PORT'] || '8080'}"
 puts ""
 
+# 设置静态文件目录环境变量（相对于项目根目录）
+project_root = Dir.pwd
+ENV['AGENT_STATIC_DIR'] = File.join(project_root, "server", "static")
+
 # 切换到 server 目录并运行
-server_dir = File.join(Dir.pwd, "server")
+server_dir = File.join(project_root, "server")
 Dir.chdir(server_dir) do
   puts "▶️  启动 server..."
+  puts "📁 静态文件目录: #{ENV['AGENT_STATIC_DIR']}"
   exec("go run main.go")
 end
 

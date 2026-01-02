@@ -268,3 +268,131 @@
   }
 }
 
+/* Download card styles */
+.downloadCard {
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08), 0 1px 4px rgba(0, 0, 0, 0.04);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  z-index: 1;
+}
+
+.downloadContent {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.downloadDescription {
+  color: #666;
+  line-height: 1.6;
+}
+
+.downloadDescription p {
+  margin-bottom: 16px;
+}
+
+.downloadSteps {
+  margin-top: 16px;
+}
+
+.downloadSteps h4 {
+  margin-bottom: 8px;
+  color: #333;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.downloadSteps ol {
+  margin: 8px 0;
+  padding-left: 24px;
+}
+
+.downloadSteps li {
+  margin-bottom: 4px;
+}
+
+.downloadSteps code {
+  background: #f5f5f5;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-size: 13px;
+  color: #e83e8c;
+}
+
+.codeBlock {
+  background: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 6px;
+  padding: 12px;
+  margin: 12px 0;
+  overflow-x: auto;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #333;
+}
+
+.downloadUsage {
+  margin-top: 16px;
+}
+
+.downloadUsage h4 {
+  margin-bottom: 8px;
+  color: #333;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.downloadUsage ul {
+  margin: 8px 0;
+  padding-left: 24px;
+}
+
+.downloadUsage li {
+  margin-bottom: 4px;
+}
+
+.downloadUsage code {
+  background: #f5f5f5;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-size: 13px;
+  color: #e83e8c;
+}
+
+.binariesList {
+  margin-top: 8px;
+}
+
+.binariesList h4 {
+  margin-bottom: 12px;
+  color: #333;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.binaryCard {
+  border: 1px solid #e8e8e8;
+  border-radius: 6px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.binaryCard:hover {
+  border-color: #1890ff;
+  box-shadow: 0 2px 8px rgba(24, 144, 255, 0.15);
+}
+
+@media (max-width: 768px) {
+  .downloadContent {
+    gap: 16px;
+  }
+  
+  .codeBlock {
+    font-size: 12px;
+    padding: 8px;
+  }
+}
+

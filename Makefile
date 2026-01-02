@@ -11,7 +11,11 @@ build-server:
 
 # Build agent
 build-agent:
-	cd agent && go build -o ../bin/kkartifact-server ./main.go
+	cd agent && go build -o ../bin/kkartifact-agent ./main.go
+
+# Build agent for all platforms
+build-agent-all:
+	ruby scripts/build-agent-binaries.rb
 
 # Build all
 build-all: build-server build-agent

@@ -5,12 +5,15 @@
 
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Tree, Input, Empty, Spin, Button, Typography } from 'antd'
-import { SearchOutlined, FolderOutlined, AppstoreOutlined, FileOutlined, LoginOutlined } from '@ant-design/icons'
+import { Tree, Input, Empty, Spin, Button, Typography, Card, Collapse, Tag, Space } from 'antd'
+import { SearchOutlined, FolderOutlined, AppstoreOutlined, FileOutlined, LoginOutlined, DownloadOutlined, CodeOutlined, DesktopOutlined } from '@ant-design/icons'
 import { useNavigate } from 'react-router-dom'
 import { publicProjectsApi, Project, App, Version } from '../api/projects'
+import { downloadsApi } from '../api/downloads'
 import type { DataNode } from 'antd/es/tree'
 import styles from './InventoryPage.module.css'
+
+const { Panel } = Collapse
 
 const { Title } = Typography
 
@@ -298,6 +301,36 @@ const InventoryPage: React.FC = () => {
     ? `没有匹配 "${debouncedSearchTerm}" 的项目、应用或版本。请尝试其他关键词。`
     : '暂无项目'
 
+  // Fetch agent version info
+  const { data: agentVersionInfo, error: agentError } = useQuery({
+    queryKey: ['agent-version'],
+    queryFn: () => downloadsApi.getAgentVersionInfo().then((res) => res.data),
+    retry: 1,
+  })
+  
+  // Debug: log agent version info
+  useEffect(() => {
+    if (agentVersionInfo) {
+      console.log('Agent version info:', agentVersionInfo)
+    }
+    if (agentError) {
+      console.error('Agent version error:', agentError)
+    }
+  }, [agentVersionInfo, agentError])
+
+  const formatFileSize = (bytes: number): string => {
+    if (bytes < 1024) return `${bytes} B`
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+  }
+
+  const getPlatformIcon = (platform: string) => {
+    if (platform.includes('windows')) return <DesktopOutlined />
+    if (platform.includes('darwin')) return <DesktopOutlined />
+    if (platform.includes('linux')) return <CodeOutlined />
+    return <CodeOutlined />
+  }
+
   return (
     <div className={styles.inventoryContainer}>
       {/* DevOps style background effects */}
@@ -334,6 +367,86 @@ const InventoryPage: React.FC = () => {
           登录后台
         </Button>
       </div>
+
+      {/* Agent Download Section */}
+      {agentVersionInfo && agentVersionInfo.binaries.length > 0 && (
+        <Card className={styles.downloadCard} style={{ marginBottom: 24 }}>
+          <Collapse defaultActiveKey={[]} ghost>
+            <Panel 
+              header={
+                <Space>
+                  <DownloadOutlined />
+                  <span style={{ fontWeight: 500 }}>下载 Agent 客户端工具</span>
+                  {agentVersionInfo.version && agentVersionInfo.version !== 'unknown' && (
+                    <Tag color="blue">
+                      {agentVersionInfo.version.startsWith('v') 
+                        ? agentVersionInfo.version 
+                        : `v${agentVersionInfo.version}`}
+                    </Tag>
+                  )}
+                </Space>
+              } 
+              key="download"
+            >
+              <div className={styles.downloadContent}>
+                <div className={styles.downloadDescription}>
+                  <p>kkartifact-agent 是一个命令行工具，用于推送和拉取制品。支持并发传输、断点续传等特性。</p>
+                  <div className={styles.downloadSteps}>
+                    <h4>使用步骤：</h4>
+                    <ol>
+                      <li>下载对应平台的二进制文件</li>
+                      <li>添加执行权限（Linux/macOS）：<code>chmod +x kkartifact-agent-*</code></li>
+                      <li>移动到系统路径（可选）：<code>mv kkartifact-agent-* /usr/local/bin/kkartifact-agent</code></li>
+                      <li>创建配置文件 <code>.kkartifact.yml</code>：</li>
+                    </ol>
+                    <pre className={styles.codeBlock}>
+{`server_url: http://localhost:3000  # 服务器地址
+token: YOUR_TOKEN_HERE             # API Token（从管理后台获取）`}
+                    </pre>
+                    <div className={styles.downloadUsage}>
+                      <h4>常用命令：</h4>
+                      <ul>
+                        <li><code>kkartifact-agent push &lt;project&gt; &lt;app&gt; &lt;version&gt; [目录]</code> - 推送制品</li>
+                        <li><code>kkartifact-agent pull &lt;project&gt; &lt;app&gt; &lt;version&gt; [目录]</code> - 拉取制品</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+                <div className={styles.binariesList}>
+                  <h4>可用的二进制文件：</h4>
+                  <Space direction="vertical" style={{ width: '100%' }} size="middle">
+                    {agentVersionInfo.binaries.map((binary) => (
+                      <Card key={binary.filename} size="small" className={styles.binaryCard}>
+                        <Space style={{ width: '100%', justifyContent: 'space-between' }}>
+                          <Space>
+                            {getPlatformIcon(binary.platform)}
+                            <div>
+                              <div style={{ fontWeight: 500 }}>{binary.platform}</div>
+                              <div style={{ fontSize: '12px', color: '#666' }}>{binary.filename}</div>
+                            </div>
+                          </Space>
+                          <Space>
+                            <Tag>{formatFileSize(binary.size)}</Tag>
+                            <Button
+                              type="primary"
+                              icon={<DownloadOutlined />}
+                              href={downloadsApi.downloadAgent(binary.filename)}
+                              download={binary.filename}
+                              size="small"
+                            >
+                              下载
+                            </Button>
+                          </Space>
+                        </Space>
+                      </Card>
+                    ))}
+                  </Space>
+                </div>
+              </div>
+            </Panel>
+          </Collapse>
+        </Card>
+      )}
 
       {/* Main content */}
       <div className={styles.contentCard}>

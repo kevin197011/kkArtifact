@@ -58,6 +58,7 @@ services:
       STORAGE_TYPE: local
       STORAGE_LOCAL_PATH: ${STORAGE_LOCAL_PATH:-/repos}
       STORAGE_BASE_PATH: ${STORAGE_BASE_PATH:-/repos}
+      AGENT_STATIC_DIR: /app/static
       VERSION_RETENTION_LIMIT: ${VERSION_RETENTION_LIMIT:-5}
       LOG_LEVEL: ${LOG_LEVEL:-info}
       LOG_FORMAT: ${LOG_FORMAT:-json}

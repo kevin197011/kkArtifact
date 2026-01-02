@@ -70,6 +70,13 @@ func (h *Handler) RegisterRoutes(router *gin.Engine) {
 		public.GET("/projects/:project/apps", h.handlePublicListApps)
 		public.GET("/projects/:project/apps/:app/versions", h.handlePublicListVersions)
 	}
+
+	// Public download endpoints (no authentication required)
+	downloads := api.Group("/downloads")
+	{
+		downloads.GET("/agent/version", h.handleGetAgentVersionInfo)
+		downloads.GET("/agent/:filename", h.handleDownloadAgent)
+	}
 	
 	// Protected routes
 	protected := api.Group("")
