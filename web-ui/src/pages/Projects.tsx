@@ -126,8 +126,19 @@ const ProjectsPage: React.FC = () => {
         pagination={{
           current: page,
           pageSize,
-          total: data?.length || 0,
+          total: data && data.length < pageSize 
+            ? (page - 1) * pageSize + data.length 
+            : data 
+            ? page * pageSize + 1 
+            : 0,
           onChange: setPage,
+          showSizeChanger: false,
+          showTotal: (total, range) => {
+            if (data && data.length < pageSize) {
+              return `共 ${total} 个项目`
+            }
+            return `第 ${range[0]}-${range[1]} 项，至少 ${total} 个项目`
+          },
         }}
         locale={{
           emptyText: <Empty description="暂无项目" />,
