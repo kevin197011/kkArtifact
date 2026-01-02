@@ -31,10 +31,11 @@ type AppResponse struct {
 
 // VersionResponse represents a version in API response
 type VersionResponse struct {
-	ID        int    `json:"id"`
-	AppID     int    `json:"app_id"`
-	Version   string `json:"version"`    // Version identifier (same as hash in database)
-	CreatedAt string `json:"created_at"` // RFC3339 format
+	ID          int    `json:"id"`
+	AppID       int    `json:"app_id"`
+	Version     string `json:"version"`      // Version identifier (same as hash in database)
+	IsPublished bool   `json:"is_published"` // Whether this version is published
+	CreatedAt   string `json:"created_at"`   // RFC3339 format
 }
 
 // handleListProjects godoc
@@ -147,10 +148,11 @@ func (h *Handler) handleListVersions(c *gin.Context) {
 	responses := make([]VersionResponse, len(versions))
 	for i, v := range versions {
 		responses[i] = VersionResponse{
-			ID:        v.ID,
-			AppID:     v.AppID,
-			Version:   v.Hash, // Map hash field from database to version in API
-			CreatedAt: v.CreatedAt.Format(time.RFC3339),
+			ID:          v.ID,
+			AppID:       v.AppID,
+			Version:     v.Hash, // Map hash field from database to version in API
+			IsPublished: v.IsPublished,
+			CreatedAt:   v.CreatedAt.Format(time.RFC3339),
 		}
 	}
 

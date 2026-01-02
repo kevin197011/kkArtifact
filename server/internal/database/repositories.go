@@ -224,6 +224,16 @@ func (r *VersionRepository) SetPublished(appID int, hash string, published bool)
 	return nil
 }
 
+// UnpublishAllVersions unpublishes all versions for an app
+func (r *VersionRepository) UnpublishAllVersions(appID int) error {
+	query := `UPDATE versions SET is_published = FALSE WHERE app_id = $1 AND is_published = TRUE`
+	_, err := r.db.Exec(query, appID)
+	if err != nil {
+		return fmt.Errorf("failed to unpublish all versions: %w", err)
+	}
+	return nil
+}
+
 // GetLatestPublished returns the latest published version for an app
 func (r *VersionRepository) GetLatestPublished(appID int) (*Version, error) {
 	var version Version

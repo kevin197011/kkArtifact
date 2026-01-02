@@ -80,6 +80,12 @@ func (h *Handler) handlePublish(c *gin.Context) {
 		return
 	}
 
+	// Unpublish all other versions for this app (only one version can be published at a time)
+	if err := h.versionRepo.UnpublishAllVersions(app.ID); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
 	// Mark version as published
 	if err := h.versionRepo.SetPublished(app.ID, req.Version, true); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})

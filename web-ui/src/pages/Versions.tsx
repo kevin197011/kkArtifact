@@ -22,7 +22,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { projectsApi, Version } from '../api/projects'
 import { versionsApi } from '../api/versions'
 import type { ColumnsType } from 'antd/es/table'
-import { EyeOutlined, StarOutlined, DownloadOutlined, DeleteOutlined } from '@ant-design/icons'
+import { EyeOutlined, StarOutlined, StarFilled, DownloadOutlined, DeleteOutlined } from '@ant-design/icons'
 
 const { Text } = Typography
 
@@ -147,13 +147,14 @@ const VersionsPage: React.FC = () => {
               清单
             </Button>
           </Tooltip>
-          <Tooltip title="发布版本">
+          <Tooltip title={record.is_published ? "已发布（点击可重新发布）" : "发布版本"}>
             <Popconfirm
               title="确定要发布此版本吗？"
+              description={record.is_published ? "这将取消当前已发布版本的发布状态" : "发布此版本后，其他已发布版本将被取消发布"}
               onConfirm={() => handlePublish(record.version)}
             >
-              <Button type="link" size="small" icon={<StarOutlined />}>
-                发布
+              <Button type="link" size="small" icon={record.is_published ? <StarFilled style={{ color: '#faad14' }} /> : <StarOutlined />}>
+                {record.is_published ? '已发布' : '发布'}
               </Button>
             </Popconfirm>
           </Tooltip>

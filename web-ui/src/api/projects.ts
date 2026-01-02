@@ -22,6 +22,7 @@ export interface Version {
   id: number
   app_id: number
   version: string
+  is_published: boolean
   created_at: string
 }
 

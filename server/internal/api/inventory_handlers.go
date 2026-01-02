@@ -58,10 +58,11 @@ func (h *Handler) handleGetInventory(c *gin.Context) {
 			versions := make([]VersionResponse, len(appInventory.Versions))
 			for k, version := range appInventory.Versions {
 				versions[k] = VersionResponse{
-					ID:        version.ID,
-					AppID:     version.AppID,
-					Version:   version.Hash,
-					CreatedAt: version.CreatedAt.Format(time.RFC3339),
+					ID:          version.ID,
+					AppID:       version.AppID,
+					Version:     version.Hash,
+					IsPublished: version.IsPublished,
+					CreatedAt:   version.CreatedAt.Format(time.RFC3339),
 				}
 			}
 
@@ -117,10 +118,11 @@ func (h *Handler) handleGetProjectInventory(c *gin.Context) {
 		versions := make([]VersionResponse, len(appInventory.Versions))
 		for k, version := range appInventory.Versions {
 			versions[k] = VersionResponse{
-				ID:        version.ID,
-				AppID:     version.AppID,
-				Version:   version.Hash,
-				CreatedAt: version.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
+				ID:          version.ID,
+				AppID:       version.AppID,
+				Version:     version.Hash,
+				IsPublished: version.IsPublished,
+				CreatedAt:   version.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
 			}
 		}
 
