@@ -346,3 +346,40 @@ func (c *Client) GetManifest(project, app, version string) (interface{}, error) 
 
 	return manifest, nil
 }
+
+// LatestVersionResponse represents the latest version response
+type LatestVersionResponse struct {
+	Project string `json:"project"`
+	App     string `json:"app"`
+	Version string `json:"version"`
+}
+
+// GetLatestVersion retrieves the latest published version for an app
+func (c *Client) GetLatestVersion(project, app string) (*LatestVersionResponse, error) {
+	url := fmt.Sprintf("%s/api/v1/projects/%s/apps/%s/latest", c.serverURL, project, app)
+
+	httpReq, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	httpReq.Header.Set("Authorization", "Bearer "+c.token)
+
+	resp, err := c.httpClient.Do(httpReq)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("get latest version failed with status %d: %s", resp.StatusCode, string(body))
+	}
+
+	var latestResp LatestVersionResponse
+	if err := json.NewDecoder(resp.Body).Decode(&latestResp); err != nil {
+		return nil, err
+	}
+
+	return &latestResp, nil
+}

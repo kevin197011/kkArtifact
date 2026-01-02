@@ -82,7 +82,7 @@ func (h *Handler) handleCreateToken(c *gin.Context) {
 	// Default permissions if not provided
 	permissions := req.Permissions
 	if len(permissions) == 0 {
-		permissions = []string{"pull", "push", "promote"}
+		permissions = []string{"pull", "push", "publish"}
 	}
 
 	// Create token in database

@@ -269,7 +269,7 @@ const WebhooksPage: React.FC = () => {
             </Select>
           </Form.Item>
           <Form.Item name="event_types" label="事件类型（逗号分隔）" rules={[{ required: true }]}>
-            <Input placeholder="push,pull,promote" />
+            <Input placeholder="push,pull,publish" />
           </Form.Item>
           <Form.Item name="enabled" label="启用" valuePropName="checked" initialValue={true}>
             <Switch />

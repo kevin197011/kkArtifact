@@ -54,8 +54,7 @@ func (h *Handler) handlePublish(c *gin.Context) {
 	}
 
 	// Verify version exists in database
-	versionRepo := database.NewVersionRepository(h.db)
-	versions, err := versionRepo.ListByApp(app.ID, 10000, 0)
+	versions, err := h.versionRepo.ListByApp(app.ID, 10000, 0)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -82,7 +81,7 @@ func (h *Handler) handlePublish(c *gin.Context) {
 	}
 
 	// Mark version as published
-	if err := versionRepo.SetPublished(app.ID, req.Version, true); err != nil {
+	if err := h.versionRepo.SetPublished(app.ID, req.Version, true); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}

@@ -27,10 +27,11 @@ type App struct {
 
 // Version represents a version in the database
 type Version struct {
-	ID        int       `db:"id"`
-	AppID     int       `db:"app_id"`
-	Hash      string    `db:"hash"`
-	CreatedAt time.Time `db:"created_at"`
+	ID          int       `db:"id"`
+	AppID       int       `db:"app_id"`
+	Hash        string    `db:"hash"`
+	IsPublished bool      `db:"is_published"`
+	CreatedAt   time.Time `db:"created_at"`
 }
 
 // Token represents a token in the database

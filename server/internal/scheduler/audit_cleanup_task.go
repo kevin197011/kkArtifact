@@ -11,6 +11,7 @@ import (
 	"strconv"
 
 	"github.com/kk/kkartifact-server/internal/database"
+	"github.com/kk/kkartifact-server/internal/util"
 )
 
 // AuditCleanupTask is a scheduled task for audit log cleanup
@@ -51,7 +52,7 @@ func (t *AuditCleanupTask) Run(ctx context.Context) error {
 		return fmt.Errorf("failed to delete old audit logs: %w", err)
 	}
 
-	if deletedCount > 0 {
+	if deletedCount > 0 && util.IsDebugMode() {
 		fmt.Printf("Deleted %d audit log entries older than %d days\n", deletedCount, retentionDays)
 	}
 

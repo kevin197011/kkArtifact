@@ -19,7 +19,7 @@ export interface Manifest {
   }>
 }
 
-export interface PromoteRequest {
+export interface PublishRequest {
   project: string
   app: string
   version: string
@@ -29,7 +29,7 @@ export const versionsApi = {
   // version parameter is the version identifier (stored as hash in database, but exposed as version in API)
   getManifest: (project: string, app: string, version: string) =>
     client.get<Manifest>(`/manifest/${project}/${app}/${version}`),
-  promote: (data: PromoteRequest) => client.post('/promote', data),
+  publish: (data: PublishRequest) => client.post('/publish', data),
   downloadFile: (project: string, app: string, version: string, path: string) =>
     client.get(`/file/${project}/${app}/${version}`, { params: { path }, responseType: 'blob' }),
 }

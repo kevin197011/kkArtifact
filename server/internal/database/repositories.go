@@ -53,6 +53,17 @@ func (r *ProjectRepository) List(limit, offset int) ([]*Project, error) {
 	return projects, rows.Err()
 }
 
+// GetByName gets a project by name
+func (r *ProjectRepository) GetByName(name string) (*Project, error) {
+	var project Project
+	query := `SELECT id, name, created_at FROM projects WHERE name = $1`
+	err := r.db.QueryRow(query, name).Scan(&project.ID, &project.Name, &project.CreatedAt)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get project: %w", err)
+	}
+	return &project, nil
+}
+
 // Delete deletes a project by name (cascade will delete apps and versions)
 func (r *ProjectRepository) Delete(name string) error {
 	query := `DELETE FROM projects WHERE name = $1`
@@ -104,6 +115,17 @@ func (r *AppRepository) ListByProject(projectID int, limit, offset int) ([]*App,
 	return apps, rows.Err()
 }
 
+// GetByName gets an app by project ID and name
+func (r *AppRepository) GetByName(projectID int, name string) (*App, error) {
+	var app App
+	query := `SELECT id, project_id, name, created_at FROM apps WHERE project_id = $1 AND name = $2`
+	err := r.db.QueryRow(query, projectID, name).Scan(&app.ID, &app.ProjectID, &app.Name, &app.CreatedAt)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get app: %w", err)
+	}
+	return &app, nil
+}
+
 // Delete deletes an app by project ID and name (cascade will delete versions)
 func (r *AppRepository) Delete(projectID int, name string) error {
 	query := `DELETE FROM apps WHERE project_id = $1 AND name = $2`
@@ -125,8 +147,8 @@ func NewVersionRepository(db *DB) *VersionRepository {
 func (r *VersionRepository) Create(appID int, hash string) (*Version, error) {
 	var version Version
 	query := `INSERT INTO versions (app_id, hash) VALUES ($1, $2)
-	          RETURNING id, app_id, hash, created_at`
-	err := r.db.QueryRow(query, appID, hash).Scan(&version.ID, &version.AppID, &version.Hash, &version.CreatedAt)
+	          RETURNING id, app_id, hash, is_published, created_at`
+	err := r.db.QueryRow(query, appID, hash).Scan(&version.ID, &version.AppID, &version.Hash, &version.IsPublished, &version.CreatedAt)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create version: %w", err)
 	}
@@ -135,7 +157,7 @@ func (r *VersionRepository) Create(appID int, hash string) (*Version, error) {
 
 // ListByApp lists versions for an app
 func (r *VersionRepository) ListByApp(appID int, limit, offset int) ([]*Version, error) {
-	query := `SELECT id, app_id, hash, created_at FROM versions 
+	query := `SELECT id, app_id, hash, is_published, created_at FROM versions 
 	          WHERE app_id = $1 ORDER BY created_at DESC LIMIT $2 OFFSET $3`
 	rows, err := r.db.Query(query, appID, limit, offset)
 	if err != nil {
@@ -146,7 +168,7 @@ func (r *VersionRepository) ListByApp(appID int, limit, offset int) ([]*Version,
 	var versions []*Version
 	for rows.Next() {
 		var v Version
-		if err := rows.Scan(&v.ID, &v.AppID, &v.Hash, &v.CreatedAt); err != nil {
+		if err := rows.Scan(&v.ID, &v.AppID, &v.Hash, &v.IsPublished, &v.CreatedAt); err != nil {
 			return nil, err
 		}
 		versions = append(versions, &v)
@@ -171,7 +193,7 @@ func (r *VersionRepository) CountByApp(appID int) (int, error) {
 
 // GetOldestVersions returns oldest versions beyond limit
 func (r *VersionRepository) GetOldestVersions(appID int, limit int) ([]*Version, error) {
-	query := `SELECT id, app_id, hash, created_at FROM versions 
+	query := `SELECT id, app_id, hash, is_published, created_at FROM versions 
 	          WHERE app_id = $1 
 	          ORDER BY created_at ASC 
 	          LIMIT $2`
@@ -184,11 +206,35 @@ func (r *VersionRepository) GetOldestVersions(appID int, limit int) ([]*Version,
 	var versions []*Version
 	for rows.Next() {
 		var v Version
-		if err := rows.Scan(&v.ID, &v.AppID, &v.Hash, &v.CreatedAt); err != nil {
+		if err := rows.Scan(&v.ID, &v.AppID, &v.Hash, &v.IsPublished, &v.CreatedAt); err != nil {
 			return nil, err
 		}
 		versions = append(versions, &v)
 	}
 	return versions, rows.Err()
+}
+
+// SetPublished marks a version as published
+func (r *VersionRepository) SetPublished(appID int, hash string, published bool) error {
+	query := `UPDATE versions SET is_published = $1 WHERE app_id = $2 AND hash = $3`
+	_, err := r.db.Exec(query, published, appID, hash)
+	if err != nil {
+		return fmt.Errorf("failed to set published status: %w", err)
+	}
+	return nil
+}
+
+// GetLatestPublished returns the latest published version for an app
+func (r *VersionRepository) GetLatestPublished(appID int) (*Version, error) {
+	var version Version
+	query := `SELECT id, app_id, hash, is_published, created_at FROM versions 
+	          WHERE app_id = $1 AND is_published = TRUE 
+	          ORDER BY created_at DESC 
+	          LIMIT 1`
+	err := r.db.QueryRow(query, appID).Scan(&version.ID, &version.AppID, &version.Hash, &version.IsPublished, &version.CreatedAt)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get latest published version: %w", err)
+	}
+	return &version, nil
 }
 

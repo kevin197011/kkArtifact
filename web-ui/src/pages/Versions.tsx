@@ -50,15 +50,15 @@ const VersionsPage: React.FC = () => {
     enabled: !!selectedVersion && !!project && !!app,
   })
 
-  const promoteMutation = useMutation({
+  const publishMutation = useMutation({
     mutationFn: (version: string) =>
-      versionsApi.promote({ project: project!, app: app!, version }),
+      versionsApi.publish({ project: project!, app: app!, version }),
     onSuccess: () => {
-      message.success('版本提升成功')
+      message.success('版本发布成功')
       queryClient.invalidateQueries({ queryKey: ['versions', project, app] })
     },
     onError: () => {
-      message.error('提升版本失败')
+      message.error('发布版本失败')
     },
   })
 
@@ -80,8 +80,8 @@ const VersionsPage: React.FC = () => {
     setManifestPage(1) // Reset to first page when opening manifest
   }
 
-  const handlePromote = (version: string) => {
-    promoteMutation.mutate(version)
+  const handlePublish = (version: string) => {
+    publishMutation.mutate(version)
   }
 
   const handleDownloadFile = (version: string, filePath: string) => {
@@ -147,13 +147,13 @@ const VersionsPage: React.FC = () => {
               清单
             </Button>
           </Tooltip>
-          <Tooltip title="提升版本">
+          <Tooltip title="发布版本">
             <Popconfirm
-              title="确定要提升此版本吗？"
-              onConfirm={() => handlePromote(record.version)}
+              title="确定要发布此版本吗？"
+              onConfirm={() => handlePublish(record.version)}
             >
               <Button type="link" size="small" icon={<StarOutlined />}>
-                提升
+                发布
               </Button>
             </Popconfirm>
           </Tooltip>

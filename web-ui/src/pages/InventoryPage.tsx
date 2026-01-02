@@ -99,9 +99,11 @@ const InventoryPage: React.FC = () => {
         try {
           const apps = await publicProjectsApi.getApps(project.name, 1000, 0).then((res) => res.data)
           return { projectName: project.name, apps }
-        } catch (error) {
-          console.error(`Failed to load apps for project ${project.name}:`, error)
-          return { projectName: project.name, apps: [] }
+          } catch (error) {
+            if (import.meta.env.DEV) {
+              console.error(`Failed to load apps for project ${project.name}:`, error)
+            }
+            return { projectName: project.name, apps: [] }
         }
       })
       const appsArrays = await Promise.all(appsPromises)
@@ -129,7 +131,9 @@ const InventoryPage: React.FC = () => {
               .then((res) => res.data)
             versionsMap[`${projectName}/${app.name}`] = versions
           } catch (error) {
-            console.error(`Failed to load versions for ${projectName}/${app.name}:`, error)
+            if (import.meta.env.DEV) {
+              console.error(`Failed to load versions for ${projectName}/${app.name}:`, error)
+            }
             versionsMap[`${projectName}/${app.name}`] = []
           }
         }
@@ -321,21 +325,11 @@ const InventoryPage: React.FC = () => {
     : '暂无项目'
 
   // Fetch agent version info
-  const { data: agentVersionInfo, error: agentError } = useQuery({
+  const { data: agentVersionInfo } = useQuery({
     queryKey: ['agent-version'],
     queryFn: () => downloadsApi.getAgentVersionInfo().then((res) => res.data),
     retry: 1,
   })
-  
-  // Debug: log agent version info
-  useEffect(() => {
-    if (agentVersionInfo) {
-      console.log('Agent version info:', agentVersionInfo)
-    }
-    if (agentError) {
-      console.error('Agent version error:', agentError)
-    }
-  }, [agentVersionInfo, agentError])
 
   const formatFileSize = (bytes: number): string => {
     if (bytes < 1024) return `${bytes} B`

@@ -9,6 +9,8 @@ import (
 	"context"
 	"log"
 	"time"
+
+	"github.com/kk/kkartifact-server/internal/util"
 )
 
 // Task represents a scheduled task
@@ -66,8 +68,11 @@ func (s *Scheduler) runTasks(ctx context.Context) {
 	// Run at 3 AM
 	if now.Hour() == 3 && now.Minute() < 10 {
 		for _, task := range s.tasks {
-			log.Printf("Running scheduled task: %s", task.Name())
+			if util.IsDebugMode() {
+				log.Printf("Running scheduled task: %s", task.Name())
+			}
 			if err := task.Run(ctx); err != nil {
+				// Always log task failures
 				log.Printf("Task %s failed: %v", task.Name(), err)
 			}
 		}

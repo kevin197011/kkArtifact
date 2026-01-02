@@ -67,14 +67,14 @@ const Dashboard: React.FC = () => {
         const colors: Record<string, string> = {
           push: 'blue',
           pull: 'green',
-          promote: 'orange',
+          publish: 'orange',
           token_create: 'purple',
           token_delete: 'red',
         }
         const labels: Record<string, string> = {
           push: '推送',
           pull: '拉取',
-          promote: '提升',
+          publish: '发布',
           token_create: '创建令牌',
           token_delete: '删除令牌',
         }

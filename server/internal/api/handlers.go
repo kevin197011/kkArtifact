@@ -86,6 +86,7 @@ func (h *Handler) RegisterRoutes(router *gin.Engine) {
 		protected.GET("/projects", h.handleListProjects)
 		protected.GET("/projects/:project/apps", h.handleListApps)
 		protected.GET("/projects/:project/apps/:app/versions", h.handleListVersions)
+		protected.GET("/projects/:project/apps/:app/latest", h.handleGetLatestVersion)
 		
 		// Delete endpoints
 		protected.DELETE("/projects/:project", h.handleDeleteProject)
@@ -110,8 +111,8 @@ func (h *Handler) RegisterRoutes(router *gin.Engine) {
 		protected.GET("/config", h.handleGetConfig)
 		protected.PUT("/config", h.handleUpdateConfig)
 		
-		// Promote endpoint
-		protected.POST("/promote", h.handlePromote)
+		// Publish endpoint
+		protected.POST("/publish", h.handlePublish)
 		
 		// Audit logs endpoint
 		protected.GET("/audit-logs", h.handleListAuditLogs)

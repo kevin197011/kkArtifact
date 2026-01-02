@@ -39,20 +39,19 @@ func init() {
 	
 	pullCmd.Flags().StringVar(&pullProject, "project", "", "Project name (required)")
 	pullCmd.Flags().StringVar(&pullApp, "app", "", "App name (required)")
-	pullCmd.Flags().StringVar(&pullVersion, "version", "", "Version hash (required)")
+	pullCmd.Flags().StringVar(&pullVersion, "version", "latest", "Version hash (use 'latest' for latest published version)")
 	pullCmd.Flags().StringVar(&pullPath, "path", ".", "Path to local directory")
 	pullCmd.Flags().StringVar(&pullConfig, "config", ".kkartifact.yml", "Config file path")
 	
 	pullCmd.MarkFlagRequired("project")
 	pullCmd.MarkFlagRequired("app")
-	pullCmd.MarkFlagRequired("version")
 }
 
 func runPull(cmd *cobra.Command, args []string) error {
 	startTime := time.Now()
 	
-	if pullProject == "" || pullApp == "" || pullVersion == "" {
-		return fmt.Errorf("project, app, and version are required")
+	if pullProject == "" || pullApp == "" {
+		return fmt.Errorf("project and app are required")
 	}
 
 	// Load config
@@ -80,14 +79,26 @@ func runPull(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
 
-	fmt.Printf("Pulling artifacts from %s/%s:%s to %s\n", pullProject, pullApp, pullVersion, absPath)
-
 	// Create API client
 	apiClient := client.New(cfg.ServerURL, cfg.Token)
 
+	// Handle "latest" version
+	actualVersion := pullVersion
+	if pullVersion == "" || pullVersion == "latest" {
+		fmt.Printf("Fetching latest published version for %s/%s...\n", pullProject, pullApp)
+		latestResp, err := apiClient.GetLatestVersion(pullProject, pullApp)
+		if err != nil {
+			return fmt.Errorf("failed to get latest version: %w", err)
+		}
+		actualVersion = latestResp.Version
+		fmt.Printf("Latest published version: %s\n", actualVersion)
+	}
+
+	fmt.Printf("Pulling artifacts from %s/%s:%s to %s\n", pullProject, pullApp, actualVersion, absPath)
+
 	// Get manifest
 	fmt.Println("Fetching manifest...")
-	manifestData, err := apiClient.GetManifest(pullProject, pullApp, pullVersion)
+	manifestData, err := apiClient.GetManifest(pullProject, pullApp, actualVersion)
 	if err != nil {
 		return fmt.Errorf("failed to get manifest: %w", err)
 	}
@@ -163,7 +174,7 @@ func runPull(cmd *cobra.Command, args []string) error {
 				}
 				
 				// Download file (with resume support if partial file exists)
-				if err := apiClient.DownloadFile(pullProject, pullApp, pullVersion, task.filePath, task.localPath, task.expectedHash, task.expectedSize); err != nil {
+				if err := apiClient.DownloadFile(pullProject, pullApp, actualVersion, task.filePath, task.localPath, task.expectedHash, task.expectedSize); err != nil {
 					errors <- fmt.Errorf("failed to download file %s: %w", task.filePath, err)
 					return
 				}
@@ -190,7 +201,7 @@ func runPull(cmd *cobra.Command, args []string) error {
 	}
 
 	duration := time.Since(startTime)
-	fmt.Printf("Successfully pulled %s/%s:%s\n", pullProject, pullApp, pullVersion)
+	fmt.Printf("Successfully pulled %s/%s:%s\n", pullProject, pullApp, actualVersion)
 	fmt.Printf("Total time: %v\n", duration.Round(time.Second))
 	return nil
 }

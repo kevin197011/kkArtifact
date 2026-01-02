@@ -13,6 +13,7 @@ import (
 	"path/filepath"
 
 	"github.com/gin-gonic/gin"
+	"github.com/kk/kkartifact-server/internal/util"
 )
 
 // findStaticFile tries to find a file in static directory by trying multiple possible paths
@@ -21,12 +22,16 @@ func findStaticFile(relativePath string) ([]byte, error) {
 	if staticDir := os.Getenv("AGENT_STATIC_DIR"); staticDir != "" {
 		filePath := filepath.Join(staticDir, relativePath)
 		if data, err := os.ReadFile(filePath); err == nil {
-			log.Printf("Found file via AGENT_STATIC_DIR: %s", filePath)
+			if util.IsDebugMode() {
+				log.Printf("Found file via AGENT_STATIC_DIR: %s", filePath)
+			}
 			return data, nil
 		}
 		if absPath, err := filepath.Abs(filePath); err == nil {
 			if data, err := os.ReadFile(absPath); err == nil {
-				log.Printf("Found file via AGENT_STATIC_DIR (abs): %s", absPath)
+				if util.IsDebugMode() {
+					log.Printf("Found file via AGENT_STATIC_DIR (abs): %s", absPath)
+				}
 				return data, nil
 			}
 		}
@@ -37,7 +42,9 @@ func findStaticFile(relativePath string) ([]byte, error) {
 	if err != nil {
 		wd = "."
 	}
-	log.Printf("Searching for %s, working directory: %s", relativePath, wd)
+	if util.IsDebugMode() {
+		log.Printf("Searching for %s, working directory: %s", relativePath, wd)
+	}
 	
 	// Try multiple possible paths (both relative and absolute)
 	possiblePaths := []string{
@@ -55,19 +62,25 @@ func findStaticFile(relativePath string) ([]byte, error) {
 	for _, path := range possiblePaths {
 		// Try as-is first
 		if data, err := os.ReadFile(path); err == nil {
-			log.Printf("Found file at: %s", path)
+			if util.IsDebugMode() {
+				log.Printf("Found file at: %s", path)
+			}
 			return data, nil
 		}
 		// Try as absolute path
 		if absPath, err := filepath.Abs(path); err == nil && absPath != path {
 			if data, err := os.ReadFile(absPath); err == nil {
-				log.Printf("Found file at (abs): %s", absPath)
+				if util.IsDebugMode() {
+					log.Printf("Found file at (abs): %s", absPath)
+				}
 				return data, nil
 			}
 		}
 	}
 	
-	log.Printf("File not found after trying %d paths", len(possiblePaths))
+	if util.IsDebugMode() {
+		log.Printf("File not found after trying %d paths", len(possiblePaths))
+	}
 	return nil, os.ErrNotExist
 }
 
@@ -86,7 +99,9 @@ func (h *Handler) handleGetAgentVersionInfo(c *gin.Context) {
 	if err != nil {
 		// Log the error for debugging
 		wd, _ := os.Getwd()
-		log.Printf("Failed to find version.json: %v, working directory: %s", err, wd)
+		if util.IsDebugMode() {
+			log.Printf("Failed to find version.json: %v, working directory: %s", err, wd)
+		}
 		// If version.json doesn't exist, return empty info
 		c.JSON(http.StatusOK, gin.H{
 			"version": "unknown",

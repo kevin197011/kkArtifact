@@ -31,7 +31,9 @@ const TokensPage: React.FC = () => {
         setStoredTokens(JSON.parse(stored))
       }
     } catch (e) {
-      console.error('Failed to load stored tokens:', e)
+      if (import.meta.env.DEV) {
+        console.error('Failed to load stored tokens:', e)
+      }
     }
   }, [])
 
@@ -42,7 +44,9 @@ const TokensPage: React.FC = () => {
       setStoredTokens(updated)
       localStorage.setItem(TOKEN_STORAGE_KEY, JSON.stringify(updated))
     } catch (e) {
-      console.error('Failed to save token to storage:', e)
+      if (import.meta.env.DEV) {
+        console.error('Failed to save token to storage:', e)
+      }
     }
   }
 
@@ -53,7 +57,9 @@ const TokensPage: React.FC = () => {
 
   // Log error for debugging
   if (error) {
-    console.error('Failed to load tokens:', error)
+    if (import.meta.env.DEV) {
+      console.error('Failed to load tokens:', error)
+    }
   }
 
   const createMutation = useMutation({
@@ -84,7 +90,9 @@ const TokensPage: React.FC = () => {
         setStoredTokens(updated)
         localStorage.setItem(TOKEN_STORAGE_KEY, JSON.stringify(updated))
       } catch (e) {
-        console.error('Failed to remove token from storage:', e)
+        if (import.meta.env.DEV) {
+          console.error('Failed to remove token from storage:', e)
+        }
       }
       queryClient.invalidateQueries({ queryKey: ['tokens'] })
       message.success('Token deleted successfully')
@@ -104,7 +112,7 @@ const TokensPage: React.FC = () => {
     form.validateFields().then((values) => {
       const data: CreateTokenRequest = {
         name: values.name,
-        permissions: values.permissions || ['pull', 'push', 'promote'],
+        permissions: values.permissions || ['pull', 'push', 'publish'],
       }
       createMutation.mutate(data)
     })
@@ -191,7 +199,7 @@ const TokensPage: React.FC = () => {
             const labels: Record<string, string> = {
               pull: '拉取',
               push: '推送',
-              promote: '提升',
+              publish: '发布',
             }
             return <Tag key={perm}>{labels[perm] || perm}</Tag>
           })}
@@ -300,12 +308,12 @@ const TokensPage: React.FC = () => {
               name="permissions"
               label="权限"
               rules={[{ required: true, message: '请选择权限！' }]}
-              initialValue={['pull', 'push', 'promote']}
+              initialValue={['pull', 'push', 'publish']}
             >
               <Select mode="multiple" placeholder="选择权限">
                 <Option value="pull">拉取</Option>
                 <Option value="push">推送</Option>
-                <Option value="promote">提升</Option>
+                <Option value="publish">发布</Option>
                 <Option value="admin">管理员</Option>
               </Select>
             </Form.Item>
