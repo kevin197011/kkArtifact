@@ -62,6 +62,18 @@ const VersionsPage: React.FC = () => {
     },
   })
 
+  const unpublishMutation = useMutation({
+    mutationFn: (version: string) =>
+      versionsApi.unpublish({ project: project!, app: app!, version }),
+    onSuccess: () => {
+      message.success('版本已取消发布')
+      queryClient.invalidateQueries({ queryKey: ['versions', project, app] })
+    },
+    onError: () => {
+      message.error('取消发布失败')
+    },
+  })
+
   const deleteMutation = useMutation({
     mutationFn: (version: string) => projectsApi.deleteVersion(project!, app!, version),
     onSuccess: () => {
@@ -82,6 +94,18 @@ const VersionsPage: React.FC = () => {
 
   const handlePublish = (version: string) => {
     publishMutation.mutate(version)
+  }
+
+  const handleUnpublish = (version: string) => {
+    unpublishMutation.mutate(version)
+  }
+
+  const handleTogglePublish = (version: string, isPublished: boolean) => {
+    if (isPublished) {
+      handleUnpublish(version)
+    } else {
+      handlePublish(version)
+    }
   }
 
   const handleDownloadFile = (version: string, filePath: string) => {
@@ -147,11 +171,11 @@ const VersionsPage: React.FC = () => {
               清单
             </Button>
           </Tooltip>
-          <Tooltip title={record.is_published ? "已发布（点击可重新发布）" : "发布版本"}>
+          <Tooltip title={record.is_published ? "点击取消发布" : "发布版本"}>
             <Popconfirm
-              title="确定要发布此版本吗？"
-              description={record.is_published ? "这将取消当前已发布版本的发布状态" : "发布此版本后，其他已发布版本将被取消发布"}
-              onConfirm={() => handlePublish(record.version)}
+              title={record.is_published ? "确定要取消发布此版本吗？" : "确定要发布此版本吗？"}
+              description={record.is_published ? "取消发布后，将无法通过 pull latest 获取此版本" : "发布此版本后，其他已发布版本将被取消发布"}
+              onConfirm={() => handleTogglePublish(record.version, record.is_published)}
             >
               <Button type="link" size="small" icon={record.is_published ? <StarFilled style={{ color: '#faad14' }} /> : <StarOutlined />}>
                 {record.is_published ? '已发布' : '发布'}

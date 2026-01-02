@@ -6,7 +6,7 @@
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Tree, Input, Empty, Spin, Button, Typography, Card, Collapse, Tag, Space } from 'antd'
-import { SearchOutlined, FolderOutlined, AppstoreOutlined, FileOutlined, LoginOutlined, DownloadOutlined, CodeOutlined, DesktopOutlined } from '@ant-design/icons'
+import { SearchOutlined, FolderOutlined, AppstoreOutlined, FileOutlined, LoginOutlined, DownloadOutlined, CodeOutlined, DesktopOutlined, StarFilled } from '@ant-design/icons'
 import { useNavigate } from 'react-router-dom'
 import { publicProjectsApi, Project, App, Version } from '../api/projects'
 import { downloadsApi } from '../api/downloads'
@@ -233,6 +233,9 @@ const InventoryPage: React.FC = () => {
                   <span style={{ marginLeft: '8px', fontSize: '12px', color: '#999', fontWeight: 'normal' }}>
                     ({formatDate(version.created_at)})
                   </span>
+                )}
+                {version.is_published && (
+                  <StarFilled style={{ marginLeft: '8px', fontSize: '14px', color: '#faad14' }} />
                 )}
               </span>
             ),

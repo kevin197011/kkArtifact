@@ -30,6 +30,7 @@ export const versionsApi = {
   getManifest: (project: string, app: string, version: string) =>
     client.get<Manifest>(`/manifest/${project}/${app}/${version}`),
   publish: (data: PublishRequest) => client.post('/publish', data),
+  unpublish: (data: PublishRequest) => client.post('/unpublish', data),
   downloadFile: (project: string, app: string, version: string, path: string) =>
     client.get(`/file/${project}/${app}/${version}`, { params: { path }, responseType: 'blob' }),
 }

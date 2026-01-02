@@ -111,8 +111,9 @@ func (h *Handler) RegisterRoutes(router *gin.Engine) {
 		protected.GET("/config", h.handleGetConfig)
 		protected.PUT("/config", h.handleUpdateConfig)
 		
-		// Publish endpoint
+		// Publish/Unpublish endpoints
 		protected.POST("/publish", h.handlePublish)
+		protected.POST("/unpublish", h.handleUnpublish)
 		
 		// Audit logs endpoint
 		protected.GET("/audit-logs", h.handleListAuditLogs)
