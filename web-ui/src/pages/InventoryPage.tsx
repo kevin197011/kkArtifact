@@ -50,6 +50,20 @@ const InventoryPage: React.FC = () => {
   const [expandedKeys, setExpandedKeys] = useState<React.Key[]>([])
   const particlesRef = useRef<HTMLDivElement>(null)
 
+  // Format date for display
+  const formatDate = useCallback((dateString: string): string => {
+    try {
+      const date = new Date(dateString)
+      return date.toLocaleDateString('zh-CN', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+      })
+    } catch {
+      return ''
+    }
+  }, [])
+
   // Create subtle particle effects
   useEffect(() => {
     if (particlesRef.current) {
@@ -275,7 +289,7 @@ const InventoryPage: React.FC = () => {
       }) as TreeDataNode[]
 
     return nodes
-  }, [allProjects, allAppsData, allVersionsData, debouncedSearchTerm, navigate])
+  }, [allProjects, allAppsData, allVersionsData, debouncedSearchTerm, formatDate])
 
   // Auto-expand when searching
   useEffect(() => {
@@ -334,20 +348,6 @@ const InventoryPage: React.FC = () => {
     if (platform.includes('darwin')) return <DesktopOutlined />
     if (platform.includes('linux')) return <CodeOutlined />
     return <CodeOutlined />
-  }
-
-  // Format date for display
-  const formatDate = (dateString: string): string => {
-    try {
-      const date = new Date(dateString)
-      return date.toLocaleDateString('zh-CN', {
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-      })
-    } catch {
-      return ''
-    }
   }
 
   return (
