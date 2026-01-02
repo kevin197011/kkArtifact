@@ -27,7 +27,11 @@ interface AppLayoutProps {
 const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   const navigate = useNavigate()
   const location = useLocation()
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null) // null means checking
+  // Initialize with token check - if token exists, assume authenticated initially to avoid flash
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(() => {
+    const token = localStorage.getItem('kkartifact_token')
+    return token ? true : null // If token exists, start as authenticated to avoid flash
+  })
 
   // Verify authentication on mount and periodically
   useEffect(() => {
@@ -49,6 +53,10 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
           setIsAuthenticated(false)
           navigate('/login', { replace: true })
           message.warning('您的会话已过期，请重新登录')
+        } else {
+          // For other errors (network, etc.), still assume authenticated if we have token
+          // This prevents flash on network issues
+          setIsAuthenticated(true)
         }
       }
     }
