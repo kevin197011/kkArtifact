@@ -8,8 +8,7 @@ services:
       POSTGRES_PASSWORD: ${DB_PASSWORD:-kkartifact}
       # Increase max_connections to handle high concurrency uploads (default is 100)
       POSTGRES_INITDB_ARGS: "-c max_connections=200"
-    ports:
-      - "${DB_PORT:-5432}:5432"
+    # Port not exposed - internal access only
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -24,8 +23,7 @@ services:
   redis:
     image: redis:7-alpine
     container_name: kkartifact-redis
-    ports:
-      - "${REDIS_PORT:-6379}:6379"
+    # Port not exposed - internal access only
     volumes:
       - redis_data:/data
     healthcheck:
@@ -79,8 +77,7 @@ services:
       # Admin token configuration
       ADMIN_TOKEN: ${ADMIN_TOKEN:-}
       ADMIN_TOKEN_NAME: ${ADMIN_TOKEN_NAME:-admin-initial-token}
-    ports:
-      - "${SERVER_PORT:-8080}:8080"
+    # Port not exposed - internal access only (accessed via web-ui proxy)
     depends_on:
       postgres:
         condition: service_healthy
@@ -102,7 +99,7 @@ services:
     image: ghcr.io/kevin197011/kkartifact/web-ui:latest
     container_name: kkartifact-web-ui
     ports:
-      - "${WEB_UI_PORT:-3000}:80"
+      - "3001:80"
     depends_on:
       server:
         condition: service_healthy
