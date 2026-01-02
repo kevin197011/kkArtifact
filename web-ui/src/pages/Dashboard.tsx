@@ -68,6 +68,7 @@ const Dashboard: React.FC = () => {
           push: 'blue',
           pull: 'green',
           publish: 'orange',
+          unpublish: 'orange',
           token_create: 'purple',
           token_delete: 'red',
         }
@@ -75,6 +76,7 @@ const Dashboard: React.FC = () => {
           push: '推送',
           pull: '拉取',
           publish: '发布',
+          unpublish: '取消发布',
           token_create: '创建令牌',
           token_delete: '删除令牌',
         }

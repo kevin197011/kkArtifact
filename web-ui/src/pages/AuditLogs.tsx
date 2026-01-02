@@ -32,6 +32,7 @@ const AuditLogsPage: React.FC = () => {
           push: '推送',
           pull: '拉取',
           publish: '发布',
+          unpublish: '取消发布',
           token_create: '创建令牌',
           token_delete: '删除令牌',
         }
