@@ -5,8 +5,8 @@
 
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Tree, Input, Empty, Spin, Button, Typography, Card, Collapse, Tag, Space } from 'antd'
-import { SearchOutlined, FolderOutlined, AppstoreOutlined, FileOutlined, LoginOutlined, DownloadOutlined, CodeOutlined, DesktopOutlined, StarFilled } from '@ant-design/icons'
+import { Tree, Input, Empty, Spin, Button, Typography, Card, Collapse, Tag, Space, message } from 'antd'
+import { SearchOutlined, FolderOutlined, AppstoreOutlined, FileOutlined, LoginOutlined, DownloadOutlined, CodeOutlined, DesktopOutlined, StarFilled, CopyOutlined } from '@ant-design/icons'
 import { useNavigate } from 'react-router-dom'
 import { publicProjectsApi, Project, App, Version } from '../api/projects'
 import { downloadsApi } from '../api/downloads'
@@ -49,6 +49,7 @@ const InventoryPage: React.FC = () => {
   const debouncedSearchTerm = useDebounce(searchTerm, 300)
   const [expandedKeys, setExpandedKeys] = useState<React.Key[]>([])
   const particlesRef = useRef<HTMLDivElement>(null)
+  const connectionsRef = useRef<HTMLDivElement>(null)
 
   // Format date for display
   const formatDate = useCallback((dateString: string): string => {
@@ -64,21 +65,49 @@ const InventoryPage: React.FC = () => {
     }
   }, [])
 
-  // Create subtle particle effects
+  // Copy version to clipboard
+  const handleCopyVersion = useCallback((version: string, e: React.MouseEvent) => {
+    e.stopPropagation() // Prevent tree node expansion
+    navigator.clipboard.writeText(version).then(() => {
+      message.success('版本号已复制到剪贴板')
+    }).catch(() => {
+      message.error('复制失败')
+    })
+  }, [])
+
+  // Create DevOps style dynamic effects
   useEffect(() => {
+    // Create particles
     if (particlesRef.current) {
       const particles = particlesRef.current
       particles.innerHTML = ''
 
-      // Create fewer particles with slower animation for subtle effect
-      for (let i = 0; i < 12; i++) {
+      // Create particles with subtle animation
+      for (let i = 0; i < 15; i++) {
         const particle = document.createElement('div')
         particle.className = styles.particle
         particle.style.left = `${Math.random() * 100}%`
         particle.style.width = particle.style.height = `${Math.random() * 3 + 2}px`
         particle.style.animationDelay = `${Math.random() * 20}s`
-        particle.style.animationDuration = `${Math.random() * 15 + 20}s`
+        particle.style.animationDuration = `${Math.random() * 15 + 25}s`
         particles.appendChild(particle)
+      }
+    }
+
+    // Create connection lines
+    if (connectionsRef.current) {
+      const connectionsContainer = connectionsRef.current
+      connectionsContainer.innerHTML = ''
+      
+      for (let i = 0; i < 8; i++) {
+        const connection = document.createElement('div')
+        connection.className = styles.connection
+        connection.style.top = `${Math.random() * 100}%`
+        connection.style.left = `${Math.random() * 100}%`
+        connection.style.width = `${Math.random() * 200 + 100}px`
+        connection.style.animationDelay = `${Math.random() * 3}s`
+        connection.style.transform = `rotate(${Math.random() * 360}deg)`
+        connectionsContainer.appendChild(connection)
       }
     }
   }, [])
@@ -229,6 +258,11 @@ const InventoryPage: React.FC = () => {
               >
                 <FileOutlined className={styles.treeNodeIcon} />
                 <span className={styles.treeNodeTextVersion}>{version.version}</span>
+                <CopyOutlined
+                  style={{ marginLeft: '8px', fontSize: '12px', color: '#999', cursor: 'pointer' }}
+                  onClick={(e) => handleCopyVersion(version.version, e)}
+                  title="复制版本号"
+                />
                 {version.created_at && (
                   <span style={{ marginLeft: '8px', fontSize: '12px', color: '#999', fontWeight: 'normal' }}>
                     ({formatDate(version.created_at)})
@@ -352,6 +386,7 @@ const InventoryPage: React.FC = () => {
       {/* DevOps style background effects */}
       <div className={styles.gridBackground}></div>
       <div className={styles.particles} ref={particlesRef}></div>
+      <div className={styles.connections} ref={connectionsRef}></div>
 
       {/* Content wrapper */}
       <div className={styles.contentWrapper}>
