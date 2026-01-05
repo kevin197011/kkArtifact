@@ -188,7 +188,7 @@ def push_tags
 end
 
 desc 'Build all components, update versions, and commit (default task)'
-task :default => [:build_all]
+task :default => [:build_and_commit]
 
 desc 'Build all, update versions, commit, and push'
 task :build_and_commit => [:build_all, :git_push] do
