@@ -6,3 +6,4 @@ storage
 .idea
 dist
 node_modules
+.kkartifact.yml
