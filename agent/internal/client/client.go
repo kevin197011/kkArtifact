@@ -383,3 +383,88 @@ func (c *Client) GetLatestVersion(project, app string) (*LatestVersionResponse, 
 
 	return &latestResp, nil
 }
+
+// AgentVersionInfo represents agent version information
+type AgentVersionInfo struct {
+	Version   string            `json:"version"`
+	BuildTime string            `json:"build_time"`
+	Binaries  []AgentBinaryInfo `json:"binaries"`
+}
+
+// AgentBinaryInfo represents a single agent binary
+type AgentBinaryInfo struct {
+	Platform string `json:"platform"`
+	Filename string `json:"filename"`
+	Size     int64  `json:"size"`
+	URL      string `json:"url"`
+}
+
+// GetAgentVersionInfo retrieves agent version information from the server
+func (c *Client) GetAgentVersionInfo() (*AgentVersionInfo, error) {
+	url := fmt.Sprintf("%s/api/v1/downloads/agent/version", c.serverURL)
+
+	httpReq, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	// Agent version endpoint is public, no auth required
+	resp, err := c.httpClient.Do(httpReq)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("get agent version info failed with status %d: %s", resp.StatusCode, string(body))
+	}
+
+	var versionInfo AgentVersionInfo
+	if err := json.NewDecoder(resp.Body).Decode(&versionInfo); err != nil {
+		return nil, err
+	}
+
+	return &versionInfo, nil
+}
+
+// DownloadAgentBinary downloads an agent binary file
+func (c *Client) DownloadAgentBinary(filename string, destPath string) error {
+	url := fmt.Sprintf("%s/api/v1/downloads/agent/%s", c.serverURL, filename)
+
+	httpReq, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return err
+	}
+
+	// Agent download endpoint is public, no auth required
+	resp, err := c.httpClient.Do(httpReq)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("download agent binary failed with status %d: %s", resp.StatusCode, string(body))
+	}
+
+	// Create destination file
+	file, err := os.Create(destPath)
+	if err != nil {
+		return fmt.Errorf("failed to create destination file: %w", err)
+	}
+	defer file.Close()
+
+	// Copy content
+	if _, err := io.Copy(file, resp.Body); err != nil {
+		return fmt.Errorf("failed to write file: %w", err)
+	}
+
+	// Make file executable on Unix systems
+	if err := os.Chmod(destPath, 0755); err != nil {
+		// Ignore chmod errors on Windows
+	}
+
+	return nil
+}
