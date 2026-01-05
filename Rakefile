@@ -51,33 +51,46 @@ task :git_commit do
   version = `git describe --tags 2>/dev/null`.strip if version.empty?
   version = 'latest' if version.empty?
 
-  # Stage relevant files (only files that should be committed)
-  files_to_add = [
+  # Stage agent-related files first (if they exist)
+  agent_files = [
     'server/static/agent/version.json',
     'server/static/agent/kkartifact-agent-*'
   ]
 
-  staged_any = false
-  files_to_add.each do |pattern|
+  staged_agent_files = false
+  agent_files.each do |pattern|
     if pattern.include?('*')
       # Handle glob patterns
       Dir.glob(pattern).each do |file|
         if File.exist?(file)
           system('git', 'add', file)
-          staged_any = true
+          staged_agent_files = true
         end
       end
     else
       if File.exist?(pattern)
         system('git', 'add', pattern)
-        staged_any = true
+        staged_agent_files = true
       end
     end
   end
 
-  unless staged_any
-    puts 'No relevant files to commit'
-    next
+  # Stage all other modified files (excluding bin/ and other ignored files)
+  modified_files = `git status --porcelain | grep '^ M' | awk '{print $2}'`.split("\n").reject(&:empty?)
+  untracked_files = `git status --porcelain | grep '^??' | awk '{print $2}'`.split("\n").reject(&:empty?)
+  
+  # Add modified files (excluding bin/ directory)
+  modified_files.each do |file|
+    next if file.start_with?('bin/')
+    next if file.start_with?('server/static/agent/') # Already handled above
+    system('git', 'add', file)
+  end
+  
+  # Add untracked files (excluding bin/ and ignored patterns)
+  untracked_files.each do |file|
+    next if file.start_with?('bin/')
+    next if file.start_with?('server/static/agent/') # Already handled above
+    system('git', 'add', file)
   end
 
   # Check if there are staged changes
@@ -87,12 +100,47 @@ task :git_commit do
     next
   end
 
-  # Commit message
-  commit_message = "chore: update binaries and version.json for #{version}"
+  # Determine commit message based on what was changed
+  if staged_agent_files
+    commit_message = "chore: update binaries and version.json for #{version}"
+  else
+    # For other changes, use a generic message or try to infer from file names
+    changed_files = staged.split("\n")
+    if changed_files.any? { |f| f.include?('workflow') || f.include?('.github') }
+      commit_message = "ci: update GitHub Actions workflow"
+    elsif changed_files.any? { |f| f.include?('Rakefile') }
+      commit_message = "chore: update Rakefile"
+    else
+      commit_message = "chore: update files"
+    end
+  end
 
   # Auto commit without confirmation
   system('git', 'commit', '-m', commit_message) || abort('Failed to commit changes')
   puts "✅ Changes committed: #{commit_message}"
+  
+  # Auto-create version tag after commit (only on main branch)
+  create_version_tag
+end
+
+# Helper method to create version tag
+def create_version_tag
+  current_branch = `git rev-parse --abbrev-ref HEAD`.strip
+  return unless current_branch == 'main'
+  
+  # Check if HEAD already has a tag
+  existing_tag = `git describe --tags --exact-match HEAD 2>/dev/null`.strip
+  return if existing_tag && !existing_tag.empty?
+  
+  # Generate version tag based on timestamp
+  version_tag = "v#{Time.now.strftime('%Y%m%d%H%M%S')}"
+  
+  # Create the tag
+  if system('git', 'tag', version_tag)
+    puts "✅ Created version tag: #{version_tag}"
+  else
+    puts "⚠️  Failed to create tag: #{version_tag}"
+  end
 end
 
 desc 'Push changes to remote'
@@ -110,6 +158,8 @@ task :git_push do
     behind = `git rev-list --count origin/#{current_branch}..HEAD 2>/dev/null`.strip
     if behind.empty? || behind == '0'
       puts 'No commits to push'
+      # Still check for tags to push
+      push_tags
       next
     end
   end
@@ -117,6 +167,24 @@ task :git_push do
   # Auto push without confirmation
   system('git', 'push', 'origin', current_branch) || abort('Failed to push changes')
   puts "✅ Changes pushed to origin/#{current_branch}"
+  
+  # Also push tags
+  push_tags
+end
+
+# Helper method to push tags
+def push_tags
+  # Get local tags that are not on remote
+  local_tags = `git tag -l`.split("\n")
+  remote_tags = `git ls-remote --tags origin 2>/dev/null | grep -v '\^{}' | sed 's/.*\\///'`.split("\n")
+  
+  tags_to_push = local_tags - remote_tags
+  
+  if tags_to_push.any?
+    puts "Pushing #{tags_to_push.size} tag(s) to remote..."
+    system('git', 'push', 'origin', '--tags') || puts('⚠️  Failed to push some tags')
+    tags_to_push.each { |tag| puts "  ✅ Pushed tag: #{tag}" }
+  end
 end
 
 desc 'Build all components, update versions, and commit (default task)'
@@ -177,3 +245,4 @@ task :help do
       rake build_agent_all          # Only build agent binaries
   HELP
 end
+
