@@ -6,7 +6,7 @@
 import React, { useEffect, useState } from 'react'
 import { Layout, Menu, Button, message } from 'antd'
 import { useNavigate, useLocation } from 'react-router-dom'
-import client from '../api/client'
+import client, { publicClient } from '../api/client'
 import {
   DashboardOutlined,
   ProjectOutlined,
@@ -38,21 +38,41 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
     const checkAuth = async () => {
       const token = localStorage.getItem('kkartifact_token')
       if (!token) {
-        setIsAuthenticated(false)
-        navigate('/login', { replace: true })
+        // No token, use public endpoint to check if service is available
+        try {
+          await publicClient.get('/public/projects', { params: { limit: 1 } })
+          // Service is available but user is not authenticated
+          setIsAuthenticated(false)
+          navigate('/login', { replace: true })
+        } catch (error: any) {
+          // Service might be down, but still redirect to login
+          setIsAuthenticated(false)
+          navigate('/login', { replace: true })
+        }
         return
       }
 
       try {
-        // Verify token is still valid
+        // Verify token is still valid using authenticated endpoint
         await client.get('/projects', { params: { limit: 1 } })
         setIsAuthenticated(true)
       } catch (error: any) {
         if (error.response?.status === 401) {
-          localStorage.removeItem('kkartifact_token')
-          setIsAuthenticated(false)
-          navigate('/login', { replace: true })
-          message.warning('您的会话已过期，请重新登录')
+          // Token is invalid, try using public endpoint instead to avoid 401
+          try {
+            await publicClient.get('/public/projects', { params: { limit: 1 } })
+            // Public endpoint works, but user is not authenticated
+            localStorage.removeItem('kkartifact_token')
+            setIsAuthenticated(false)
+            navigate('/login', { replace: true })
+            message.warning('您的会话已过期，请重新登录')
+          } catch (publicError: any) {
+            // Even public endpoint failed, remove token and redirect
+            localStorage.removeItem('kkartifact_token')
+            setIsAuthenticated(false)
+            navigate('/login', { replace: true })
+            message.warning('您的会话已过期，请重新登录')
+          }
         } else {
           // For other errors (network, etc.), still assume authenticated if we have token
           // This prevents flash on network issues
