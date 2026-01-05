@@ -11,7 +11,10 @@ build-server:
 
 # Build agent
 build-agent:
-	cd agent && go build -o ../bin/kkartifact-agent ./main.go
+	@VERSION=$$(git describe --tags --exact-match 2>/dev/null || git describe --tags 2>/dev/null || echo "dev"); \
+	BUILD_TIME=$$(date -u +%Y-%m-%dT%H:%M:%SZ); \
+	GIT_COMMIT=$$(git rev-parse --short HEAD 2>/dev/null || echo "unknown"); \
+	cd agent && go build -ldflags "-X github.com/kk/kkartifact-agent/internal/cli.Version=$$VERSION -X github.com/kk/kkartifact-agent/internal/cli.BuildTime=$$BUILD_TIME -X github.com/kk/kkartifact-agent/internal/cli.GitCommit=$$GIT_COMMIT" -o ../bin/kkartifact-agent ./main.go
 
 # Build agent for all platforms
 build-agent-all:

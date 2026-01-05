@@ -49,9 +49,7 @@ func (cm *CleanupManager) CleanupOldVersions(ctx context.Context, project, app s
 	// This should be done first, before checking retention limits
 	if err := cm.cleanupIncompleteVersions(ctx, project, app, appModel.ID, versionRepo); err != nil {
 		// Log error but continue - this is not critical
-		if util.IsDebugMode() {
-			fmt.Printf("Warning: failed to cleanup incomplete versions for %s/%s: %v\n", project, app, err)
-		}
+		fmt.Printf("Warning: failed to cleanup incomplete versions for %s/%s: %v\n", project, app, err)
 	}
 
 	// Step 2: Clean up old versions beyond retention limit
@@ -126,26 +124,22 @@ func (cm *CleanupManager) cleanupIncompleteVersions(ctx context.Context, project
 
 		// If meta.yaml doesn't exist (GetManifest failed), this is an incomplete upload - delete it
 		if !hasManifest {
-			if util.IsDebugMode() {
-				fmt.Printf("Cleaning up incomplete version (no meta.yaml): %s/%s/%s\n", project, app, version)
-			}
+			fmt.Printf("Cleaning up incomplete version (no meta.yaml): %s/%s/%s\n", project, app, version)
 			if err := cm.artifactManager.DeleteVersion(ctx, project, app, version); err != nil {
-				if util.IsDebugMode() {
-					fmt.Printf("Failed to delete incomplete version %s/%s/%s: %v\n", project, app, version, err)
-				}
+				fmt.Printf("Failed to delete incomplete version %s/%s/%s: %v\n", project, app, version, err)
+			} else {
+				fmt.Printf("Successfully deleted incomplete version: %s/%s/%s\n", project, app, version)
 			}
 			continue
 		}
 
 		// If meta.yaml exists but version is not in database, delete it (orphaned version)
 		if !dbVersionMap[version] {
-			if util.IsDebugMode() {
-				fmt.Printf("Cleaning up orphaned version (not in database): %s/%s/%s\n", project, app, version)
-			}
+			fmt.Printf("Cleaning up orphaned version (not in database): %s/%s/%s\n", project, app, version)
 			if err := cm.artifactManager.DeleteVersion(ctx, project, app, version); err != nil {
-				if util.IsDebugMode() {
-					fmt.Printf("Failed to delete orphaned version %s/%s/%s: %v\n", project, app, version, err)
-				}
+				fmt.Printf("Failed to delete orphaned version %s/%s/%s: %v\n", project, app, version, err)
+			} else {
+				fmt.Printf("Successfully deleted orphaned version: %s/%s/%s\n", project, app, version)
 			}
 		}
 	}

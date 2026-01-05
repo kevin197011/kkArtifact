@@ -9,8 +9,6 @@ import (
 	"context"
 	"log"
 	"time"
-
-	"github.com/kk/kkartifact-server/internal/util"
 )
 
 // Task represents a scheduled task
@@ -21,15 +19,17 @@ type Task interface {
 
 // Scheduler manages scheduled tasks
 type Scheduler struct {
-	tasks []Task
-	stop  chan struct{}
+	tasks      []Task
+	stop       chan struct{}
+	lastRunDay int // Track last run day to prevent multiple runs per day
 }
 
 // New creates a new scheduler
 func New() *Scheduler {
 	return &Scheduler{
-		tasks: []Task{},
-		stop:  make(chan struct{}),
+		tasks:      []Task{},
+		stop:       make(chan struct{}),
+		lastRunDay: -1, // Initialize to -1 so first run can happen
 	}
 }
 
@@ -65,15 +65,20 @@ func (s *Scheduler) Stop() {
 
 func (s *Scheduler) runTasks(ctx context.Context) {
 	now := time.Now()
-	// Run at 3 AM
-	if now.Hour() == 3 && now.Minute() < 10 {
+	currentDay := now.YearDay() // Day of year (1-365/366)
+	
+	// Run at 3 AM (03:00-03:09) and only once per day
+	if now.Hour() == 3 && now.Minute() < 10 && s.lastRunDay != currentDay {
+		s.lastRunDay = currentDay
+		
+		log.Printf("Running scheduled cleanup tasks at %s", now.Format("2006-01-02 15:04:05"))
 		for _, task := range s.tasks {
-			if util.IsDebugMode() {
-				log.Printf("Running scheduled task: %s", task.Name())
-			}
+			log.Printf("Running scheduled task: %s", task.Name())
 			if err := task.Run(ctx); err != nil {
 				// Always log task failures
 				log.Printf("Task %s failed: %v", task.Name(), err)
+			} else {
+				log.Printf("Task %s completed successfully", task.Name())
 			}
 		}
 	}

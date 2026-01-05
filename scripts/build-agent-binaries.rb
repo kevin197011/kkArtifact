@@ -67,18 +67,25 @@ class AgentBinaryBuilder
     filename = "kkartifact-agent-#{platform[:goos]}-#{platform[:goarch]}#{platform[:suffix]}"
     output_path = File.join(@output_dir, filename)
 
+    # Get version from git tag
+    version = get_version_from_git
+    build_time = Time.now.utc.iso8601
+    git_commit = get_git_commit
+
     env = {
       'GOOS' => platform[:goos],
       'GOARCH' => platform[:goarch],
       'CGO_ENABLED' => '0'
     }
 
-    cmd = "cd #{@agent_dir} && go build -trimpath -ldflags='-s -w' -o ../#{output_path} ./main.go"
+    # Build with version info injected via ldflags
+    ldflags = "-s -w -X github.com/kk/kkartifact-agent/internal/cli.Version=#{version} -X github.com/kk/kkartifact-agent/internal/cli.BuildTime=#{build_time} -X github.com/kk/kkartifact-agent/internal/cli.GitCommit=#{git_commit}"
+    cmd = "cd #{@agent_dir} && go build -trimpath -ldflags='#{ldflags}' -o ../#{output_path} ./main.go"
 
     stdout, stderr, status = Open3.capture3(env, cmd)
 
     if status.success?
-      { success: true, filename: filename }
+      { success: true, filename: filename, version: version }
     else
       { success: false, error: stderr.strip }
     end
@@ -86,19 +93,29 @@ class AgentBinaryBuilder
     { success: false, error: e.message }
   end
 
+  def get_version_from_git
+    # Try to get exact tag first
+    tag, _ = Open3.capture2('git describe --tags --exact-match 2>/dev/null')
+    return tag.strip if tag && !tag.strip.empty?
+
+    # Try to get latest tag with distance
+    tag, _ = Open3.capture2('git describe --tags 2>/dev/null')
+    return tag.strip if tag && !tag.strip.empty?
+
+    # Fallback to timestamp
+    Time.now.strftime('v%Y%m%d%H%M%S')
+  end
+
+  def get_git_commit
+    commit, _ = Open3.capture2('git rev-parse --short HEAD 2>/dev/null')
+    commit&.strip || 'unknown'
+  end
+
   def generate_version_info
     version_file = File.join(@output_dir, 'version.json')
     
-    # Try to get version from git or use timestamp
-    version = nil
-    begin
-      git_tag, _ = Open3.capture2('git describe --tags --exact-match 2>/dev/null')
-      version = git_tag.strip if git_tag && !git_tag.empty?
-    rescue
-      # Ignore errors
-    end
-
-    version ||= Time.now.strftime('%Y%m%d%H%M%S')
+    # Get version from git tag (same logic as build_platform)
+    version = get_version_from_git
 
     binaries = PLATFORMS.map do |platform|
       filename = "kkartifact-agent-#{platform[:goos]}-#{platform[:goarch]}#{platform[:suffix]}"

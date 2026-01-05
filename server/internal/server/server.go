@@ -146,7 +146,7 @@ func New(cfg *config.Config) (*Server, error) {
 	sched.AddTask(auditCleanupTask)
 	
 	go sched.Start(context.Background())
-	log.Printf("Scheduler started: cleanup tasks will run daily at 3 AM")
+	log.Printf("Scheduler started: cleanup tasks will run daily at 3 AM (03:00)")
 
 	return server, nil
 }
