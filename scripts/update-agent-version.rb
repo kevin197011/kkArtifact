@@ -9,6 +9,7 @@
 require 'fileutils'
 require 'json'
 require 'open3'
+require 'time'
 
 # Quick script to update agent version.json without rebuilding binaries
 class AgentVersionUpdater
@@ -74,7 +75,7 @@ class AgentVersionUpdater
 
     version_info = {
       version: version,
-      build_time: Time.now.utc.iso8601,
+      build_time: Time.now.utc.strftime('%Y-%m-%dT%H:%M:%SZ'),
       binaries: binaries
     }
 

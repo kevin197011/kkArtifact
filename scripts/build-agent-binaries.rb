@@ -8,6 +8,7 @@
 
 require 'fileutils'
 require 'open3'
+require 'time'
 
 # Build agent binaries for multiple platforms
 class AgentBinaryBuilder
@@ -71,7 +72,7 @@ class AgentBinaryBuilder
 
     # Get version from git tag
     version = get_version_from_git
-    build_time = Time.now.utc.iso8601
+    build_time = Time.now.utc.strftime('%Y-%m-%dT%H:%M:%SZ')
     git_commit = get_git_commit
 
     env = {
@@ -138,7 +139,7 @@ class AgentBinaryBuilder
 
     version_info = {
       version: version,
-      build_time: Time.now.utc.iso8601,
+      build_time: Time.now.utc.strftime('%Y-%m-%dT%H:%M:%SZ'),
       binaries: binaries
     }
 
