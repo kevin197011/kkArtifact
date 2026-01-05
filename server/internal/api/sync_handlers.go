@@ -108,11 +108,12 @@ func (h *Handler) handleSyncStorage(c *gin.Context) {
 
 			manifestPath := filepath.Join(path, "meta.yaml")
 			if _, err := os.Stat(manifestPath); os.IsNotExist(err) {
-				// No manifest, skip
-				return nil
+				// No manifest, skip this version directory
+				// Skip deeper traversal into version directory to avoid processing subdirectories
+				return filepath.SkipDir
 			}
 
-			// Track this version exists
+			// Track this version exists (has meta.yaml)
 			if storageVersions[projectName] == nil {
 				storageVersions[projectName] = make(map[string]map[string]bool)
 			}
@@ -120,6 +121,11 @@ func (h *Handler) handleSyncStorage(c *gin.Context) {
 				storageVersions[projectName][appName] = make(map[string]bool)
 			}
 			storageVersions[projectName][appName][versionHash] = true
+			// Skip deeper traversal into version directory to avoid processing subdirectories
+			return filepath.SkipDir
+		} else if len(parts) > 3 {
+			// Deeper than version level, skip to avoid processing subdirectories
+			return filepath.SkipDir
 		}
 
 		return nil
@@ -197,20 +203,21 @@ func (h *Handler) handleSyncStorage(c *gin.Context) {
 
 			manifestPath := filepath.Join(path, "meta.yaml")
 			if _, err := os.Stat(manifestPath); os.IsNotExist(err) {
-				// No manifest, skip
-				return nil
+				// No manifest, skip this version (only versions with meta.yaml are considered complete)
+				// Skip deeper traversal into version directory to avoid processing subdirectories
+				return filepath.SkipDir
 			}
 
 			project, err := h.projectRepo.CreateOrGet(projectName)
 			if err != nil {
 				log.Printf("Warning: failed to create/get project %s: %v", projectName, err)
-				return nil
+				return filepath.SkipDir
 			}
 
 			app, err := h.appRepo.CreateOrGet(project.ID, appName)
 			if err != nil {
 				log.Printf("Warning: failed to create/get app %s/%s: %v", projectName, appName, err)
-				return nil
+				return filepath.SkipDir
 			}
 
 			_, err = h.versionRepo.Create(app.ID, versionHash)
@@ -220,6 +227,12 @@ func (h *Handler) handleSyncStorage(c *gin.Context) {
 				versionCount++
 				log.Printf("    Added version: %s/%s/%s", projectName, appName, versionHash)
 			}
+			
+			// Skip deeper traversal into version directory to avoid processing subdirectories
+			return filepath.SkipDir
+		} else if len(parts) > 3 {
+			// Deeper than version level, skip to avoid processing subdirectories
+			return filepath.SkipDir
 		}
 
 		return nil
