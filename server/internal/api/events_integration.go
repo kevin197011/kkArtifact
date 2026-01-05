@@ -6,6 +6,7 @@
 package api
 
 import (
+	"log"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -39,9 +40,13 @@ func (h *Handler) publishEventWithContext(c *gin.Context, eventType events.Event
 		Timestamp: time.Now(),
 	}
 
-	// TODO: Integrate with event bus
-	// For now, just log the event
-	_ = event
+	// Publish event to event bus if available
+	if h.eventBus != nil {
+		if err := h.eventBus.Publish(event); err != nil {
+			// Log error but continue with audit log and webhook triggering
+			log.Printf("Failed to publish event to event bus: %v", err)
+		}
+	}
 
 	// Get project and app IDs
 	projectObj, err := h.projectRepo.CreateOrGet(project)

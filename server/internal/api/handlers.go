@@ -14,6 +14,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/kk/kkartifact-server/internal/auth"
 	"github.com/kk/kkartifact-server/internal/database"
+	"github.com/kk/kkartifact-server/internal/events"
 	"github.com/kk/kkartifact-server/internal/services"
 	"github.com/kk/kkartifact-server/internal/storage"
 )
@@ -28,6 +29,7 @@ type Handler struct {
 	appRepo         *database.AppRepository
 	versionRepo     *database.VersionRepository
 	inventoryService *services.InventoryService
+	eventBus        events.EventBus
 }
 
 // NewHandler creates a new API handler
@@ -35,6 +37,9 @@ func NewHandler(db *database.DB, storageBackend storage.Storage, authenticator *
 	projectRepo := database.NewProjectRepository(db)
 	appRepo := database.NewAppRepository(db)
 	versionRepo := database.NewVersionRepository(db)
+	
+	// Initialize event bus (can be nil if not needed)
+	eventBus := events.NewMemoryEventBus()
 	
 	return &Handler{
 		db:              db,
@@ -45,6 +50,7 @@ func NewHandler(db *database.DB, storageBackend storage.Storage, authenticator *
 		appRepo:         appRepo,
 		versionRepo:     versionRepo,
 		inventoryService: services.NewInventoryService(projectRepo, appRepo, versionRepo),
+		eventBus:        eventBus,
 	}
 }
 

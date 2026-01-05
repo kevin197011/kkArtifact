@@ -6,6 +6,7 @@
 package events
 
 import (
+	"log"
 	"time"
 )
 
@@ -13,23 +14,23 @@ import (
 type EventType string
 
 const (
-	EventTypePush    EventType = "push"
-	EventTypePull    EventType = "pull"
-	EventTypePromote EventType = "promote"
+	EventTypePush     EventType = "push"
+	EventTypePull     EventType = "pull"
+	EventTypePromote  EventType = "promote"
 	EventTypeRollback EventType = "rollback"
-	EventTypeDelete  EventType = "delete"
+	EventTypeDelete   EventType = "delete"
 )
 
 // Event represents an event in the system
 type Event struct {
-	ID        int       `json:"id"`
-	Type      EventType `json:"type"`
-	Project   string    `json:"project"`
-	App       string    `json:"app"`
-	Version   string    `json:"version,omitempty"`
-	AgentID   string    `json:"agent_id,omitempty"`
+	ID        int                    `json:"id"`
+	Type      EventType              `json:"type"`
+	Project   string                 `json:"project"`
+	App       string                 `json:"app"`
+	Version   string                 `json:"version,omitempty"`
+	AgentID   string                 `json:"agent_id,omitempty"`
 	Metadata  map[string]interface{} `json:"metadata,omitempty"`
-	Timestamp time.Time `json:"timestamp"`
+	Timestamp time.Time              `json:"timestamp"`
 }
 
 // EventBus handles event publishing and subscription
@@ -59,8 +60,9 @@ func (b *MemoryEventBus) Publish(event *Event) error {
 	for _, handler := range handlers {
 		if err := handler(event); err != nil {
 			// Log error but continue with other handlers
-			// TODO: Add proper logging
-			_ = err
+			// Use standard library log for now (can be replaced with structured logger if needed)
+			log.Printf("Event handler error for event type %s (project=%s, app=%s, version=%s): %v",
+				event.Type, event.Project, event.App, event.Version, err)
 		}
 	}
 	return nil
@@ -71,4 +73,3 @@ func (b *MemoryEventBus) Subscribe(eventType EventType, handler EventHandler) er
 	b.handlers[eventType] = append(b.handlers[eventType], handler)
 	return nil
 }
-
