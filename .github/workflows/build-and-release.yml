@@ -146,7 +146,12 @@ jobs:
           if [ "${{ matrix.goos }}" == "windows" ]; then
             OUTPUT_NAME="${OUTPUT_NAME}.exe"
           fi
-          go build -trimpath -ldflags="-s -w" -o ${OUTPUT_NAME} ./main.go
+          # Get version from tag
+          VERSION="${{ github.ref_name }}"
+          BUILD_TIME=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          GIT_COMMIT="${GITHUB_SHA:0:7}"
+          # Build with version info injected
+          go build -trimpath -ldflags="-s -w -X github.com/kk/kkartifact-agent/internal/cli.Version=${VERSION} -X github.com/kk/kkartifact-agent/internal/cli.BuildTime=${BUILD_TIME} -X github.com/kk/kkartifact-agent/internal/cli.GitCommit=${GIT_COMMIT}" -o ${OUTPUT_NAME} ./main.go
           mkdir -p ../release
           mv ${OUTPUT_NAME} ../release/
 
@@ -167,6 +172,9 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
 
       - name: Download all artifacts
         uses: actions/download-artifact@v4
@@ -193,6 +201,39 @@ jobs:
           ls -lh
           echo "Checksums:"
           cat checksums.txt
+
+      - name: Generate version.json and update server/static/agent
+        run: |
+          VERSION="${{ github.ref_name }}"
+          BUILD_TIME=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          
+          # Create server/static/agent directory
+          mkdir -p server/static/agent
+          
+          # Copy all binaries to server/static/agent
+          cp release/kkartifact-agent-* server/static/agent/ 2>/dev/null || true
+          
+          # Use Ruby script to generate version.json (more reliable)
+          ruby scripts/update-agent-version.rb server/static/agent
+          
+          echo "Generated version.json:"
+          cat server/static/agent/version.json
+          
+          echo ""
+          echo "Files in server/static/agent:"
+          ls -lh server/static/agent/
+
+      - name: Commit and push version.json and binaries
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add server/static/agent/version.json server/static/agent/kkartifact-agent-*
+          if ! git diff --staged --quiet; then
+            git commit -m "chore: update agent binaries and version.json for ${{ github.ref_name }}"
+            git push
+          else
+            echo "No changes to commit"
+          fi
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1

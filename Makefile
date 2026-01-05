@@ -23,6 +23,10 @@ build-agent:
 build-agent-all:
 	ruby scripts/build-agent-binaries.rb
 
+# Update agent version.json only (without rebuilding binaries)
+update-agent-version:
+	ruby scripts/update-agent-version.rb
+
 # Build all
 build-all: build-server build-agent
 
