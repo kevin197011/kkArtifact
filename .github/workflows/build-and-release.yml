@@ -1,0 +1,284 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - 'v*'  # Trigger on version tags (e.g., v1.0.0)
+    # branches:
+    #   - main  # Also trigger on push to main branch
+  workflow_dispatch:  # Allow manual trigger
+
+env:
+  REGISTRY: ghcr.io
+  SERVER_IMAGE: server
+  WEB_UI_IMAGE: web-ui
+
+jobs:
+  build-server:
+    name: Build and Push Server Image
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ github.repository }}/${{ env.SERVER_IMAGE }}
+          tags: |
+            type=ref,event=tag
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
+            type=raw,value=latest,enable=${{ github.ref == format('refs/heads/{0}', github.event.repository.default_branch) }}
+          tags-fallback: latest
+
+      - name: Build and push server image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./server
+          file: ./server/Dockerfile
+          push: ${{ startsWith(github.ref, 'refs/tags/') || github.ref == format('refs/heads/{0}', github.event.repository.default_branch) }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  build-web-ui:
+    name: Build and Push Web UI Image
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ github.repository }}/${{ env.WEB_UI_IMAGE }}
+          tags: |
+            type=ref,event=tag
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
+            type=raw,value=latest,enable=${{ github.ref == format('refs/heads/{0}', github.event.repository.default_branch) }}
+          tags-fallback: latest
+
+      - name: Build and push web-ui image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./web-ui
+          file: ./web-ui/Dockerfile
+          push: ${{ startsWith(github.ref, 'refs/tags/') || github.ref == format('refs/heads/{0}', github.event.repository.default_branch) }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  build-server-binaries:
+    name: Build Server Binaries
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - goos: linux
+            goarch: amd64
+            suffix: ''
+          - goos: linux
+            goarch: arm64
+            suffix: ''
+          - goos: darwin
+            goarch: amd64
+            suffix: ''
+          - goos: darwin
+            goarch: arm64
+            suffix: ''
+          - goos: windows
+            goarch: amd64
+            suffix: '.exe'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'
+          cache-dependency-path: './server/go.sum'
+
+      - name: Build server binary
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          CGO_ENABLED: 0
+        run: |
+          mkdir -p release
+          VERSION="${{ github.ref_name }}"
+          BUILD_TIME=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          GIT_COMMIT="${GITHUB_SHA:0:7}"
+          OUTPUT_NAME="kkartifact-server-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.suffix }}"
+          cd server
+          go build -trimpath -ldflags="-s -w -X github.com/kk/kkartifact-server/internal/version.Version=${VERSION} -X github.com/kk/kkartifact-server/internal/version.BuildTime=${BUILD_TIME} -X github.com/kk/kkartifact-server/internal/version.GitCommit=${GIT_COMMIT}" -o ../release/${OUTPUT_NAME} ./main.go
+
+      - name: Upload server binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: server-${{ matrix.goos }}-${{ matrix.goarch }}
+          path: release/kkartifact-server-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.suffix }}
+          retention-days: 7
+
+  build-agent-binaries:
+    name: Build Agent Binaries
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - goos: linux
+            goarch: amd64
+            suffix: ''
+          - goos: linux
+            goarch: arm64
+            suffix: ''
+          - goos: darwin
+            goarch: amd64
+            suffix: ''
+          - goos: darwin
+            goarch: arm64
+            suffix: ''
+          - goos: windows
+            goarch: amd64
+            suffix: '.exe'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'
+          cache-dependency-path: './agent/go.sum'
+
+      - name: Build agent binary
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          CGO_ENABLED: 0
+        run: |
+          mkdir -p release
+          VERSION="${{ github.ref_name }}"
+          BUILD_TIME=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          GIT_COMMIT="${GITHUB_SHA:0:7}"
+          OUTPUT_NAME="kkartifact-agent-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.suffix }}"
+          cd agent
+          go build -trimpath -ldflags="-s -w -X github.com/kk/kkartifact-agent/internal/cli.Version=${VERSION} -X github.com/kk/kkartifact-agent/internal/cli.BuildTime=${BUILD_TIME} -X github.com/kk/kkartifact-agent/internal/cli.GitCommit=${GIT_COMMIT}" -o ../release/${OUTPUT_NAME} ./main.go
+
+      - name: Upload agent binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: agent-${{ matrix.goos }}-${{ matrix.goarch }}
+          path: release/kkartifact-agent-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.suffix }}
+          retention-days: 7
+
+  release:
+    name: Create GitHub Release
+    needs: [build-server, build-web-ui, build-server-binaries, build-agent-binaries]
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Download server binaries
+        uses: actions/download-artifact@v4
+        with:
+          path: release/server
+          pattern: server-*
+
+      - name: Download agent binaries
+        uses: actions/download-artifact@v4
+        with:
+          path: release/agent
+          pattern: agent-*
+
+      - name: Prepare release files
+        run: |
+          mkdir -p release
+          # Move all binaries to release root
+          find release/server -type f -name "kkartifact-server-*" -exec mv {} release/ \;
+          find release/agent -type f -name "kkartifact-agent-*" -exec mv {} release/ \;
+          
+          # Generate checksums for all binaries
+          cd release
+          find . -maxdepth 1 -type f \( -name "kkartifact-*" \) -exec shasum -a 256 {} \; > checksums.txt || \
+          find . -maxdepth 1 -type f \( -name "kkartifact-*" \) -exec sha256sum {} \; > checksums.txt
+          
+          echo "Release files:"
+          ls -lh
+          echo ""
+          echo "Checksums:"
+          cat checksums.txt
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: release/*
+          name: Release ${{ github.ref_name }}
+          body: |
+            ## kkArtifact ${{ github.ref_name }}
+
+            ### Server Binaries
+            - **Linux (amd64)**: `kkartifact-server-linux-amd64`
+            - **Linux (arm64)**: `kkartifact-server-linux-arm64`
+            - **macOS (amd64)**: `kkartifact-server-darwin-amd64`
+            - **macOS (arm64)**: `kkartifact-server-darwin-arm64`
+            - **Windows (amd64)**: `kkartifact-server-windows-amd64.exe`
+
+            ### Agent Binaries
+            - **Linux (amd64)**: `kkartifact-agent-linux-amd64`
+            - **Linux (arm64)**: `kkartifact-agent-linux-arm64`
+            - **macOS (amd64)**: `kkartifact-agent-darwin-amd64`
+            - **macOS (arm64)**: `kkartifact-agent-darwin-arm64`
+            - **Windows (amd64)**: `kkartifact-agent-windows-amd64.exe`
+
+            ### Checksums
+            See `checksums.txt` for SHA256 checksums of all binaries.
+
+            ### Docker Images
+            - **Server**: `${{ env.REGISTRY }}/${{ github.repository }}/${{ env.SERVER_IMAGE }}:${{ github.ref_name }}`
+            - **Web UI**: `${{ env.REGISTRY }}/${{ github.repository }}/${{ env.WEB_UI_IMAGE }}:${{ github.ref_name }}`
+          draft: false
+          prerelease: ${{ contains(github.ref_name, '-') }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
