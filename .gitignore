@@ -1,0 +1,9 @@
+.cursor
+bin
+storage
+.vscode
+.kiro
+.idea
+dist
+node_modules
+.kkartifact.yml

@@ -1,0 +1,111 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: kkartifact-postgres
+    environment:
+      POSTGRES_DB: ${DB_NAME:-kkartifact}
+      POSTGRES_USER: ${DB_USER:-kkartifact}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-kkartifact}
+      # Increase max_connections to handle high concurrency uploads (default is 100)
+      POSTGRES_INITDB_ARGS: "-c max_connections=200"
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-kkartifact}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - kkartifact-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: kkartifact-redis
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - kkartifact-network
+
+  server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: kkartifact-server
+    environment:
+      SERVER_HOST: ${SERVER_HOST:-0.0.0.0}
+      SERVER_PORT: ${SERVER_PORT:-8080}
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: ${DB_NAME:-kkartifact}
+      DB_USER: ${DB_USER:-kkartifact}
+      DB_PASSWORD: ${DB_PASSWORD:-kkartifact}
+      DB_SSLMODE: ${DB_SSLMODE:-disable}
+      DB_MAX_OPEN_CONNS: ${DB_MAX_OPEN_CONNS:-50}  # Increased to 50 for high concurrency uploads (PostgreSQL max_connections=200)
+      DB_MAX_IDLE_CONNS: ${DB_MAX_IDLE_CONNS:-10}  # Increased to 10 for better connection reuse
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
+      REDIS_DB: ${REDIS_DB:-0}
+      STORAGE_TYPE: local
+      STORAGE_LOCAL_PATH: ${STORAGE_LOCAL_PATH:-/repos}
+      STORAGE_BASE_PATH: ${STORAGE_BASE_PATH:-/repos}
+      AGENT_STATIC_DIR: /app/static
+      VERSION_RETENTION_LIMIT: ${VERSION_RETENTION_LIMIT:-5}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      LOG_FORMAT: ${LOG_FORMAT:-json}
+      # JWT secret for session tokens (if not set, will generate random secret on each restart)
+      JWT_SECRET: ${JWT_SECRET:-}
+      # Admin user configuration
+      ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-admin123}
+      SKIP_ADMIN_USER: ${SKIP_ADMIN_USER:-false}
+      # Admin token configuration
+      # Only creates admin token if ADMIN_TOKEN is set
+      # If ADMIN_TOKEN is not set, token creation is skipped
+      ADMIN_TOKEN: ${ADMIN_TOKEN:-}
+      ADMIN_TOKEN_NAME: ${ADMIN_TOKEN_NAME:-admin-initial-token}
+    ports:
+      - "${SERVER_PORT:-8080}:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - kkartifact-network
+    volumes:
+      - ./storage:/repos
+
+  web-ui:
+    build:
+      context: ./web-ui
+      dockerfile: Dockerfile
+      args:
+        # API URL for frontend - use relative path since nginx proxies /api/ to backend
+        VITE_API_URL: /
+    container_name: kkartifact-web-ui
+    ports:
+      - "${WEB_UI_PORT:-3000}:80"
+    depends_on:
+      - server
+    networks:
+      - kkartifact-network
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  kkartifact-network:
+    driver: bridge
+
