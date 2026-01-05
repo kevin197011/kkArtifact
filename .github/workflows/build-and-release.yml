@@ -175,6 +175,7 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           fetch-depth: 0
+          ref: ${{ github.event.repository.default_branch }}
 
       - name: Download all artifacts
         uses: actions/download-artifact@v4
@@ -227,10 +228,15 @@ jobs:
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
+          
+          # Ensure we're on the default branch
+          DEFAULT_BRANCH="${{ github.event.repository.default_branch }}"
+          git checkout -B ${DEFAULT_BRANCH} origin/${DEFAULT_BRANCH} || git checkout -b ${DEFAULT_BRANCH}
+          
           git add server/static/agent/version.json server/static/agent/kkartifact-agent-*
           if ! git diff --staged --quiet; then
             git commit -m "chore: update agent binaries and version.json for ${{ github.ref_name }}"
-            git push
+            git push origin ${DEFAULT_BRANCH}
           else
             echo "No changes to commit"
           fi
