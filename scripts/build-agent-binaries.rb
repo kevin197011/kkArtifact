@@ -25,7 +25,9 @@ class AgentBinaryBuilder
   end
 
   def build_all
+    version = get_version_from_git
     puts "开始构建 agent 二进制文件..."
+    puts "版本: #{version}"
     puts "输出目录: #{@output_dir}"
     puts ''
 

@@ -14,6 +14,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/kk/kkartifact-server/internal/util"
+	"github.com/kk/kkartifact-server/internal/version"
 )
 
 // findStaticFile tries to find a file in static directory by trying multiple possible paths
@@ -174,5 +175,29 @@ type AgentBinaryInfo struct {
 	Filename string `json:"filename"`
 	Size     int64  `json:"size"`
 	URL      string `json:"url"`
+}
+
+// ServerVersionInfo represents server version information
+type ServerVersionInfo struct {
+	Version   string `json:"version"`
+	BuildTime string `json:"build_time"`
+	GitCommit string `json:"git_commit"`
+}
+
+// handleGetServerVersion returns server version information
+// handleGetServerVersion godoc
+// @Summary      Get server version info
+// @Description  Get server version, build time, and git commit information
+// @Tags         downloads
+// @Produce      json
+// @Success      200  {object}  ServerVersionInfo
+// @Router       /downloads/server/version [get]
+func (h *Handler) handleGetServerVersion(c *gin.Context) {
+	versionInfo := ServerVersionInfo{
+		Version:   version.GetVersion(),
+		BuildTime: version.GetBuildTime(),
+		GitCommit: version.GetGitCommit(),
+	}
+	c.JSON(http.StatusOK, versionInfo)
 }
 

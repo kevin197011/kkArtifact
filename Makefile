@@ -7,7 +7,10 @@
 
 # Build server
 build-server:
-	cd server && go build -o ../bin/kkartifact-server ./main.go
+	@VERSION=$$(git describe --tags --exact-match 2>/dev/null || git describe --tags 2>/dev/null || echo "dev"); \
+	BUILD_TIME=$$(date -u +%Y-%m-%dT%H:%M:%SZ); \
+	GIT_COMMIT=$$(git rev-parse --short HEAD 2>/dev/null || echo "unknown"); \
+	cd server && go build -ldflags "-X github.com/kk/kkartifact-server/internal/version.Version=$$VERSION -X github.com/kk/kkartifact-server/internal/version.BuildTime=$$BUILD_TIME -X github.com/kk/kkartifact-server/internal/version.GitCommit=$$GIT_COMMIT" -o ../bin/kkartifact-server ./main.go
 
 # Build agent
 build-agent:

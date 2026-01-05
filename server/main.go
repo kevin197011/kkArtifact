@@ -25,14 +25,28 @@
 package main
 
 import (
+	"flag"
 	"log"
 	"os"
 
 	"github.com/kk/kkartifact-server/internal/config"
 	"github.com/kk/kkartifact-server/internal/server"
+	"github.com/kk/kkartifact-server/internal/version"
 )
 
 func main() {
+	var showVersion bool
+	flag.BoolVar(&showVersion, "version", false, "Show version information")
+	flag.BoolVar(&showVersion, "v", false, "Show version information (shorthand)")
+	flag.Parse()
+
+	if showVersion {
+		log.Printf("kkartifact-server version %s", version.GetVersion())
+		log.Printf("Build time: %s", version.GetBuildTime())
+		log.Printf("Git commit: %s", version.GetGitCommit())
+		os.Exit(0)
+	}
+
 	cfg, err := config.Load()
 	if err != nil {
 		log.Fatalf("Failed to load config: %v", err)
