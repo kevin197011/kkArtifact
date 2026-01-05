@@ -144,13 +144,31 @@ func NewVersionRepository(db *DB) *VersionRepository {
 }
 
 // Create creates a new version
+// Uses ON CONFLICT DO NOTHING for idempotency - if version already exists, returns existing record
 func (r *VersionRepository) Create(appID int, hash string) (*Version, error) {
 	var version Version
 	query := `INSERT INTO versions (app_id, hash) VALUES ($1, $2)
+	          ON CONFLICT (app_id, hash) DO NOTHING
 	          RETURNING id, app_id, hash, is_published, created_at`
 	err := r.db.QueryRow(query, appID, hash).Scan(&version.ID, &version.AppID, &version.Hash, &version.IsPublished, &version.CreatedAt)
 	if err != nil {
+		// If no rows returned (conflict occurred), fetch the existing version
+		if err.Error() == "sql: no rows in result set" {
+			return r.GetByHash(appID, hash)
+		}
 		return nil, fmt.Errorf("failed to create version: %w", err)
+	}
+	return &version, nil
+}
+
+// GetByHash gets a version by app ID and hash
+func (r *VersionRepository) GetByHash(appID int, hash string) (*Version, error) {
+	var version Version
+	query := `SELECT id, app_id, hash, is_published, created_at FROM versions 
+	          WHERE app_id = $1 AND hash = $2`
+	err := r.db.QueryRow(query, appID, hash).Scan(&version.ID, &version.AppID, &version.Hash, &version.IsPublished, &version.CreatedAt)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get version: %w", err)
 	}
 	return &version, nil
 }
@@ -247,4 +265,3 @@ func (r *VersionRepository) GetLatestPublished(appID int) (*Version, error) {
 	}
 	return &version, nil
 }
-

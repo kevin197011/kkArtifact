@@ -9,6 +9,7 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"path/filepath"
 	"strings"
@@ -212,13 +213,12 @@ func (h *Handler) handleFinishUpload(c *gin.Context) {
 	}
 
 	// Create version record in database
-	// Note: Since we delete existing versions in handleInitUpload, this should always create a new record
-	// However, in case of race conditions or other edge cases, we try to create and log errors
+	// Uses ON CONFLICT DO NOTHING for idempotency - handles race conditions gracefully
 	_, err = h.versionRepo.Create(app.ID, req.Version)
 	if err != nil {
 		// Log error but don't fail the request - version exists in storage which is what matters most
-		// The version record might already exist due to a race condition or previous partial failure
-		// TODO: Consider using INSERT ... ON CONFLICT DO NOTHING or similar for idempotency
+		// The Create method now handles conflicts gracefully using ON CONFLICT DO NOTHING
+		log.Printf("Warning: failed to create version record for %s/%s/%s: %v", req.Project, req.App, req.Version, err)
 	}
 
 	// Publish push event with context to extract agent ID and metadata
