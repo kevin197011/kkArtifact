@@ -5,294 +5,175 @@
 # This software is released under the MIT License.
 # https://opensource.org/licenses/MIT
 
-require 'time'
+require 'fileutils'
+require 'open3'
 
-task default: %w[push]
+# Rake tasks for kkArtifact project
 
-# 生成智能 commit message
-def generate_commit_message
-  # 获取暂存区的变更
-  diff_output = `git diff --cached --name-status 2>&1`
-  return nil if diff_output.empty? || !$?.success?
-
-  changed_files = diff_output.split("\n")
-  return nil if changed_files.empty?
-
-  # 分析变更类型
-  types = []
-  scopes = []
-  file_descriptions = []
-
-  changed_files.each do |line|
-    status, file = line.split("\t", 2)
-    next unless file
-
-    type, scope, description = analyze_file_change(status, file)
-    types << type if type
-    scopes << scope if scope
-    file_descriptions << description if description
-  end
-
-  # 确定主要的 commit type（优先级：feat > fix > docs > refactor > style > perf > test > chore）
-  type_priority = {
-    'feat' => 1,
-    'fix' => 2,
-    'docs' => 3,
-    'refactor' => 4,
-    'style' => 5,
-    'perf' => 6,
-    'test' => 7,
-    'chore' => 8
-  }
-
-  main_type = types.min_by { |t| type_priority[t] || 9 } || 'chore'
-  main_scope = scopes.compact.uniq.first || 'general'
-
-  # 生成 subject
-  subject = generate_subject(main_type, main_scope, file_descriptions)
-
-  # 生成 body（如果有多个文件变更）
-  body = generate_body(changed_files) if changed_files.length > 1
-
-  # 组合 commit message
-  message = "#{main_type}(#{main_scope}): #{subject}"
-  message += "\n\n#{body}" if body
-
-  message
+desc 'Update agent version.json and binaries'
+task :update_agent_version do
+  puts 'Updating agent version.json...'
+  system('ruby', 'scripts/update-agent-version.rb') || abort('Failed to update agent version')
+  puts '✅ Agent version updated'
 end
 
-# 分析单个文件的变更
-def analyze_file_change(status, file)
-  type = nil
-  scope = nil
-  description = nil
-
-  # 根据文件路径和状态判断类型
-  case file
-  when %r{^rules/}
-    type = 'docs'
-    scope = 'rules'
-    description = "更新规则文档: #{File.basename(file)}"
-  when %r{^backend/}
-    type = status == 'A' ? 'feat' : 'refactor'
-    scope = 'backend'
-    description = "#{status == 'A' ? '新增' : '更新'}后端代码: #{File.basename(file)}"
-  when %r{^frontend/}
-    type = status == 'A' ? 'feat' : 'refactor'
-    scope = 'frontend'
-    description = "#{status == 'A' ? '新增' : '更新'}前端代码: #{File.basename(file)}"
-  when /\.(rb|rake)$/
-    type = 'chore'
-    scope = 'scripts'
-    description = "更新脚本: #{File.basename(file)}"
-  when /\.(sh|bash)$/
-    type = 'chore'
-    scope = 'scripts'
-    description = "更新脚本: #{File.basename(file)}"
-  when /\.(md|mdx|txt)$/
-    type = 'docs'
-    scope = 'docs'
-    description = "更新文档: #{File.basename(file)}"
-  when /\.(yml|yaml)$/
-    type = 'ci'
-    scope = 'ci'
-    description = "更新 CI 配置: #{File.basename(file)}"
-  when /\.(json)$/
-    type = 'chore'
-    scope = 'config'
-    description = "更新配置: #{File.basename(file)}"
-  when /\.(go)$/
-    type = status == 'A' ? 'feat' : (status == 'D' ? 'refactor' : 'fix')
-    scope = 'backend'
-    description = "#{status == 'A' ? '新增' : status == 'D' ? '删除' : '更新'} Go 文件: #{File.basename(file)}"
-  when /\.(ts|tsx|js|jsx)$/
-    type = status == 'A' ? 'feat' : (status == 'D' ? 'refactor' : 'fix')
-    scope = 'frontend'
-    description = "#{status == 'A' ? '新增' : status == 'D' ? '删除' : '更新'} 前端文件: #{File.basename(file)}"
-  else
-    type = 'chore'
-    scope = 'general'
-    description = "#{status == 'A' ? '新增' : status == 'D' ? '删除' : '更新'} 文件: #{File.basename(file)}"
-  end
-
-  # 根据状态调整类型
-  case status
-  when 'D'
-    type = 'refactor' if type == 'feat'
-  when 'M'
-    # 检查是否是修复（通过关键词）
-    if file.match?(/fix|bug|error|issue/i)
-      type = 'fix'
-    end
-  end
-
-  [type, scope, description]
+desc 'Build agent binaries for all platforms'
+task :build_agent_all do
+  puts 'Building agent binaries for all platforms...'
+  system('ruby', 'scripts/build-agent-binaries.rb') || abort('Failed to build agent binaries')
+  puts '✅ Agent binaries built'
 end
 
-# 生成 subject
-def generate_subject(type, scope, descriptions)
-  return '更新项目文件' if descriptions.empty?
-
-  # 如果只有一个文件，使用更具体的描述
-  if descriptions.length == 1
-    desc = descriptions.first
-    # 提取关键信息
-    case desc
-    when /更新规则文档/
-      '更新开发规范'
-    when /新增.*后端/
-      '新增后端功能'
-    when /更新.*后端/
-      '更新后端代码'
-    when /新增.*前端/
-      '新增前端功能'
-    when /更新.*前端/
-      '更新前端代码'
-    when /更新脚本/
-      '更新构建脚本'
-    when /更新文档/
-      '更新项目文档'
-    else
-      desc.split(':').last&.strip || '更新项目文件'
-    end
-  else
-    # 多个文件，生成通用描述
-    case type
-    when 'feat'
-      '添加新功能'
-    when 'fix'
-      '修复问题'
-    when 'docs'
-      '更新文档'
-    when 'refactor'
-      '重构代码'
-    when 'style'
-      '代码格式调整'
-    when 'perf'
-      '性能优化'
-    when 'test'
-      '更新测试'
-    when 'chore'
-      '项目维护'
-    else
-      '更新项目文件'
-    end
-  end
+desc 'Update agent version and build binaries'
+task :build_and_update_agent => [:build_agent_all, :update_agent_version] do
+  puts '✅ Agent binaries built and version updated'
 end
 
-# 生成 body
-def generate_body(changed_files)
-  lines = ['变更文件:']
-  changed_files.each do |line|
-    status, file = line.split("\t", 2)
-    next unless file
-
-    status_icon = case status
-                  when 'A' then '✨'
-                  when 'D' then '🗑️'
-                  when 'M' then '📝'
-                  when 'R' then '🔄'
-                  else '📄'
-                  end
-
-    lines << "  #{status_icon} #{file}"
-  end
-  lines.join("\n")
+desc 'Get current git tag version'
+task :git_version do
+  version = `git describe --tags --exact-match 2>/dev/null`.strip
+  version = `git describe --tags 2>/dev/null`.strip if version.empty?
+  version = "v#{Time.now.strftime('%Y%m%d%H%M%S')}" if version.empty?
+  puts version
 end
 
-task :push do
-  # 检查是否有变更
-  status_output = `git status --porcelain 2>&1`
-  if status_output.empty? || !$?.success?
-    puts '没有变更需要提交'
-    exit 0
+desc 'Commit changes to git'
+task :git_commit do
+  # Check if there are any changes to commit
+  status = `git status --porcelain`.strip
+  if status.empty?
+    puts 'No changes to commit'
+    next
   end
 
-  # 添加所有变更
-  system 'git add .'
+  # Get current git tag version for commit message
+  version = `git describe --tags --exact-match 2>/dev/null`.strip
+  version = `git describe --tags 2>/dev/null`.strip if version.empty?
+  version = 'latest' if version.empty?
 
-  # 生成智能 commit message
-  commit_message = generate_commit_message || "chore: 更新项目文件\n\n#{Time.now}"
+  # Stage relevant files (only files that should be committed)
+  files_to_add = [
+    'server/static/agent/version.json',
+    'server/static/agent/kkartifact-agent-*'
+  ]
 
-  # 创建临时文件存储 commit message
-  require 'tempfile'
-  temp_file = Tempfile.new('commit_message')
-  temp_file.write(commit_message)
-  temp_file.close
-
-  # 使用临时文件提交
-  success = system("git commit -F #{temp_file.path}")
-
-  temp_file.unlink
-
-  unless success
-    puts '提交失败'
-    exit 1
-  end
-
-  puts "✅ 提交成功: #{commit_message.lines.first.chomp}"
-
-  # 拉取最新代码
-  pull_output = `git pull 2>&1`
-  unless $?.success?
-    if pull_output.include?('conflict') || pull_output.include?('CONFLICT')
-      puts '❌ 检测到合并冲突，请手动解决后重试'
-      puts pull_output
-      exit 1
-    else
-      puts '⚠️  拉取失败，但继续推送'
-      puts pull_output if pull_output.length > 0
-    end
-  end
-
-  # 推送到远程
-  push_output = `git push origin main 2>&1`
-  unless $?.success?
-    puts '❌ 推送失败'
-    puts push_output
-    exit 1
-  end
-
-  puts '✅ 推送成功'
-
-  # 创建基于日期的版本标签
-  tag_name = "v#{Time.now.strftime('%Y%m%d%H%M%S')}"
-  
-  # 检查标签是否已存在
-  tag_exists = `git tag -l #{tag_name}`.strip
-  if tag_exists == tag_name
-    puts "⚠️  标签 #{tag_name} 已存在，跳过创建"
-  else
-    # 创建标签
-    tag_message = "Auto-generated tag for #{Time.now.strftime('%Y-%m-%d %H:%M:%S')}"
-    tag_success = system("git tag -a #{tag_name} -m '#{tag_message}'")
-    
-    if tag_success
-      puts "✅ 创建标签: #{tag_name}"
-      
-      # 推送标签到远程
-      tag_push_output = `git push origin #{tag_name} 2>&1`
-      if $?.success?
-        puts "✅ 推送标签成功: #{tag_name}"
-      else
-        puts "⚠️  标签创建成功，但推送失败: #{tag_name}"
-        puts tag_push_output if tag_push_output.length > 0
+  staged_any = false
+  files_to_add.each do |pattern|
+    if pattern.include?('*')
+      # Handle glob patterns
+      Dir.glob(pattern).each do |file|
+        if File.exist?(file)
+          system('git', 'add', file)
+          staged_any = true
+        end
       end
     else
-      puts "⚠️  标签创建失败: #{tag_name}"
+      if File.exist?(pattern)
+        system('git', 'add', pattern)
+        staged_any = true
+      end
     end
   end
+
+  unless staged_any
+    puts 'No relevant files to commit'
+    next
+  end
+
+  # Check if there are staged changes
+  staged = `git diff --cached --name-only`.strip
+  if staged.empty?
+    puts 'No staged changes to commit'
+    next
+  end
+
+  # Commit message
+  commit_message = "chore: update binaries and version.json for #{version}"
+
+  # Auto commit without confirmation
+  system('git', 'commit', '-m', commit_message) || abort('Failed to commit changes')
+  puts "✅ Changes committed: #{commit_message}"
 end
 
-task :run do
-  system 'docker compose down'
-  system 'docker compose up -d --build --remove-orphans'
-  system 'docker compose logs -f'
+desc 'Push changes to remote'
+task :git_push do
+  current_branch = `git rev-parse --abbrev-ref HEAD`.strip
+  if current_branch.empty? || current_branch == 'HEAD'
+    puts 'Not on a branch, skipping push'
+    next
+  end
+
+  # Check if there are commits to push
+  ahead = `git rev-list --count HEAD..origin/#{current_branch} 2>/dev/null`.strip
+  if ahead.empty? || ahead == '0'
+    # Check if there are local commits not pushed
+    behind = `git rev-list --count origin/#{current_branch}..HEAD 2>/dev/null`.strip
+    if behind.empty? || behind == '0'
+      puts 'No commits to push'
+      next
+    end
+  end
+
+  # Auto push without confirmation
+  system('git', 'push', 'origin', current_branch) || abort('Failed to push changes')
+  puts "✅ Changes pushed to origin/#{current_branch}"
 end
 
-# task :push do
-#   system 'git add .'
-#   system "git commit -m 'Update #{Time.now}'"
-#   system 'git pull'
-#   system 'git push origin main'
-# end
+desc 'Build all components, update versions, and commit (default task)'
+task :default => [:build_all]
+
+desc 'Build all, update versions, commit, and push'
+task :build_and_commit => [:build_all, :git_push] do
+  puts ''
+  puts '✅ All done: built, updated, committed, and pushed'
+end
+
+desc 'Build all components (server, agent binaries, and update version)'
+task :build_all => [:build_server, :build_and_update_agent, :git_commit] do
+  puts ''
+  puts '✅ All components built, versions updated, and changes committed'
+end
+
+desc 'Build server binary'
+task :build_server do
+  puts 'Building server...'
+  system('make build-server') || abort('Failed to build server')
+  puts '✅ Server built'
+end
+
+desc 'Show all available tasks'
+task :list => :help
+
+desc 'Show help'
+task :help do
+  puts <<~HELP
+    kkArtifact Rake Tasks
+    ====================
+
+    Main Tasks (executed in order):
+      rake                          Build all, update versions, and commit changes
+      rake build_all                Build server, agent binaries, update version, and commit
+      rake build_and_commit         Build all, update versions, commit, and push
+      rake build_server             Build server binary
+      rake build_and_update_agent   Build agent binaries and update version.json
+
+    Git Tasks:
+      rake git_commit               Commit changes (with confirmation)
+      rake git_push                 Push changes to remote (with confirmation)
+      rake git_version              Show current git tag version
+
+    Agent Tasks:
+      rake update_agent_version     Update agent version.json (from git tag)
+      rake build_agent_all          Build agent binaries for all platforms
+
+    Utility Tasks:
+      rake help                     Show this help message
+
+    Examples:
+      rake                          # Build everything, commit, and push automatically
+      rake build_all                # Build and commit (no push)
+      rake build_and_commit         # Build, commit, and push
+      rake update_agent_version     # Only update version.json
+      rake build_agent_all          # Only build agent binaries
+  HELP
+end
