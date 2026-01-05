@@ -59,17 +59,46 @@ func TestShouldIgnore(t *testing.T) {
 		patterns []string
 		want     bool
 	}{
+		// Basic patterns
 		{"test.log", []string{"*.log"}, true},
 		{"test.txt", []string{"*.log"}, false},
+		{"test.log", []string{"test.*"}, true},
+		
+		// Directory patterns with **
 		{"node_modules/file.js", []string{"node_modules/**"}, true},
+		{"node_modules/subdir/file.js", []string{"node_modules/**"}, true},
+		{"node_modules/a/b/c/file.js", []string{"node_modules/**"}, true},
 		{"src/file.js", []string{"node_modules/**"}, false},
+		
+		// Recursive file patterns
+		{"test.log", []string{"**/*.log"}, true},
+		{"subdir/test.log", []string{"**/*.log"}, true},
+		{"a/b/c/test.log", []string{"**/*.log"}, true},
+		{"test.txt", []string{"**/*.log"}, false},
+		
+		// Directory prefix patterns
+		{"logs/app.log", []string{"logs/"}, true},
+		{"logs/subdir/app.log", []string{"logs/"}, true},
+		{"tmp/file.tmp", []string{"tmp/"}, true},
+		{"other/file.tmp", []string{"tmp/"}, false},
+		
+		// Multiple patterns
+		{"test.log", []string{"*.log", "*.tmp"}, true},
+		{"test.tmp", []string{"*.log", "*.tmp"}, true},
+		{"test.txt", []string{"*.log", "*.tmp"}, false},
+		
+		// Complex patterns
+		{"src/main.js", []string{"src/**/*.js"}, true},
+		{"src/utils/helper.js", []string{"src/**/*.js"}, true},
+		{"src/a/b/c/file.js", []string{"src/**/*.js"}, true},
+		{"other/main.js", []string{"src/**/*.js"}, false},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.path, func(t *testing.T) {
 			got := shouldIgnore(tt.path, tt.patterns)
 			if got != tt.want {
-				t.Errorf("shouldIgnore() = %v, want %v", got, tt.want)
+				t.Errorf("shouldIgnore(%q, %v) = %v, want %v", tt.path, tt.patterns, got, tt.want)
 			}
 		})
 	}
