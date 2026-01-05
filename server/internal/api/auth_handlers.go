@@ -60,7 +60,9 @@ func (h *Handler) handleLogin(c *gin.Context) {
 	}
 
 	// Generate JWT token for session (not stored in database)
-	// For now, all users have admin permissions (TODO: implement roles)
+	// Note: Currently all authenticated users have admin permissions
+	// Future enhancement: Implement role-based access control (RBAC) with user roles table
+	// This would require: users table with role field, role-based permission checking in middleware
 	jwtToken, err := auth.GenerateJWTToken(user.ID, user.Username, true)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to generate session token"})

@@ -34,7 +34,23 @@ func (h *Handler) triggerWebhook(webhook *database.Webhook, event *events.Event)
 	// Send webhook
 	if err := sender.Send(webhook.URL, headers, event); err != nil {
 		log.Printf("Failed to send webhook %d to %s: %v", webhook.ID, webhook.URL, err)
-		// TODO: Store webhook failure in audit log
+		// Store webhook failure in audit log
+		auditRepo := database.NewAuditRepository(h.db)
+		metadata := map[string]interface{}{
+			"webhook_id": webhook.ID,
+			"webhook_url": webhook.URL,
+			"error": err.Error(),
+		}
+		var projectID, appID *int
+		if webhook.ProjectID.Valid {
+			id := int(webhook.ProjectID.Int64)
+			projectID = &id
+		}
+		if webhook.AppID.Valid {
+			id := int(webhook.AppID.Int64)
+			appID = &id
+		}
+		_ = auditRepo.Create("webhook_failed", projectID, appID, event.Version, event.AgentID, metadata)
 	} else {
 		log.Printf("Webhook %d triggered successfully", webhook.ID)
 	}
