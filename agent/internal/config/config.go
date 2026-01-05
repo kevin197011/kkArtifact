@@ -21,7 +21,7 @@ type Config struct {
 	App            string   `yaml:"app"`
 	Ignore         []string `yaml:"ignore,omitempty"`
 	RetainVersions *int     `yaml:"retain_versions,omitempty"`
-	Concurrency    int      `yaml:"concurrency"` // Number of concurrent uploads/downloads (default: 8)
+	Concurrency    int      `yaml:"concurrency"` // Number of concurrent uploads/downloads (default: 50)
 }
 
 // GetGlobalConfigPath returns the path to the global configuration file
@@ -133,7 +133,7 @@ func Load(configPath string) (*Config, error) {
 			}
 			// Set default concurrency if not specified
 			if globalConfig.Concurrency <= 0 {
-				globalConfig.Concurrency = 8
+				globalConfig.Concurrency = 50
 			}
 			return globalConfig, nil
 		}
@@ -153,7 +153,7 @@ func Load(configPath string) (*Config, error) {
 
 	// Set default concurrency if not specified or invalid
 	if mergedConfig.Concurrency <= 0 {
-		mergedConfig.Concurrency = 8 // Default to 8 concurrent operations
+		mergedConfig.Concurrency = 50 // Default to 50 concurrent operations
 	}
 
 	return mergedConfig, nil
