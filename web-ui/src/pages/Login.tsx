@@ -5,7 +5,7 @@
 
 import React, { useState, useEffect, useRef } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { Form, Input, Button, Card, message, Typography } from 'antd'
+import { Form, Input, Button, Card, message, Typography, Spin } from 'antd'
 import { UserOutlined, LockOutlined } from '@ant-design/icons'
 import { authApi } from '../api/auth'
 import client from '../api/client'
@@ -17,6 +17,7 @@ const LoginPage: React.FC = () => {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const [loading, setLoading] = useState(false)
+  const [checkingToken, setCheckingToken] = useState(true)
   const particlesRef = useRef<HTMLDivElement>(null)
   const connectionsRef = useRef<HTMLDivElement>(null)
 
@@ -28,12 +29,15 @@ const LoginPage: React.FC = () => {
       client
         .get('/projects', { params: { limit: 1, offset: 0 } })
         .then(() => {
-          navigate('/dashboard')
+          navigate('/dashboard', { replace: true })
         })
         .catch(() => {
           // Token invalid, clear it
           localStorage.removeItem('kkartifact_token')
+          setCheckingToken(false)
         })
+    } else {
+      setCheckingToken(false)
     }
 
     // Create particles
@@ -92,6 +96,44 @@ const LoginPage: React.FC = () => {
     } finally {
       setLoading(false)
     }
+  }
+
+  // Show loading state while checking token
+  if (checkingToken) {
+    return (
+      <div className={styles.loginContainer}>
+        <div className={styles.gridBackground}></div>
+        <div className={styles.particles} ref={particlesRef}></div>
+        <div className={styles.connections} ref={connectionsRef}></div>
+        
+        <div className={styles.contentWrapper}>
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+              flex: 1,
+            }}
+          >
+            <Card 
+              className={styles.loginCard}
+              style={{ 
+                width: 400, 
+                boxShadow: '0 8px 32px rgba(0,0,0,0.2)',
+                background: 'rgba(255, 255, 255, 0.95)',
+                backdropFilter: 'blur(10px)',
+                border: '1px solid rgba(255, 255, 255, 0.3)',
+              }}
+              bodyStyle={{ padding: '24px' }}
+            >
+              <div style={{ textAlign: 'center', padding: '40px' }}>
+                <Spin size="large" />
+              </div>
+            </Card>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   return (
