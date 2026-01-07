@@ -137,7 +137,7 @@ const Dashboard: React.FC = () => {
               value={auditLogsData?.length || 0}
               prefix={<ClockCircleOutlined />}
               valueStyle={{ color: '#fa8c16' }}
-              suffix={auditLogsData?.length ? `最近${auditLogsData.length}条` : '条'}
+              // suffix={auditLogsData?.length ? `最近${auditLogsData.length}条` : '条'}
             />
           </Card>
         </Col>
