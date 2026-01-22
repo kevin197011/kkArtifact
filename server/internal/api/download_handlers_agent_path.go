@@ -32,11 +32,15 @@ func findAgentFilePath(filename string) (string, error) {
 	}
 	
 	// Try multiple possible paths
+	// Priority: Docker container paths first, then development paths
 	possiblePaths := []string{
+		// Docker container paths (WORKDIR /app)
+		filepath.Join("/app", "static", "agent", filename),
+		filepath.Join("static", "agent", filename), // Relative to working directory
+		// Development paths
 		filepath.Join("server", "static", "agent", filename),
-		filepath.Join("static", "agent", filename),
-		filepath.Join(wd, "server", "static", "agent", filename),
 		filepath.Join(wd, "static", "agent", filename),
+		filepath.Join(wd, "server", "static", "agent", filename),
 	}
 	
 	for _, path := range possiblePaths {

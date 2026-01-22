@@ -49,14 +49,17 @@ func findStaticFile(relativePath string) ([]byte, error) {
 	}
 	
 	// Try multiple possible paths (both relative and absolute)
+	// Priority: Docker container paths first, then development paths
 	possiblePaths := []string{
-		// Relative paths (most common)
+		// Docker container paths (WORKDIR /app)
+		filepath.Join("/app", "static", relativePath),
+		filepath.Join("static", relativePath),                    // Relative to working directory
+		// Development paths
 		filepath.Join("server", "static", relativePath),          // If running from project root
-		filepath.Join("static", relativePath),                    // If running from server directory
 		filepath.Join("..", "server", "static", relativePath),    // If in subdirectory
 		// Absolute paths based on current working directory
-		filepath.Join(wd, "server", "static", relativePath),      // Absolute, if in project root
 		filepath.Join(wd, "static", relativePath),                // Absolute, if in server directory
+		filepath.Join(wd, "server", "static", relativePath),      // Absolute, if in project root
 		filepath.Join(filepath.Dir(wd), "server", "static", relativePath), // Parent dir
 	}
 	
