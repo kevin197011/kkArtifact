@@ -65,7 +65,7 @@ const ProjectsPage: React.FC = () => {
       dataIndex: 'name',
       key: 'name',
       render: (text: string) => (
-        <span style={{ fontWeight: 500, color: '#1a1a1a' }}>{text}</span>
+        <span style={{ fontWeight: 500, color: 'var(--color-text-primary)' }}>{text}</span>
       ),
     },
     {
@@ -73,7 +73,7 @@ const ProjectsPage: React.FC = () => {
       dataIndex: 'created_at',
       key: 'created_at',
       render: (date: string) => (
-        <span style={{ color: '#8c8c8c', fontSize: '14px' }}>
+        <span style={{ color: 'var(--color-text-secondary)', fontSize: '14px' }}>
           {new Date(date).toLocaleString('zh-CN')}
         </span>
       ),
@@ -141,6 +141,8 @@ const ProjectsPage: React.FC = () => {
                 borderRadius: '6px',
                 height: '36px',
                 padding: '0 16px',
+                color: 'var(--color-text-primary)',
+                borderColor: 'var(--color-border)',
               }}
             >
               刷新列表

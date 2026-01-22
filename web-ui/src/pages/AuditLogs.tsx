@@ -59,7 +59,7 @@ const AuditLogsPage: React.FC = () => {
       dataIndex: 'agent_id',
       key: 'agent_id',
       render: (id?: string) => (
-        <span style={{ color: '#8c8c8c', fontSize: '14px' }}>{id || '-'}</span>
+        <span style={{ color: 'var(--color-text-secondary)', fontSize: '14px' }}>{id || '-'}</span>
       ),
     },
     {
@@ -67,12 +67,12 @@ const AuditLogsPage: React.FC = () => {
       dataIndex: 'metadata',
       key: 'metadata',
       render: (meta?: string) => {
-        if (!meta) return <span style={{ color: '#8c8c8c' }}>-</span>
+        if (!meta) return <span style={{ color: 'var(--color-text-secondary)' }}>-</span>
         try {
           const parsed = JSON.parse(meta)
-          return <pre style={{ margin: 0, fontSize: '12px', fontFamily: 'monospace', color: '#1a1a1a' }}>{JSON.stringify(parsed, null, 2)}</pre>
+          return <pre style={{ margin: 0, fontSize: '12px', fontFamily: 'monospace', color: 'var(--color-text-primary)', background: 'var(--color-bg-secondary)', padding: '12px', borderRadius: '6px' }}>{JSON.stringify(parsed, null, 2)}</pre>
         } catch {
-          return <span style={{ color: '#8c8c8c', fontSize: '14px' }}>{meta}</span>
+          return <span style={{ color: 'var(--color-text-secondary)', fontSize: '14px' }}>{meta}</span>
         }
       },
     },
@@ -81,7 +81,7 @@ const AuditLogsPage: React.FC = () => {
       dataIndex: 'created_at',
       key: 'created_at',
       render: (date: string) => (
-        <span style={{ color: '#8c8c8c', fontSize: '14px' }}>
+        <span style={{ color: 'var(--color-text-secondary)', fontSize: '14px' }}>
           {new Date(date).toLocaleString('zh-CN')}
         </span>
       ),

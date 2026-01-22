@@ -236,6 +236,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
             margin: '24px', 
             padding: 0,
             minHeight: 280,
+            background: 'transparent',
           }}
         >
           <div

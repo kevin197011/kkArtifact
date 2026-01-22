@@ -135,7 +135,7 @@ const WebhooksPage: React.FC = () => {
       dataIndex: 'name',
       key: 'name',
       render: (text: string) => (
-        <span style={{ fontWeight: 500, color: '#1a1a1a' }}>{text}</span>
+        <span style={{ fontWeight: 500, color: 'var(--color-text-primary)' }}>{text}</span>
       ),
     },
     {
@@ -143,7 +143,7 @@ const WebhooksPage: React.FC = () => {
       dataIndex: 'url',
       key: 'url',
       render: (text: string) => (
-        <span style={{ color: '#8c8c8c', fontSize: '14px', fontFamily: 'monospace' }}>{text}</span>
+        <span style={{ color: 'var(--color-text-secondary)', fontSize: '14px', fontFamily: 'monospace' }}>{text}</span>
       ),
     },
     {

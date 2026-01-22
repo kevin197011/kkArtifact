@@ -137,7 +137,7 @@ const VersionsPage: React.FC = () => {
       key: 'version',
       width: 300,
       render: (version: string) => (
-        <Text style={{ fontFamily: 'monospace', fontSize: '13px', color: '#1a1a1a' }} copyable>
+        <Text style={{ fontFamily: 'monospace', fontSize: '13px', color: 'var(--color-text-primary)' }} copyable>
           {version}
         </Text>
       ),
@@ -148,7 +148,7 @@ const VersionsPage: React.FC = () => {
       key: 'created_at',
       width: 180,
       render: (date: string) => (
-        <span style={{ color: '#8c8c8c', fontSize: '14px' }}>
+        <span style={{ color: 'var(--color-text-secondary)', fontSize: '14px' }}>
           {new Date(date).toLocaleString('zh-CN', {
             year: 'numeric',
             month: '2-digit',
@@ -190,7 +190,7 @@ const VersionsPage: React.FC = () => {
               <Button 
                 type="link" 
                 size="small" 
-                icon={record.is_published ? <StarFilled style={{ color: '#faad14' }} /> : <StarOutlined />}
+                icon={record.is_published ? <StarFilled style={{ color: 'var(--color-warning)' }} /> : <StarOutlined style={{ color: 'var(--color-text-tertiary)' }} />}
                 style={{
                   padding: '0 8px',
                   height: '32px',
@@ -235,13 +235,13 @@ const VersionsPage: React.FC = () => {
         style={{ marginBottom: '24px', fontSize: '14px' }}
         items={[
           {
-            title: <a onClick={() => navigate('/projects')} style={{ color: '#1890ff' }}>项目</a>,
+            title: <a onClick={() => navigate('/projects')} style={{ color: 'var(--color-primary)' }}>项目</a>,
           },
           {
-            title: <a onClick={() => navigate(`/projects/${project}/apps`)} style={{ color: '#1890ff' }}>{project}</a>,
+            title: <a onClick={() => navigate(`/projects/${project}/apps`)} style={{ color: 'var(--color-primary)' }}>{project}</a>,
           },
           {
-            title: <span style={{ color: '#8c8c8c' }}>{app}</span>,
+            title: <span style={{ color: 'var(--color-text-secondary)' }}>{app}</span>,
           },
         ]}
       />

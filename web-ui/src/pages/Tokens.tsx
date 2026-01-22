@@ -146,7 +146,7 @@ const TokensPage: React.FC = () => {
       dataIndex: 'name',
       key: 'name',
       render: (text: string) => (
-        <span style={{ fontWeight: 500, color: '#1a1a1a' }}>{text}</span>
+        <span style={{ fontWeight: 500, color: 'var(--color-text-primary)' }}>{text}</span>
       ),
     },
     {
@@ -176,6 +176,10 @@ const TokensPage: React.FC = () => {
                   icon={isVisible ? <EyeInvisibleOutlined /> : <EyeOutlined />}
                   onClick={() => toggleTokenVisibility(record.id)}
                   title={isVisible ? '隐藏令牌' : '显示令牌'}
+                  style={{
+                    color: 'var(--color-text-primary)',
+                    borderColor: 'var(--color-border)',
+                  }}
                 />
                 <Button
                   icon={<CopyOutlined />}
@@ -185,6 +189,10 @@ const TokensPage: React.FC = () => {
                     }
                   }}
                   title="复制令牌"
+                  style={{
+                    color: 'var(--color-text-primary)',
+                    borderColor: 'var(--color-border)',
+                  }}
                 />
               </>
             )}
@@ -214,7 +222,7 @@ const TokensPage: React.FC = () => {
       dataIndex: 'expires_at',
       key: 'expires_at',
       render: (expiresAt?: string) => (
-        <span style={{ color: '#8c8c8c', fontSize: '14px' }}>
+        <span style={{ color: 'var(--color-text-secondary)', fontSize: '14px' }}>
           {expiresAt ? new Date(expiresAt).toLocaleString('zh-CN') : '永不过期'}
         </span>
       ),
@@ -224,7 +232,7 @@ const TokensPage: React.FC = () => {
       dataIndex: 'created_at',
       key: 'created_at',
       render: (date: string) => (
-        <span style={{ color: '#8c8c8c', fontSize: '14px' }}>
+        <span style={{ color: 'var(--color-text-secondary)', fontSize: '14px' }}>
           {new Date(date).toLocaleString('zh-CN')}
         </span>
       ),
@@ -288,12 +296,13 @@ const TokensPage: React.FC = () => {
         <div style={{ 
           marginBottom: '16px', 
           padding: '16px', 
-          background: '#fff1f0', 
-          border: '1px solid #ffccc7', 
+          background: 'rgba(255, 77, 79, 0.1)', 
+          border: '1px solid var(--color-error)', 
           borderRadius: '6px',
-          color: '#cf1322',
         }}>
-          加载令牌失败，请重试。
+          <div style={{ color: 'var(--color-error)' }}>
+            加载令牌失败，请重试。
+          </div>
         </div>
       )}
       <div

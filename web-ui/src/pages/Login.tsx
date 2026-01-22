@@ -9,7 +9,6 @@ import { Form, Input, Button, Card, message, Typography, Spin } from 'antd'
 import { UserOutlined, LockOutlined } from '@ant-design/icons'
 import { authApi } from '../api/auth'
 import client from '../api/client'
-import ThemeToggle from '../components/ThemeToggle'
 import styles from './Login.module.css'
 
 const { Title, Text } = Typography
@@ -134,16 +133,13 @@ const LoginPage: React.FC = () => {
     <div className={styles.loginContainer}>
       <div className={styles.particles} ref={particlesRef}></div>
       <div className={styles.contentWrapper}>
-        <div style={{ position: 'absolute', top: '24px', right: '24px', zIndex: 10 }}>
-          <ThemeToggle scope="backend" type="text" />
-        </div>
         <div
           style={{
             display: 'flex',
             justifyContent: 'center',
             alignItems: 'center',
             flex: 1,
-            minHeight: '100vh',
+            height: '100vh',
             padding: '24px',
           }}
         >
@@ -193,7 +189,7 @@ const LoginPage: React.FC = () => {
                     marginBottom: '6px', 
                     fontSize: '22px', 
                     fontWeight: 600, 
-                    color: 'var(--color-text-primary)',
+                    color: '#1d2129',
                     letterSpacing: '-0.3px',
                   }}
                 >
@@ -203,7 +199,7 @@ const LoginPage: React.FC = () => {
                   type="secondary" 
                   style={{ 
                     fontSize: '13px', 
-                    color: 'var(--color-text-secondary)',
+                    color: '#86909c',
                     fontWeight: 400,
                   }}
                 >
@@ -219,13 +215,13 @@ const LoginPage: React.FC = () => {
               layout="vertical"
             >
               <Form.Item
-                label={<span style={{ fontSize: '13px', fontWeight: 500, color: 'var(--color-text-primary)' }}>用户名</span>}
+                label={<span style={{ fontSize: '13px', fontWeight: 500, color: '#1d2129' }}>用户名</span>}
                 name="username"
                 rules={[{ required: true, message: '请输入用户名！' }]}
                 style={{ marginBottom: '20px' }}
               >
                 <Input
-                  prefix={<UserOutlined style={{ color: 'var(--color-text-tertiary)' }} />}
+                  prefix={<UserOutlined style={{ color: '#c9cdd4' }} />}
                   placeholder="请输入用户名"
                   autoComplete="username"
                   style={{
@@ -236,13 +232,13 @@ const LoginPage: React.FC = () => {
               </Form.Item>
 
               <Form.Item
-                label={<span style={{ fontSize: '13px', fontWeight: 500, color: 'var(--color-text-primary)' }}>密码</span>}
+                label={<span style={{ fontSize: '13px', fontWeight: 500, color: '#1d2129' }}>密码</span>}
                 name="password"
                 rules={[{ required: true, message: '请输入密码！' }]}
                 style={{ marginBottom: '24px' }}
               >
                 <Input.Password
-                  prefix={<LockOutlined style={{ color: 'var(--color-text-tertiary)' }} />}
+                  prefix={<LockOutlined style={{ color: '#c9cdd4' }} />}
                   placeholder="请输入密码"
                   autoComplete="current-password"
                   style={{
@@ -286,7 +282,7 @@ const LoginPage: React.FC = () => {
           style={{
             textAlign: 'center',
             padding: '20px',
-            color: 'var(--color-text-secondary)',
+            color: '#86909c',
             fontSize: '13px',
             background: 'transparent',
           }}

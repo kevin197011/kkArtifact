@@ -543,14 +543,18 @@ const InventoryPage: React.FC = () => {
               borderRadius: '10px',
               border: '2px solid var(--color-border-light)',
               transition: 'all 0.2s ease',
+              background: 'var(--color-bg-primary)',
+              color: 'var(--color-text-primary)',
             }}
             onFocus={(e) => {
               e.target.style.borderColor = 'var(--color-primary)'
               e.target.style.boxShadow = '0 0 0 3px var(--color-primary-light)'
+              e.target.style.background = 'var(--color-bg-primary)'
             }}
             onBlur={(e) => {
               e.target.style.borderColor = 'var(--color-border-light)'
               e.target.style.boxShadow = 'none'
+              e.target.style.background = 'var(--color-bg-primary)'
             }}
           />
         </div>

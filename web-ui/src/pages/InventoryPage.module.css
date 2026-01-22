@@ -162,6 +162,28 @@
   color: var(--color-text-tertiary);
 }
 
+/* Dark theme search input */
+:global(.theme-dark) .searchInput :global(.ant-input) {
+  background: var(--color-bg-primary) !important;
+  border-color: var(--color-border) !important;
+  color: var(--color-text-primary) !important;
+}
+
+:global(.theme-dark) .searchInput :global(.ant-input):focus,
+:global(.theme-dark) .searchInput :global(.ant-input):hover {
+  background: var(--color-bg-primary) !important;
+  border-color: var(--color-primary) !important;
+  color: var(--color-text-primary) !important;
+}
+
+:global(.theme-dark) .searchInput :global(.ant-input)::placeholder {
+  color: var(--color-text-tertiary) !important;
+}
+
+:global(.theme-dark) .searchInput :global(.ant-input-prefix) {
+  color: var(--color-text-tertiary) !important;
+}
+
 /* Tree container - compact */
 .treeContainer {
   padding: 4px 0;
@@ -683,7 +705,7 @@
 
 .downloadUsage h4 {
   margin-bottom: 8px;
-  color: #333;
+  color: var(--color-text-primary);
   font-size: 14px;
   font-weight: 600;
 }

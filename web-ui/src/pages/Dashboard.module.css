@@ -1,0 +1,290 @@
+/* Elegant Dashboard Styles */
+
+.dashboardContainer {
+  position: relative;
+}
+
+.header {
+  margin-bottom: 32px;
+}
+
+.title {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  letter-spacing: -0.3px;
+}
+
+.subtitle {
+  margin-top: 6px;
+  color: var(--color-text-secondary);
+  font-size: 13px;
+}
+
+/* Statistic Cards - Enhanced Design */
+.statCard {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border-light);
+  background: var(--color-bg-primary);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+}
+
+.statCard::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, var(--color-primary), var(--color-primary-hover));
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.statCard:hover {
+  transform: translateY(-4px);
+  box-shadow: 
+    0 8px 24px rgba(0, 0, 0, 0.12),
+    0 2px 8px rgba(0, 0, 0, 0.08);
+  border-color: var(--color-border);
+}
+
+.statCard:hover::before {
+  opacity: 1;
+}
+
+.statCard.projectCard::before {
+  background: linear-gradient(90deg, var(--color-primary), var(--color-primary-hover));
+}
+
+.statCard.appCard::before {
+  background: linear-gradient(90deg, var(--color-success), #00e676);
+}
+
+.statCard.activityCard::before {
+  background: linear-gradient(90deg, var(--color-warning), #ffb84d);
+}
+
+.statCard.versionCard::before {
+  background: linear-gradient(90deg, var(--color-primary), var(--color-primary-hover));
+}
+
+.statCardBody {
+  padding: 24px;
+  position: relative;
+}
+
+.statIconWrapper {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  width: 56px;
+  height: 56px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.1;
+  transition: all 0.3s ease;
+}
+
+.statCard:hover .statIconWrapper {
+  opacity: 0.15;
+  transform: scale(1.1);
+}
+
+.statIconWrapper.projectIcon {
+  background: var(--color-primary);
+}
+
+.statIconWrapper.appIcon {
+  background: var(--color-success);
+}
+
+.statIconWrapper.activityIcon {
+  background: var(--color-warning);
+}
+
+.statIconWrapper.versionIcon {
+  background: var(--color-primary);
+}
+
+.statIcon {
+  font-size: 28px;
+  transition: transform 0.3s ease;
+}
+
+.statCard:hover .statIcon {
+  transform: scale(1.1);
+}
+
+.statContent {
+  position: relative;
+  z-index: 1;
+}
+
+.statTitle {
+  color: var(--color-text-secondary);
+  font-size: 13px;
+  font-weight: 500;
+  margin-bottom: 12px;
+  display: block;
+}
+
+.statValue {
+  font-size: 32px;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  line-height: 1.2;
+  margin: 0;
+  letter-spacing: -0.5px;
+}
+
+.statPrefix {
+  display: inline-flex;
+  align-items: center;
+  margin-right: 8px;
+  font-size: 20px;
+}
+
+/* Activity Table Card */
+.activityCard {
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border-light);
+  background: var(--color-bg-primary);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.activityCardHeader {
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--color-border-light);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.activityCardTitle {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.activityCardBody {
+  padding: 0;
+}
+
+/* Operation Badge */
+.operationBadge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  background: var(--color-bg-secondary);
+  color: var(--color-text-primary);
+  border: 1px solid var(--color-border-light);
+}
+
+.operationBadge.push {
+  background: rgba(22, 93, 255, 0.1);
+  color: var(--color-primary);
+  border-color: rgba(22, 93, 255, 0.2);
+}
+
+.operationBadge.pull {
+  background: rgba(0, 180, 42, 0.1);
+  color: var(--color-success);
+  border-color: rgba(0, 180, 42, 0.2);
+}
+
+.operationBadge.publish,
+.operationBadge.unpublish {
+  background: rgba(255, 125, 0, 0.1);
+  color: var(--color-warning);
+  border-color: rgba(255, 125, 0, 0.2);
+}
+
+.operationBadge.token_create {
+  background: rgba(114, 46, 209, 0.1);
+  color: #a855f7;
+  border-color: rgba(114, 46, 209, 0.2);
+}
+
+:global(.theme-dark) .operationBadge.token_create {
+  background: rgba(168, 85, 247, 0.15);
+  color: #c084fc;
+  border-color: rgba(168, 85, 247, 0.3);
+}
+
+.operationBadge.token_delete {
+  background: rgba(245, 63, 63, 0.1);
+  color: var(--color-error);
+  border-color: rgba(245, 63, 63, 0.2);
+}
+
+/* Empty State */
+.emptyState {
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--color-text-secondary);
+}
+
+.emptyStateIcon {
+  font-size: 48px;
+  color: var(--color-text-tertiary);
+  margin-bottom: 16px;
+  opacity: 0.5;
+}
+
+.emptyStateText {
+  font-size: 14px;
+  color: var(--color-text-secondary);
+}
+
+/* Dark theme adjustments */
+:global(.theme-dark) .statCard::before {
+  opacity: 0.3;
+}
+
+:global(.theme-dark) .statCard:hover::before {
+  opacity: 0.5;
+}
+
+:global(.theme-dark) .statIconWrapper {
+  opacity: 0.08;
+}
+
+:global(.theme-dark) .statCard:hover .statIconWrapper {
+  opacity: 0.12;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .statCardBody {
+    padding: 20px;
+  }
+  
+  .statIconWrapper {
+    width: 48px;
+    height: 48px;
+    top: 16px;
+    right: 16px;
+  }
+  
+  .statIcon {
+    font-size: 24px;
+  }
+  
+  .statValue {
+    font-size: 28px;
+  }
+}

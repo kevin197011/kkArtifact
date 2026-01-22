@@ -2,16 +2,17 @@
 
 .loginContainer {
   position: relative;
-  min-height: 100vh;
+  height: 100vh;
+  max-height: 100vh;
   background: linear-gradient(135deg, #f5f7fa 0%, #e8edf2 25%, #f0f4f8 50%, #e8edf2 75%, #f5f7fa 100%);
   background-size: 400% 400%;
   animation: gradientShift 20s ease infinite;
   overflow: hidden;
 }
 
-/* Dark theme background */
+/* Force light theme - override dark theme */
 :global(.theme-dark) .loginContainer {
-  background: linear-gradient(135deg, #1a1d29 0%, #1e212e 25%, #232633 50%, #1e212e 75%, #1a1d29 100%);
+  background: linear-gradient(135deg, #f5f7fa 0%, #e8edf2 25%, #f0f4f8 50%, #e8edf2 75%, #f5f7fa 100%) !important;
 }
 
 @keyframes gradientShift {
@@ -178,38 +179,43 @@
   z-index: 1;
   display: flex;
   flex-direction: column;
-  min-height: 100vh;
+  height: 100vh;
+  max-height: 100vh;
+  overflow: hidden;
 }
 
 .loginCard {
   position: relative;
   z-index: 2;
-  backdrop-filter: blur(10px);
-  background: rgba(255, 255, 255, 0.95);
+  background: #ffffff;
   box-shadow: 
     0 8px 32px rgba(0, 0, 0, 0.08),
-    0 2px 8px rgba(0, 0, 0, 0.04),
-    inset 0 1px 0 rgba(255, 255, 255, 0.9);
-  border: 1px solid rgba(255, 255, 255, 0.8);
+    0 2px 8px rgba(0, 0, 0, 0.04);
+  border: 1px solid #e8eaed;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* Dark theme login card */
+/* Force light theme login card - override dark theme */
 :global(.theme-dark) .loginCard {
-  background: rgba(26, 29, 41, 0.95);
-  border: 1px solid rgba(45, 49, 66, 0.8);
+  background: #ffffff !important;
+  border: 1px solid #e8eaed !important;
   box-shadow: 
-    0 8px 32px rgba(0, 0, 0, 0.4),
-    0 2px 8px rgba(0, 0, 0, 0.3),
-    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    0 8px 32px rgba(0, 0, 0, 0.08),
+    0 2px 8px rgba(0, 0, 0, 0.04) !important;
 }
 
 .loginCard:hover {
   box-shadow: 
     0 12px 40px rgba(0, 0, 0, 0.12),
-    0 4px 12px rgba(0, 0, 0, 0.06),
-    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+    0 4px 12px rgba(0, 0, 0, 0.06);
   transform: translateY(-2px);
+}
+
+/* Force light theme hover - override dark theme */
+:global(.theme-dark) .loginCard:hover {
+  box-shadow: 
+    0 12px 40px rgba(0, 0, 0, 0.12),
+    0 4px 12px rgba(0, 0, 0, 0.06) !important;
 }
 
 /* Respect reduced motion preference */
@@ -246,3 +252,31 @@
   z-index: 2;
 }
 
+/* Force light theme for all login page elements - override dark theme */
+:global(.theme-dark) .loginContainer :global(.ant-input),
+:global(.theme-dark) .loginContainer :global(.ant-input-password),
+:global(.theme-dark) .loginContainer :global(.ant-input-password .ant-input) {
+  background: #ffffff !important;
+  border-color: #e8eaed !important;
+  color: #1d2129 !important;
+}
+
+:global(.theme-dark) .loginContainer :global(.ant-input)::placeholder,
+:global(.theme-dark) .loginContainer :global(.ant-input-password .ant-input)::placeholder {
+  color: #c9cdd4 !important;
+}
+
+:global(.theme-dark) .loginContainer :global(.ant-input):focus,
+:global(.theme-dark) .loginContainer :global(.ant-input-password .ant-input):focus {
+  background: #ffffff !important;
+  border-color: #165dff !important;
+  color: #1d2129 !important;
+}
+
+:global(.theme-dark) .loginContainer :global(.ant-form-item-label > label) {
+  color: #1d2129 !important;
+}
+
+:global(.theme-dark) .loginContainer :global(.ant-typography) {
+  color: #1d2129 !important;
+}

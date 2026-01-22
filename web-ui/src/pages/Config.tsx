@@ -62,7 +62,7 @@ const ConfigPage: React.FC = () => {
         >
           <Form.Item
             name="version_retention_limit"
-            label={<span style={{ fontWeight: 600, fontSize: '15px' }}>版本保留数量</span>}
+            label={<span style={{ fontWeight: 600, fontSize: '15px', color: 'var(--color-text-primary)' }}>版本保留数量</span>}
             tooltip="每个应用保留的最新版本数量。超过此数量的旧版本将在每天凌晨3点自动清理。"
             rules={[
               { required: true, message: '请输入版本保留数量' },
@@ -79,7 +79,7 @@ const ConfigPage: React.FC = () => {
           </Form.Item>
           <Form.Item
             name="audit_log_retention_days"
-            label={<span style={{ fontWeight: 600, fontSize: '15px' }}>审计日志保留天数</span>}
+            label={<span style={{ fontWeight: 600, fontSize: '15px', color: 'var(--color-text-primary)' }}>审计日志保留天数</span>}
             tooltip="审计日志保留的天数。超过此天数的审计日志将在每天凌晨3点自动清理。"
             rules={[
               { required: true, message: '请输入审计日志保留天数' },
@@ -106,8 +106,8 @@ const ConfigPage: React.FC = () => {
             </div>
             <ul style={{ margin: 0, paddingLeft: '24px', color: 'var(--color-text-secondary)', lineHeight: '1.8', fontSize: '13px' }}>
               <li>清理任务每天凌晨 3:00 自动运行</li>
-              <li><strong>版本清理</strong>：保留每个应用最新的 N 个版本，删除更旧的版本</li>
-              <li><strong>审计日志清理</strong>：删除超过保留天数的审计日志记录</li>
+              <li><strong style={{ color: 'var(--color-text-primary)' }}>版本清理</strong>：保留每个应用最新的 N 个版本，删除更旧的版本</li>
+              <li><strong style={{ color: 'var(--color-text-primary)' }}>审计日志清理</strong>：删除超过保留天数的审计日志记录</li>
               <li>清理范围：所有项目和应用</li>
               <li>清理内容：从存储和数据库同时删除旧数据</li>
             </ul>
@@ -133,6 +133,8 @@ const ConfigPage: React.FC = () => {
                   borderRadius: '6px',
                   height: '40px',
                   padding: '0 24px',
+                  color: 'var(--color-text-primary)',
+                  borderColor: 'var(--color-border)',
                 }}
               >
                 重置

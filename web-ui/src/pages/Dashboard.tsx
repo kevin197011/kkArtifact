@@ -5,16 +5,20 @@
 
 import React from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Row, Col, Card, Statistic, Table, Typography, Spin } from 'antd'
-import { ProjectOutlined, AppstoreOutlined, FileOutlined, ClockCircleOutlined } from '@ant-design/icons'
+import { Row, Col, Card, Table, Typography, Spin } from 'antd'
+import { ProjectOutlined, AppstoreOutlined, TagOutlined, ClockCircleOutlined, HistoryOutlined } from '@ant-design/icons'
+import { useNavigate } from 'react-router-dom'
 import { projectsApi } from '../api/projects'
 import { auditApi } from '../api/audit'
 import type { AuditLog } from '../api/audit'
 import type { ColumnType } from 'antd/es/table'
+import styles from './Dashboard.module.css'
 
 const { Title } = Typography
 
 const Dashboard: React.FC = () => {
+  const navigate = useNavigate()
+  
   // Fetch projects count
   const { data: projectsData, isLoading: projectsLoading } = useQuery({
     queryKey: ['projects', 'dashboard'],
@@ -41,9 +45,30 @@ const Dashboard: React.FC = () => {
     enabled: !!projectsData && projectsData.length > 0,
   })
 
+  // Fetch versions for all apps to calculate total count
+  const { data: allVersionsData } = useQuery({
+    queryKey: ['all-versions', 'dashboard', allAppsData?.map((a) => `${a.project_id}/${a.name}`)],
+    queryFn: async () => {
+      if (!allAppsData || !projectsData || allAppsData.length === 0) return []
+      // Create a map from project_id to project name
+      const projectMap = new Map(projectsData.map((p) => [p.id, p.name]))
+      const versionsPromises = allAppsData.map((app) => {
+        const projectName = projectMap.get(app.project_id)
+        if (!projectName) {
+          return Promise.resolve([] as any[])
+        }
+        return projectsApi.getVersions(projectName, app.name, 1000, 0).then((res) => res.data)
+      })
+      const versionsArrays = await Promise.all(versionsPromises)
+      return versionsArrays.flat()
+    },
+    enabled: !!allAppsData && !!projectsData && allAppsData.length > 0,
+  })
+
   // Calculate statistics
   const projectsCount = projectsData?.length || 0
   const appsCount = allAppsData?.length || 0
+  const versionsCount = allVersionsData?.length || 0
   const isLoading = projectsLoading || auditLogsLoading
 
   // Audit logs columns
@@ -64,14 +89,6 @@ const Dashboard: React.FC = () => {
       key: 'operation',
       width: 120,
       render: (text: string) => {
-        const colorMap: Record<string, string> = {
-          push: 'var(--color-primary)',
-          pull: 'var(--color-success)',
-          publish: 'var(--color-warning)',
-          unpublish: 'var(--color-warning)',
-          token_create: '#722ed1',
-          token_delete: 'var(--color-error)',
-        }
         const labels: Record<string, string> = {
           push: '推送',
           pull: '拉取',
@@ -80,7 +97,11 @@ const Dashboard: React.FC = () => {
           token_create: '创建令牌',
           token_delete: '删除令牌',
         }
-        return <span style={{ color: colorMap[text] || 'var(--color-text-primary)', fontWeight: 500, fontSize: '13px' }}>{labels[text] || text}</span>
+        return (
+          <span className={`${styles.operationBadge} ${styles[text] || ''}`}>
+            {labels[text] || text}
+          </span>
+        )
       },
     },
     {
@@ -107,97 +128,141 @@ const Dashboard: React.FC = () => {
   ]
 
   return (
-    <div>
-      <div style={{ marginBottom: '32px' }}>
-        <Title level={2} style={{ margin: 0, fontSize: '24px', fontWeight: 600, color: 'var(--color-text-primary)', letterSpacing: '-0.3px' }}>
+    <div className={styles.dashboardContainer}>
+      <div className={styles.header}>
+        <Title level={2} className={styles.title}>
           仪表盘
         </Title>
-        <div style={{ marginTop: '6px', color: 'var(--color-text-secondary)', fontSize: '13px' }}>
+        <div className={styles.subtitle}>
           系统概览和最近活动
         </div>
       </div>
 
-      <Row gutter={[16, 16]} style={{ marginBottom: '32px' }}>
+      <Row gutter={[20, 20]} style={{ marginBottom: '32px' }}>
         <Col xs={24} sm={12} lg={6}>
           <Card 
             loading={isLoading}
-            hoverable
-            onClick={() => window.location.href = '/projects'}
-            style={{ cursor: 'pointer' }}
-            bodyStyle={{ padding: '20px' }}
+            className={`${styles.statCard} ${styles.projectCard}`}
+            onClick={() => navigate('/projects')}
+            bodyStyle={{ padding: 0 }}
           >
-            <Statistic
-              title={<span style={{ color: 'var(--color-text-secondary)', fontSize: '13px', fontWeight: 500 }}>项目数</span>}
-              value={projectsCount}
-              prefix={<ProjectOutlined style={{ color: 'var(--color-primary)', fontSize: '18px', marginRight: '8px' }} />}
-              valueStyle={{ color: 'var(--color-text-primary)', fontSize: '24px', fontWeight: 600 }}
-            />
+            <div className={styles.statCardBody}>
+              <div className={`${styles.statIconWrapper} ${styles.projectIcon}`}>
+                <ProjectOutlined className={styles.statIcon} style={{ color: 'var(--color-primary)' }} />
+              </div>
+              <div className={styles.statContent}>
+                <span className={styles.statTitle}>项目数</span>
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
+                  <span className={styles.statPrefix}>
+                    <ProjectOutlined style={{ color: 'var(--color-primary)', fontSize: '20px' }} />
+                  </span>
+                  <span className={styles.statValue}>{projectsCount}</span>
+                </div>
+              </div>
+            </div>
           </Card>
         </Col>
         <Col xs={24} sm={12} lg={6}>
           <Card 
             loading={isLoading}
-            hoverable
-            bodyStyle={{ padding: '20px' }}
+            className={`${styles.statCard} ${styles.appCard}`}
+            bodyStyle={{ padding: 0 }}
           >
-            <Statistic
-              title={<span style={{ color: 'var(--color-text-secondary)', fontSize: '13px', fontWeight: 500 }}>应用总数</span>}
-              value={appsCount}
-              prefix={<AppstoreOutlined style={{ color: 'var(--color-success)', fontSize: '18px', marginRight: '8px' }} />}
-              valueStyle={{ color: 'var(--color-text-primary)', fontSize: '24px', fontWeight: 600 }}
-            />
+            <div className={styles.statCardBody}>
+              <div className={`${styles.statIconWrapper} ${styles.appIcon}`}>
+                <AppstoreOutlined className={styles.statIcon} style={{ color: 'var(--color-success)' }} />
+              </div>
+              <div className={styles.statContent}>
+                <span className={styles.statTitle}>应用总数</span>
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
+                  <span className={styles.statPrefix}>
+                    <AppstoreOutlined style={{ color: 'var(--color-success)', fontSize: '20px' }} />
+                  </span>
+                  <span className={styles.statValue}>{appsCount}</span>
+                </div>
+              </div>
+            </div>
           </Card>
         </Col>
         <Col xs={24} sm={12} lg={6}>
           <Card
-            hoverable
-            onClick={() => window.location.href = '/audit-logs'}
-            style={{ cursor: 'pointer' }}
-            bodyStyle={{ padding: '20px' }}
+            loading={isLoading}
+            className={`${styles.statCard} ${styles.versionCard}`}
+            bodyStyle={{ padding: 0 }}
           >
-            <Statistic
-              title={<span style={{ color: 'var(--color-text-secondary)', fontSize: '13px', fontWeight: 500 }}>最近活动</span>}
-              value={auditLogsData?.length || 0}
-              prefix={<ClockCircleOutlined style={{ color: 'var(--color-warning)', fontSize: '18px', marginRight: '8px' }} />}
-              valueStyle={{ color: 'var(--color-text-primary)', fontSize: '24px', fontWeight: 600 }}
-            />
+            <div className={styles.statCardBody}>
+              <div className={`${styles.statIconWrapper} ${styles.versionIcon}`}>
+                <TagOutlined className={styles.statIcon} style={{ color: 'var(--color-primary)' }} />
+              </div>
+              <div className={styles.statContent}>
+                <span className={styles.statTitle}>版本总数</span>
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
+                  <span className={styles.statPrefix}>
+                    <TagOutlined style={{ color: 'var(--color-primary)', fontSize: '20px' }} />
+                  </span>
+                  <span className={styles.statValue}>{versionsCount}</span>
+                </div>
+              </div>
+            </div>
           </Card>
         </Col>
         <Col xs={24} sm={12} lg={6}>
           <Card
-            bodyStyle={{ padding: '20px' }}
+            className={`${styles.statCard} ${styles.activityCard}`}
+            onClick={() => navigate('/audit-logs')}
+            bodyStyle={{ padding: 0 }}
           >
-            <Statistic
-              title={<span style={{ color: 'var(--color-text-secondary)', fontSize: '13px', fontWeight: 500 }}>系统状态</span>}
-              value="运行中"
-              prefix={<FileOutlined style={{ color: 'var(--color-success)', fontSize: '18px', marginRight: '8px' }} />}
-              valueStyle={{ color: 'var(--color-success)', fontSize: '16px', fontWeight: 600 }}
-            />
+            <div className={styles.statCardBody}>
+              <div className={`${styles.statIconWrapper} ${styles.activityIcon}`}>
+                <ClockCircleOutlined className={styles.statIcon} style={{ color: 'var(--color-warning)' }} />
+              </div>
+              <div className={styles.statContent}>
+                <span className={styles.statTitle}>最近活动</span>
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
+                  <span className={styles.statPrefix}>
+                    <ClockCircleOutlined style={{ color: 'var(--color-warning)', fontSize: '20px' }} />
+                  </span>
+                  <span className={styles.statValue}>{auditLogsData?.length || 0}</span>
+                </div>
+              </div>
+            </div>
           </Card>
         </Col>
       </Row>
 
       <Card 
-        title={
-          <span style={{ fontSize: '16px', fontWeight: 600, color: 'var(--color-text-primary)' }}>
-            最近活动
-          </span>
-        }
-        bodyStyle={{ padding: '20px' }}
+        className={styles.activityCard}
+        bodyStyle={{ padding: 0 }}
       >
-        {auditLogsLoading ? (
-          <div style={{ textAlign: 'center', padding: '60px' }}>
-            <Spin size="large" />
-          </div>
-        ) : (
-          <Table
-            columns={auditColumns}
-            dataSource={auditLogsData || []}
-            rowKey="id"
-            pagination={false}
-            size="middle"
-          />
-        )}
+        <div className={styles.activityCardHeader}>
+          <h3 className={styles.activityCardTitle}>
+            <HistoryOutlined style={{ fontSize: '18px', color: 'var(--color-primary)' }} />
+            最近活动
+          </h3>
+        </div>
+        <div className={styles.activityCardBody}>
+          {auditLogsLoading ? (
+            <div className={styles.emptyState}>
+              <Spin size="large" />
+            </div>
+          ) : auditLogsData && auditLogsData.length > 0 ? (
+            <Table
+              columns={auditColumns}
+              dataSource={auditLogsData}
+              rowKey="id"
+              pagination={false}
+              size="middle"
+              style={{ background: 'transparent' }}
+            />
+          ) : (
+            <div className={styles.emptyState}>
+              <div className={styles.emptyStateIcon}>
+                <HistoryOutlined />
+              </div>
+              <div className={styles.emptyStateText}>暂无活动记录</div>
+            </div>
+          )}
+        </div>
       </Card>
     </div>
   )

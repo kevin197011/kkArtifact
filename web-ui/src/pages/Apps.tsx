@@ -47,7 +47,7 @@ const AppsPage: React.FC = () => {
       dataIndex: 'name',
       key: 'name',
       render: (text: string) => (
-        <span style={{ fontWeight: 500, color: '#1a1a1a' }}>{text}</span>
+        <span style={{ fontWeight: 500, color: 'var(--color-text-primary)' }}>{text}</span>
       ),
     },
     {
@@ -55,7 +55,7 @@ const AppsPage: React.FC = () => {
       dataIndex: 'created_at',
       key: 'created_at',
       render: (date: string) => (
-        <span style={{ color: '#8c8c8c', fontSize: '14px' }}>
+        <span style={{ color: 'var(--color-text-secondary)', fontSize: '14px' }}>
           {new Date(date).toLocaleString('zh-CN')}
         </span>
       ),
@@ -108,10 +108,10 @@ const AppsPage: React.FC = () => {
         style={{ marginBottom: '24px', fontSize: '14px' }}
         items={[
           {
-            title: <a onClick={() => navigate('/projects')} style={{ color: '#1890ff' }}>项目</a>,
+            title: <a onClick={() => navigate('/projects')} style={{ color: 'var(--color-primary)' }}>项目</a>,
           },
           {
-            title: <span style={{ color: '#8c8c8c' }}>{project}</span>,
+            title: <span style={{ color: 'var(--color-text-secondary)' }}>{project}</span>,
           },
         ]}
       />
