@@ -67,9 +67,38 @@ function Download-Binary {
     )
     
     try {
-        Invoke-WebRequest -Uri $Url -OutFile $OutputPath -ErrorAction Stop
+        $response = Invoke-WebRequest -Uri $Url -OutFile $OutputPath -ErrorAction Stop
+        
+        # Verify HTTP status code
+        if ($response.StatusCode -ne 200) {
+            Write-Host "Error: Download failed with HTTP status $($response.StatusCode)" -ForegroundColor Red
+            if (Test-Path $OutputPath) {
+                Remove-Item $OutputPath -Force
+            }
+            exit 1
+        }
+        
+        # Verify downloaded file is not JSON (error response)
+        if (Test-Path $OutputPath) {
+            $firstLine = Get-Content $OutputPath -TotalCount 1 -ErrorAction SilentlyContinue
+            if ($firstLine -and $firstLine.Trim().StartsWith("{")) {
+                Write-Host "Error: Server returned JSON error instead of binary file" -ForegroundColor Red
+                Write-Host "Response content:"
+                Get-Content $OutputPath -TotalCount 5
+                Remove-Item $OutputPath -Force
+                exit 1
+            }
+        }
     } catch {
         Write-Host "Error: Failed to download binary: $_" -ForegroundColor Red
+        if (Test-Path $OutputPath) {
+            $content = Get-Content $OutputPath -Raw -ErrorAction SilentlyContinue
+            if ($content -and $content.Trim().StartsWith("{")) {
+                Write-Host "Server returned error response:" -ForegroundColor Red
+                Write-Host $content
+            }
+            Remove-Item $OutputPath -Force -ErrorAction SilentlyContinue
+        }
         exit 1
     }
 }
@@ -191,8 +220,34 @@ function New-GlobalConfig {
         
         # Create or update config file
         if (Test-Path $configFile) {
-            Write-Host "Global config file already exists: $configFile" -ForegroundColor Yellow
-            Write-Host "Skipping config file creation to preserve existing settings."
+            # Check if server_url needs to be updated (if it's localhost or placeholder)
+            $content = Get-Content $configFile -Raw -ErrorAction SilentlyContinue
+            $currentUrl = ""
+            if ($content) {
+                $match = [regex]::Match($content, '(?m)^server_url:\s*(.+)$')
+                if ($match.Success) {
+                    $currentUrl = $match.Groups[1].Value.Trim()
+                }
+            }
+            
+            if ([string]::IsNullOrEmpty($currentUrl) -or $currentUrl -eq "http://localhost:8080" -or $currentUrl -eq "__SERVER_URL__") {
+                # Update server_url if it's using default/placeholder value
+                $newContent = $content -replace '(?m)^server_url:\s*.+$', "server_url: $SERVER_URL"
+                if ($newContent -ne $content) {
+                    Set-Content -Path $configFile -Value $newContent -Encoding UTF8
+                    Write-Host "✓ Updated server_url in global config file: $configFile" -ForegroundColor Green
+                    Write-Host "  Updated to: $SERVER_URL"
+                } else {
+                    # Add server_url if it doesn't exist
+                    $newContent = $content + "`nserver_url: $SERVER_URL`n"
+                    Set-Content -Path $configFile -Value $newContent -Encoding UTF8
+                    Write-Host "✓ Added server_url to global config file: $configFile" -ForegroundColor Green
+                }
+            } else {
+                Write-Host "Global config file already exists: $configFile" -ForegroundColor Yellow
+                Write-Host "  Current server_url: $currentUrl"
+                Write-Host "  Skipping update to preserve existing settings."
+            }
         } else {
             $configContent = @"
 # kkArtifact Agent Global Configuration

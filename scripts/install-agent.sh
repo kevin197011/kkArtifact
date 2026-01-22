@@ -68,12 +68,62 @@ download_binary() {
     local url="$1"
     local output="$2"
     
+    local http_code=""
+    local temp_output=$(mktemp)
+    trap "rm -f ${temp_output}" EXIT
+    
     if command -v curl >/dev/null 2>&1; then
-        curl -L -o "${output}" "${url}"
+        # Use -w to write HTTP code to stderr, download to temp file first
+        http_code=$(curl -L -w "%{http_code}" -o "${temp_output}" -s "${url}" 2>&1 | tail -n1)
+        # Move temp file to output if successful
+        if [ "${http_code}" = "200" ]; then
+            mv "${temp_output}" "${output}"
+        else
+            mv "${temp_output}" "${output}" 2>/dev/null || true
+        fi
     elif command -v wget >/dev/null 2>&1; then
-        wget -O "${output}" "${url}"
+        if wget -O "${temp_output}" "${url}" 2>&1 | grep -q "200 OK"; then
+            http_code="200"
+            mv "${temp_output}" "${output}"
+        else
+            http_code="000"
+            mv "${temp_output}" "${output}" 2>/dev/null || true
+        fi
     else
         echo "Error: curl or wget is required but not found" >&2
+        exit 1
+    fi
+    
+    # Check HTTP status code
+    if [ "${http_code}" != "200" ]; then
+        echo -e "${RED}Error: Download failed with HTTP status ${http_code}${NC}" >&2
+        # Check if output is JSON error response
+        if [ -f "${output}" ] && head -n1 "${output}" 2>/dev/null | grep -q "^{"; then
+            echo "Server returned error:" >&2
+            cat "${output}" >&2
+            echo "" >&2
+        fi
+        rm -f "${output}"
+        exit 1
+    fi
+    
+    # Verify downloaded file is not JSON (error response)
+    if [ -f "${output}" ] && head -n1 "${output}" 2>/dev/null | grep -q "^{"; then
+        echo -e "${RED}Error: Server returned JSON error instead of binary file${NC}" >&2
+        echo "Response content:" >&2
+        head -n5 "${output}" >&2
+        rm -f "${output}"
+        exit 1
+    fi
+    
+    # Verify file is not empty and has reasonable size (at least 1KB for a binary)
+    if [ ! -s "${output}" ] || [ $(stat -f%z "${output}" 2>/dev/null || stat -c%s "${output}" 2>/dev/null || echo 0) -lt 1024 ]; then
+        echo -e "${RED}Error: Downloaded file is too small or empty (may be an error response)${NC}" >&2
+        if [ -f "${output}" ]; then
+            echo "File content (first 10 lines):" >&2
+            head -n10 "${output}" >&2
+        fi
+        rm -f "${output}"
         exit 1
     fi
 }
@@ -227,8 +277,32 @@ create_global_config() {
     
     # Create or update config file
     if [ -f "${config_file}" ]; then
-        echo -e "${YELLOW}Global config file already exists: ${config_file}${NC}"
-        echo "Skipping config file creation to preserve existing settings."
+        # Check if server_url needs to be updated (if it's localhost or placeholder)
+        local current_url=$(grep -E "^server_url:" "${config_file}" 2>/dev/null | sed 's/^server_url:[[:space:]]*//' | tr -d '"' || echo "")
+        if [ -z "${current_url}" ] || [ "${current_url}" = "http://localhost:8080" ] || [ "${current_url}" = "__SERVER_URL__" ]; then
+            # Update server_url if it's using default/placeholder value
+            if command -v sed >/dev/null 2>&1; then
+                # Use sed to update server_url line
+                if grep -q "^server_url:" "${config_file}"; then
+                    sed -i "s|^server_url:.*|server_url: ${SERVER_URL}|" "${config_file}"
+                    echo -e "${GREEN}✓ Updated server_url in global config file: ${config_file}${NC}"
+                    echo "  Updated to: ${SERVER_URL}"
+                else
+                    # Add server_url if it doesn't exist
+                    sed -i "/^# kkArtifact Agent Global Configuration/a\\server_url: ${SERVER_URL}" "${config_file}"
+                    echo -e "${GREEN}✓ Added server_url to global config file: ${config_file}${NC}"
+                fi
+            else
+                echo -e "${YELLOW}Global config file exists but server_url may need updating${NC}"
+                echo "  Current: ${current_url:-not set}"
+                echo "  Should be: ${SERVER_URL}"
+                echo "  Please update manually if needed."
+            fi
+        else
+            echo -e "${YELLOW}Global config file already exists: ${config_file}${NC}"
+            echo "  Current server_url: ${current_url}"
+            echo "  Skipping update to preserve existing settings."
+        fi
     else
         cat > "${config_file}" <<EOF
 # kkArtifact Agent Global Configuration
