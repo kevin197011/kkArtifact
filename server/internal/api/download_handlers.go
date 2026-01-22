@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/kk/kkartifact-server/internal/util"
@@ -201,3 +202,71 @@ func (h *Handler) handleGetServerVersion(c *gin.Context) {
 	c.JSON(http.StatusOK, versionInfo)
 }
 
+// handleDownloadScript serves installation scripts
+// handleDownloadScript godoc
+// @Summary      Download installation script
+// @Description  Download installation script for Unix (install-agent.sh) or Windows (install-agent.ps1)
+// @Tags         downloads
+// @Param        filename  path  string  true  "Script filename (install-agent.sh or install-agent.ps1)"
+// @Produce      text/x-shellscript
+// @Produce      application/x-powershell
+// @Success      200  {file}  script
+// @Failure      404  {object}  ErrorResponse
+// @Router       /downloads/scripts/{filename} [get]
+func (h *Handler) handleDownloadScript(c *gin.Context) {
+	filename := c.Param("filename")
+	
+	// Validate filename to prevent path traversal
+	if filename == "" || filepath.Base(filename) != filename {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid filename"})
+		return
+	}
+
+	// Only allow install-agent scripts
+	if filename != "install-agent.sh" && filename != "install-agent.ps1" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid script filename"})
+		return
+	}
+
+	// Find the script file
+	scriptData, err := findStaticFile("scripts/" + filename)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "script not found"})
+		return
+	}
+
+	// Extract server URL from request
+	// Get scheme (http/https)
+	scheme := "http"
+	if c.GetHeader("X-Forwarded-Proto") == "https" || c.Request.TLS != nil {
+		scheme = "https"
+	}
+	
+	// Get host from request
+	host := c.GetHeader("Host")
+	if host == "" {
+		host = c.Request.Host
+	}
+	if host == "" {
+		host = "localhost:8080"
+	}
+	
+	// Construct server URL
+	serverURL := scheme + "://" + host
+
+	// Inject server URL into script content
+	// Replace __SERVER_URL__ placeholder with actual server URL
+	scriptContent := string(scriptData)
+	scriptContent = strings.ReplaceAll(scriptContent, "__SERVER_URL__", serverURL)
+
+	// Set appropriate Content-Type based on script type
+	if filename == "install-agent.sh" {
+		c.Header("Content-Type", "text/x-shellscript")
+	} else {
+		c.Header("Content-Type", "application/x-powershell")
+	}
+	c.Header("Content-Disposition", "attachment; filename=\""+filename+"\"")
+
+	// Serve file content with injected server URL
+	c.Data(http.StatusOK, c.GetHeader("Content-Type"), []byte(scriptContent))
+}

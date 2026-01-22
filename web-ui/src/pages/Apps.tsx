@@ -43,24 +43,37 @@ const AppsPage: React.FC = () => {
 
   const columns: ColumnsType<App> = [
     {
-      title: '名称',
+      title: <span style={{ fontWeight: 600 }}>名称</span>,
       dataIndex: 'name',
       key: 'name',
+      render: (text: string) => (
+        <span style={{ fontWeight: 500, color: '#1a1a1a' }}>{text}</span>
+      ),
     },
     {
-      title: '创建时间',
+      title: <span style={{ fontWeight: 600 }}>创建时间</span>,
       dataIndex: 'created_at',
       key: 'created_at',
-      render: (date: string) => new Date(date).toLocaleString('zh-CN'),
+      render: (date: string) => (
+        <span style={{ color: '#8c8c8c', fontSize: '14px' }}>
+          {new Date(date).toLocaleString('zh-CN')}
+        </span>
+      ),
     },
     {
-      title: '操作',
+      title: <span style={{ fontWeight: 600 }}>操作</span>,
       key: 'actions',
+      width: 200,
       render: (_, record) => (
         <Space>
           <Button
             type="link"
             onClick={() => navigate(`/projects/${project}/apps/${record.name}/versions`)}
+            style={{
+              padding: '0 8px',
+              height: '32px',
+              fontWeight: 500,
+            }}
           >
             查看版本
           </Button>
@@ -72,7 +85,15 @@ const AppsPage: React.FC = () => {
             cancelText="取消"
             okButtonProps={{ danger: true }}
           >
-            <Button type="link" danger icon={<DeleteOutlined />}>
+            <Button 
+              type="link" 
+              danger 
+              icon={<DeleteOutlined />}
+              style={{
+                padding: '0 8px',
+                height: '32px',
+              }}
+            >
               删除
             </Button>
           </Popconfirm>
@@ -83,36 +104,60 @@ const AppsPage: React.FC = () => {
 
   return (
     <div>
-      <Breadcrumb style={{ marginBottom: 16 }}>
-        <Breadcrumb.Item>
-          <a onClick={() => navigate('/projects')}>项目</a>
-        </Breadcrumb.Item>
-        <Breadcrumb.Item>{project}</Breadcrumb.Item>
-      </Breadcrumb>
-      <h2>应用 - {project}</h2>
-      <Table
-        columns={columns}
-        dataSource={data}
-        loading={isLoading}
-        rowKey="id"
-        pagination={{
-          current: page,
-          pageSize,
-          total: data && data.length < pageSize 
-            ? (page - 1) * pageSize + data.length 
-            : data 
-            ? page * pageSize + 1 
-            : 0,
-          onChange: setPage,
-          showSizeChanger: false,
-          showTotal: (total, range) => {
-            if (data && data.length < pageSize) {
-              return `共 ${total} 个应用`
-            }
-            return `第 ${range[0]}-${range[1]} 项，至少 ${total} 个应用`
+      <Breadcrumb 
+        style={{ marginBottom: '24px', fontSize: '14px' }}
+        items={[
+          {
+            title: <a onClick={() => navigate('/projects')} style={{ color: '#1890ff' }}>项目</a>,
           },
-        }}
+          {
+            title: <span style={{ color: '#8c8c8c' }}>{project}</span>,
+          },
+        ]}
       />
+      <div style={{ marginBottom: '24px' }}>
+        <h2 style={{ margin: 0, fontSize: '24px', fontWeight: 600, color: 'var(--color-text-primary)', letterSpacing: '-0.3px' }}>
+          应用 - {project}
+        </h2>
+        <div style={{ marginTop: '6px', color: 'var(--color-text-secondary)', fontSize: '13px' }}>
+          管理项目下的所有应用
+        </div>
+      </div>
+      <div
+        style={{
+          background: 'var(--color-bg-primary)',
+          borderRadius: 'var(--radius-md)',
+          border: '1px solid var(--color-border-light)',
+          overflow: 'hidden',
+        }}
+      >
+        <Table
+          columns={columns}
+          dataSource={data}
+          loading={isLoading}
+          rowKey="id"
+          pagination={{
+            current: page,
+            pageSize,
+            total: data && data.length < pageSize 
+              ? (page - 1) * pageSize + data.length 
+              : data 
+              ? page * pageSize + 1 
+              : 0,
+            onChange: setPage,
+            showSizeChanger: false,
+            showTotal: (total, range) => {
+              if (data && data.length < pageSize) {
+                return `共 ${total} 个应用`
+              }
+              return `第 ${range[0]}-${range[1]} 项，至少 ${total} 个应用`
+            },
+            style: {
+              padding: '16px 24px',
+            },
+          }}
+        />
+      </div>
     </div>
   )
 }

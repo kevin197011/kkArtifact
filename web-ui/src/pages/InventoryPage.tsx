@@ -3,10 +3,10 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
-import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react'
+import React, { useState, useMemo, useCallback, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Tree, Input, Empty, Spin, Button, Typography, Card, Collapse, Tag, Space, message } from 'antd'
-import { SearchOutlined, FolderOutlined, AppstoreOutlined, FileOutlined, LoginOutlined, DownloadOutlined, CodeOutlined, DesktopOutlined, StarFilled, CopyOutlined } from '@ant-design/icons'
+import { SearchOutlined, FolderOutlined, AppstoreOutlined, LoginOutlined, DownloadOutlined, CopyOutlined, CalendarOutlined, CheckCircleOutlined } from '@ant-design/icons'
 import { useNavigate } from 'react-router-dom'
 import { publicProjectsApi, Project, App, Version } from '../api/projects'
 import { downloadsApi } from '../api/downloads'
@@ -48,8 +48,17 @@ const InventoryPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('')
   const debouncedSearchTerm = useDebounce(searchTerm, 300)
   const [expandedKeys, setExpandedKeys] = useState<React.Key[]>([])
-  const particlesRef = useRef<HTMLDivElement>(null)
-  const connectionsRef = useRef<HTMLDivElement>(null)
+  
+  // Get full script URL for install commands
+  const getScriptUrl = (filename: string) => {
+    const scriptPath = downloadsApi.downloadScript(filename)
+    // If scriptPath is already a full URL, return it
+    if (scriptPath.startsWith('http://') || scriptPath.startsWith('https://')) {
+      return scriptPath
+    }
+    // Otherwise, prepend current origin
+    return `${window.location.origin}${scriptPath}`
+  }
 
   // Format date for display
   const formatDate = useCallback((dateString: string): string => {
@@ -75,42 +84,6 @@ const InventoryPage: React.FC = () => {
     })
   }, [])
 
-  // Create DevOps style dynamic effects
-  useEffect(() => {
-    // Create particles
-    if (particlesRef.current) {
-      const particles = particlesRef.current
-      particles.innerHTML = ''
-
-      // Create particles with subtle animation
-      for (let i = 0; i < 15; i++) {
-        const particle = document.createElement('div')
-        particle.className = styles.particle
-        particle.style.left = `${Math.random() * 100}%`
-        particle.style.width = particle.style.height = `${Math.random() * 3 + 2}px`
-        particle.style.animationDelay = `${Math.random() * 20}s`
-        particle.style.animationDuration = `${Math.random() * 15 + 25}s`
-        particles.appendChild(particle)
-      }
-    }
-
-    // Create connection lines
-    if (connectionsRef.current) {
-      const connectionsContainer = connectionsRef.current
-      connectionsContainer.innerHTML = ''
-      
-      for (let i = 0; i < 8; i++) {
-        const connection = document.createElement('div')
-        connection.className = styles.connection
-        connection.style.top = `${Math.random() * 100}%`
-        connection.style.left = `${Math.random() * 100}%`
-        connection.style.width = `${Math.random() * 200 + 100}px`
-        connection.style.animationDelay = `${Math.random() * 3}s`
-        connection.style.transform = `rotate(${Math.random() * 360}deg)`
-        connectionsContainer.appendChild(connection)
-      }
-    }
-  }, [])
 
   // Fetch all projects
   const { data: allProjects, isLoading: projectsLoading } = useQuery({
@@ -249,29 +222,37 @@ const InventoryPage: React.FC = () => {
           const versionNodes: TreeDataNode[] = versions.map((version) => ({
             key: `version-${version.id}`,
             title: (
-              <span
-                className={styles.treeNode}
+              <div
+                className={styles.versionNode}
                 onClick={(e) => {
                   e.stopPropagation()
                   // Public inventory page - no navigation, just display information
                 }}
               >
-                <FileOutlined className={styles.treeNodeIcon} />
-                <span className={styles.treeNodeTextVersion}>{version.version}</span>
-                <CopyOutlined
-                  style={{ marginLeft: '8px', fontSize: '12px', color: '#999', cursor: 'pointer' }}
-                  onClick={(e) => handleCopyVersion(version.version, e)}
-                  title="复制版本号"
-                />
-                {version.created_at && (
-                  <span style={{ marginLeft: '8px', fontSize: '12px', color: '#999', fontWeight: 'normal' }}>
-                    ({formatDate(version.created_at)})
-                  </span>
-                )}
-                {version.is_published && (
-                  <StarFilled style={{ marginLeft: '8px', fontSize: '14px', color: '#faad14' }} />
-                )}
-              </span>
+                <div className={styles.versionNodeContent}>
+                  <span className={styles.versionNumber}>{version.version}</span>
+                  {version.is_published && (
+                    <Tag 
+                      color="success" 
+                      icon={<CheckCircleOutlined />}
+                      className={styles.publishedTag}
+                    >
+                      已发布
+                    </Tag>
+                  )}
+                  {version.created_at && (
+                    <span className={styles.versionDate}>
+                      <CalendarOutlined style={{ fontSize: '10px', marginRight: '3px' }} />
+                      {formatDate(version.created_at)}
+                    </span>
+                  )}
+                  <CopyOutlined
+                    className={styles.copyIcon}
+                    onClick={(e) => handleCopyVersion(version.version, e)}
+                    title="复制版本号"
+                  />
+                </div>
+              </div>
             ),
             isLeaf: true,
             version,
@@ -283,16 +264,19 @@ const InventoryPage: React.FC = () => {
           return {
             key: appKey,
             title: (
-              <span
-                className={styles.treeNode}
+              <div
+                className={styles.appNode}
                 onClick={(e) => {
                   e.stopPropagation()
                   // Public inventory page - no navigation, just display information
                 }}
               >
-                <AppstoreOutlined className={styles.treeNodeIcon} />
-                <span className={styles.treeNodeText}>{app.name}</span>
-              </span>
+                <AppstoreOutlined className={styles.appIcon} />
+                <span className={styles.appName}>{app.name}</span>
+                {versions.length > 0 && (
+                  <span className={styles.versionCount}>{versions.length} 个版本</span>
+                )}
+              </div>
             ),
             children: versionNodes.length > 0 ? versionNodes : undefined,
             isLeaf: versionNodes.length === 0,
@@ -304,18 +288,21 @@ const InventoryPage: React.FC = () => {
 
         return {
           key: projectKey,
-          title: (
-            <span
-              className={styles.treeNode}
-              onClick={(e) => {
-                e.stopPropagation()
-                // Public inventory page - no navigation, just display information
-              }}
-            >
-              <FolderOutlined className={styles.treeNodeIcon} />
-              <span className={styles.treeNodeText}>{project.name}</span>
-            </span>
-          ),
+            title: (
+              <div
+                className={styles.projectNode}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  // Public inventory page - no navigation, just display information
+                }}
+              >
+                <FolderOutlined className={styles.projectIcon} />
+                <span className={styles.projectName}>{project.name}</span>
+                {apps.length > 0 && (
+                  <span className={styles.appCount}>{apps.length} 个应用</span>
+                )}
+              </div>
+            ),
           children: appNodes.length > 0 ? appNodes : undefined,
           isLeaf: false,
           project,
@@ -368,73 +355,68 @@ const InventoryPage: React.FC = () => {
     retry: 1,
   })
 
-  const formatFileSize = (bytes: number): string => {
-    if (bytes < 1024) return `${bytes} B`
-    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
-    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
-  }
-
-  const getPlatformIcon = (platform: string) => {
-    if (platform.includes('windows')) return <DesktopOutlined />
-    if (platform.includes('darwin')) return <DesktopOutlined />
-    if (platform.includes('linux')) return <CodeOutlined />
-    return <CodeOutlined />
-  }
-
   return (
     <div className={styles.inventoryContainer}>
-      {/* DevOps style background effects */}
-      <div className={styles.gridBackground}></div>
-      <div className={styles.particles} ref={particlesRef}></div>
-      <div className={styles.connections} ref={connectionsRef}></div>
-
       {/* Content wrapper */}
       <div className={styles.contentWrapper}>
-        {/* Enhanced header */}
+        {/* Elegant header */}
         <div className={styles.header}>
-        <div className={styles.headerContent}>
-          <Title level={2} className={styles.title}>
-            制品清单
-          </Title>
+          <div className={styles.headerContent}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <img 
+                src="/logo-icon.svg" 
+                alt="kkArtifact" 
+                style={{ 
+                  width: '32px', 
+                  height: '32px',
+                  filter: 'drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1))',
+                }} 
+              />
+              <div>
+                <Title level={2} className={styles.title} style={{ margin: 0 }}>
+                  制品清单
+                </Title>
+                <div style={{ fontSize: '13px', color: 'var(--color-text-secondary)', marginTop: '4px' }}>
+                  浏览所有项目和版本
+                </div>
+              </div>
+            </div>
+          </div>
+          <Button
+            type="primary"
+            icon={<LoginOutlined />}
+            onClick={() => navigate('/login')}
+            style={{
+              height: '40px',
+              padding: '0 20px',
+              fontWeight: 500,
+              fontSize: '14px',
+              borderRadius: '8px',
+              boxShadow: '0 2px 8px rgba(22, 93, 255, 0.2)',
+            }}
+          >
+            登录后台
+          </Button>
         </div>
-        <Button
-          type="primary"
-          icon={<LoginOutlined />}
-          onClick={() => navigate('/login')}
-          size="large"
-          style={{
-            background: 'rgba(255, 255, 255, 0.25)',
-            borderColor: 'rgba(255, 255, 255, 0.4)',
-            color: '#ffffff',
-            fontWeight: 500,
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.background = 'rgba(255, 255, 255, 0.35)'
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.background = 'rgba(255, 255, 255, 0.25)'
-          }}
-        >
-          登录后台
-        </Button>
-      </div>
 
       {/* Agent Download Section */}
       {agentVersionInfo && agentVersionInfo.binaries.length > 0 && (
-        <Card className={styles.downloadCard} style={{ marginBottom: 24 }}>
+        <Card 
+          style={{ 
+            marginBottom: 32,
+            borderRadius: 'var(--radius-lg)',
+            border: '1px solid var(--color-border-light)',
+            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04)',
+          }}
+        >
           <Collapse defaultActiveKey={[]} ghost>
             <Panel 
               header={
                 <Space>
-                  <DownloadOutlined />
-                  <span style={{ fontWeight: 500 }}>下载 Agent 客户端工具</span>
-                  {agentVersionInfo.version && agentVersionInfo.version !== 'unknown' && (
-                    <Tag color="blue">
-                      {agentVersionInfo.version.startsWith('v') 
-                        ? agentVersionInfo.version 
-                        : `v${agentVersionInfo.version}`}
-                    </Tag>
-                  )}
+                  <DownloadOutlined style={{ color: 'var(--color-primary)', fontSize: '16px' }} />
+                  <span style={{ fontWeight: 600, fontSize: '15px', color: 'var(--color-text-primary)' }}>
+                    安装 agent 客户端工具
+                  </span>
                 </Space>
               } 
               key="download"
@@ -442,56 +424,99 @@ const InventoryPage: React.FC = () => {
               <div className={styles.downloadContent}>
                 <div className={styles.downloadDescription}>
                   <p>kkartifact-agent 是一个命令行工具，用于推送和拉取制品。支持并发传输、断点续传等特性。</p>
-                  <div className={styles.downloadSteps}>
-                    <h4>使用步骤：</h4>
-                    <ol>
-                      <li>下载对应平台的二进制文件</li>
-                      <li>添加执行权限（Linux/macOS）：<code>chmod +x kkartifact-agent-*</code></li>
-                      <li>移动到系统路径（可选）：<code>mv kkartifact-agent-* /usr/local/bin/kkartifact-agent</code></li>
-                      <li>创建配置文件 <code>.kkartifact.yml</code>：</li>
-                    </ol>
-                    <pre className={styles.codeBlock}>
-{`server_url: http://localhost:3000  # 服务器地址
-token: YOUR_TOKEN_HERE             # API Token（从管理后台获取）`}
-                    </pre>
-                    <div className={styles.downloadUsage}>
-                      <h4>常用命令：</h4>
-                      <ul>
-                        <li><code>kkartifact-agent push &lt;project&gt; &lt;app&gt; &lt;version&gt; [目录]</code> - 推送制品</li>
-                        <li><code>kkartifact-agent pull &lt;project&gt; &lt;app&gt; &lt;version&gt; [目录]</code> - 拉取制品</li>
-                      </ul>
+                  <div style={{ marginTop: '20px', marginBottom: '20px' }}>
+                    <h4 style={{ marginBottom: '12px' }}>一键安装（推荐）：</h4>
+                    <div style={{ marginBottom: '16px' }}>
+                      <div style={{ marginBottom: '12px' }}>
+                        <strong style={{ fontSize: '14px', color: 'var(--color-text-primary)' }}>Unix/Linux/macOS：</strong>
+                        <div style={{ 
+                          background: 'var(--color-bg-secondary)', 
+                          padding: '12px', 
+                          borderRadius: '6px', 
+                          fontSize: '13px',
+                          fontFamily: 'monospace',
+                          marginTop: '8px',
+                          position: 'relative',
+                        }}>
+                          <code style={{ color: 'var(--color-text-primary)' }}>
+                            {`curl -fsSL ${getScriptUrl('install-agent.sh')} | bash`}
+                          </code>
+                          <CopyOutlined
+                            style={{ 
+                              position: 'absolute',
+                              right: '12px',
+                              top: '12px',
+                              fontSize: '14px', 
+                              color: 'var(--color-text-tertiary)', 
+                              cursor: 'pointer',
+                              padding: '4px',
+                              borderRadius: '4px',
+                              transition: 'all 0.2s ease',
+                            }}
+                            onClick={() => {
+                              const scriptUrl = getScriptUrl('install-agent.sh')
+                              const cmd = `curl -fsSL ${scriptUrl} | bash`
+                              navigator.clipboard.writeText(cmd)
+                              message.success('命令已复制到剪贴板')
+                            }}
+                            title="复制命令"
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.color = 'var(--color-primary)'
+                              e.currentTarget.style.backgroundColor = 'var(--color-primary-light)'
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.color = 'var(--color-text-tertiary)'
+                              e.currentTarget.style.backgroundColor = 'transparent'
+                            }}
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <strong style={{ fontSize: '14px', color: 'var(--color-text-primary)' }}>Windows (PowerShell)：</strong>
+                        <div style={{ 
+                          background: 'var(--color-bg-secondary)', 
+                          padding: '12px', 
+                          borderRadius: '6px', 
+                          fontSize: '13px',
+                          fontFamily: 'monospace',
+                          marginTop: '8px',
+                          position: 'relative',
+                        }}>
+                          <code style={{ color: 'var(--color-text-primary)' }}>
+                            {`irm ${getScriptUrl('install-agent.ps1')} | iex`}
+                          </code>
+                          <CopyOutlined
+                            style={{ 
+                              position: 'absolute',
+                              right: '12px',
+                              top: '12px',
+                              fontSize: '14px', 
+                              color: 'var(--color-text-tertiary)', 
+                              cursor: 'pointer',
+                              padding: '4px',
+                              borderRadius: '4px',
+                              transition: 'all 0.2s ease',
+                            }}
+                            onClick={() => {
+                              const scriptUrl = getScriptUrl('install-agent.ps1')
+                              const cmd = `irm ${scriptUrl} | iex`
+                              navigator.clipboard.writeText(cmd)
+                              message.success('命令已复制到剪贴板')
+                            }}
+                            title="复制命令"
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.color = 'var(--color-primary)'
+                              e.currentTarget.style.backgroundColor = 'var(--color-primary-light)'
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.color = 'var(--color-text-tertiary)'
+                              e.currentTarget.style.backgroundColor = 'transparent'
+                            }}
+                          />
+                        </div>
+                      </div>
                     </div>
                   </div>
-                </div>
-                <div className={styles.binariesList}>
-                  <h4>可用的二进制文件：</h4>
-                  <Space direction="vertical" style={{ width: '100%' }} size="middle">
-                    {agentVersionInfo.binaries.map((binary) => (
-                      <Card key={binary.filename} size="small" className={styles.binaryCard}>
-                        <Space style={{ width: '100%', justifyContent: 'space-between' }}>
-                          <Space>
-                            {getPlatformIcon(binary.platform)}
-                            <div>
-                              <div style={{ fontWeight: 500 }}>{binary.platform}</div>
-                              <div style={{ fontSize: '12px', color: '#666' }}>{binary.filename}</div>
-                            </div>
-                          </Space>
-                          <Space>
-                            <Tag>{formatFileSize(binary.size)}</Tag>
-                            <Button
-                              type="primary"
-                              icon={<DownloadOutlined />}
-                              href={downloadsApi.downloadAgent(binary.filename)}
-                              download={binary.filename}
-                              size="small"
-                            >
-                              下载
-                            </Button>
-                          </Space>
-                        </Space>
-                      </Card>
-                    ))}
-                  </Space>
                 </div>
               </div>
             </Panel>
@@ -504,14 +529,24 @@ token: YOUR_TOKEN_HERE             # API Token（从管理后台获取）`}
         <div className={styles.searchContainer}>
           <Input
             placeholder="搜索项目、应用和版本..."
-            prefix={<SearchOutlined />}
+            prefix={<SearchOutlined style={{ fontSize: '16px' }} />}
             value={searchTerm}
             onChange={handleSearchChange}
             allowClear
             size="large"
             className={styles.searchInput}
             style={{
-              borderRadius: '8px',
+              borderRadius: '10px',
+              border: '2px solid var(--color-border-light)',
+              transition: 'all 0.2s ease',
+            }}
+            onFocus={(e) => {
+              e.target.style.borderColor = 'var(--color-primary)'
+              e.target.style.boxShadow = '0 0 0 3px var(--color-primary-light)'
+            }}
+            onBlur={(e) => {
+              e.target.style.borderColor = 'var(--color-border-light)'
+              e.target.style.boxShadow = 'none'
             }}
           />
         </div>
@@ -530,7 +565,7 @@ token: YOUR_TOKEN_HERE             # API Token（从管理后台获取）`}
               treeData={treeData}
               expandedKeys={expandedKeys}
               onExpand={setExpandedKeys}
-              showLine={false}
+              showLine={{ showLeafIcon: false }}
               showIcon={false}
               blockNode
               style={{
@@ -544,7 +579,7 @@ token: YOUR_TOKEN_HERE             # API Token（从管理后台获取）`}
 
       {/* Footer */}
       <div className={styles.footer}>
-        本系统由系统部驱动
+        系统运行部驱动
       </div>
     </div>
   )

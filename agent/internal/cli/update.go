@@ -38,8 +38,8 @@ func init() {
 }
 
 func runUpdate(cmd *cobra.Command, args []string) error {
-	// Load config to get server URL
-	cfg, err := config.Load(updateConfig)
+	// Load config to get server URL (no command-line overrides for update command)
+	cfg, err := config.Load(updateConfig, nil)
 	if err != nil {
 		return fmt.Errorf("failed to load config: %w", err)
 	}

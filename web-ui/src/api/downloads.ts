@@ -30,5 +30,15 @@ export const downloadsApi = {
           : `${API_URL}/api/v1`)
     return `${baseURL}/downloads/agent/${filename}`
   },
+  
+  downloadScript: (filename: string) => {
+    const API_URL = import.meta.env.VITE_API_URL || '/'
+    const baseURL = (API_URL === '/' || API_URL === '')
+      ? '/api/v1'  // Relative path for nginx proxy
+      : (API_URL.endsWith('/api/v1') 
+          ? API_URL 
+          : `${API_URL}/api/v1`)
+    return `${baseURL}/downloads/scripts/${filename}`
+  },
 }
 

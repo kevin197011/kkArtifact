@@ -131,17 +131,23 @@ const WebhooksPage: React.FC = () => {
 
   const columns: ColumnsType<Webhook> = [
     {
-      title: '名称',
+      title: <span style={{ fontWeight: 600 }}>名称</span>,
       dataIndex: 'name',
       key: 'name',
+      render: (text: string) => (
+        <span style={{ fontWeight: 500, color: '#1a1a1a' }}>{text}</span>
+      ),
     },
     {
-      title: 'URL',
+      title: <span style={{ fontWeight: 600 }}>URL</span>,
       dataIndex: 'url',
       key: 'url',
+      render: (text: string) => (
+        <span style={{ color: '#8c8c8c', fontSize: '14px', fontFamily: 'monospace' }}>{text}</span>
+      ),
     },
     {
-      title: '项目 / 应用',
+      title: <span style={{ fontWeight: 600 }}>项目 / 应用</span>,
       key: 'project_app',
       render: (_: any, record: Webhook) => {
         if (record.project_name) {
@@ -154,7 +160,7 @@ const WebhooksPage: React.FC = () => {
       },
     },
     {
-      title: '事件类型',
+      title: <span style={{ fontWeight: 600 }}>事件类型</span>,
       dataIndex: 'event_types',
       key: 'event_types',
       render: (types: string[]) => (
@@ -166,7 +172,7 @@ const WebhooksPage: React.FC = () => {
       ),
     },
     {
-      title: '状态',
+      title: <span style={{ fontWeight: 600 }}>状态</span>,
       dataIndex: 'enabled',
       key: 'enabled',
       render: (enabled: boolean) => (
@@ -174,18 +180,36 @@ const WebhooksPage: React.FC = () => {
       ),
     },
     {
-      title: '操作',
+      title: <span style={{ fontWeight: 600 }}>操作</span>,
       key: 'actions',
+      width: 150,
       render: (_, record) => (
         <Space>
-          <Button type="link" size="small" onClick={() => handleEdit(record)}>
+          <Button 
+            type="link" 
+            size="small" 
+            onClick={() => handleEdit(record)}
+            style={{
+              padding: '0 8px',
+              height: '32px',
+              fontWeight: 500,
+            }}
+          >
             编辑
           </Button>
           <Popconfirm
             title="确定要删除此 Webhook 吗？"
             onConfirm={() => deleteMutation.mutate(record.id)}
           >
-            <Button type="link" size="small" danger>
+            <Button 
+              type="link" 
+              size="small" 
+              danger
+              style={{
+                padding: '0 8px',
+                height: '32px',
+              }}
+            >
               删除
             </Button>
           </Popconfirm>
@@ -196,18 +220,45 @@ const WebhooksPage: React.FC = () => {
 
   return (
     <div>
-      <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between' }}>
-        <h2>Webhooks</h2>
-        <Button type="primary" onClick={handleCreate}>
-          Create Webhook
-        </Button>
+      <div style={{ marginBottom: '24px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
+          <div>
+            <h2 style={{ margin: 0, fontSize: '24px', fontWeight: 600, color: 'var(--color-text-primary)', letterSpacing: '-0.3px' }}>
+              Webhooks
+            </h2>
+            <div style={{ marginTop: '6px', color: 'var(--color-text-secondary)', fontSize: '13px' }}>
+              配置事件通知 Webhook
+            </div>
+          </div>
+          <Button 
+            type="primary" 
+            onClick={handleCreate}
+            style={{
+              borderRadius: '6px',
+              height: '36px',
+              padding: '0 16px',
+              fontWeight: 500,
+            }}
+          >
+            创建 Webhook
+          </Button>
+        </div>
       </div>
-      <Table
-        columns={columns}
-        dataSource={data}
-        loading={isLoading}
-        rowKey="id"
-      />
+      <div
+        style={{
+          background: 'var(--color-bg-primary)',
+          borderRadius: 'var(--radius-md)',
+          border: '1px solid var(--color-border-light)',
+          overflow: 'hidden',
+        }}
+      >
+        <Table
+          columns={columns}
+          dataSource={data}
+          loading={isLoading}
+          rowKey="id"
+        />
+      </div>
       <Modal
         title={editingWebhook ? '编辑 Webhook' : '创建 Webhook'}
         open={isModalVisible}

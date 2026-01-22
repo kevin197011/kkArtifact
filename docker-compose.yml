@@ -37,8 +37,8 @@ services:
 
   server:
     build:
-      context: ./server
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: ./server/Dockerfile
     container_name: kkartifact-server
     environment:
       SERVER_HOST: ${SERVER_HOST:-0.0.0.0}

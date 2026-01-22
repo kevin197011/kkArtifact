@@ -19,7 +19,6 @@ const LoginPage: React.FC = () => {
   const [loading, setLoading] = useState(false)
   const [checkingToken, setCheckingToken] = useState(true)
   const particlesRef = useRef<HTMLDivElement>(null)
-  const connectionsRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     // Check if already logged in
@@ -39,40 +38,39 @@ const LoginPage: React.FC = () => {
     } else {
       setCheckingToken(false)
     }
-
-    // Create particles
-    if (particlesRef.current) {
-      const particles = particlesRef.current
-      particles.innerHTML = ''
-      
-      for (let i = 0; i < 20; i++) {
-        const particle = document.createElement('div')
-        particle.className = styles.particle
-        particle.style.left = `${Math.random() * 100}%`
-        particle.style.width = particle.style.height = `${Math.random() * 4 + 2}px`
-        particle.style.animationDelay = `${Math.random() * 15}s`
-        particle.style.animationDuration = `${Math.random() * 10 + 10}s`
-        particles.appendChild(particle)
-      }
-    }
-
-    // Create connection lines
-    if (connectionsRef.current) {
-      const connectionsContainer = connectionsRef.current
-      connectionsContainer.innerHTML = ''
-      
-      for (let i = 0; i < 10; i++) {
-        const connection = document.createElement('div')
-        connection.className = styles.connection
-        connection.style.top = `${Math.random() * 100}%`
-        connection.style.left = `${Math.random() * 100}%`
-        connection.style.width = `${Math.random() * 200 + 100}px`
-        connection.style.animationDelay = `${Math.random() * 3}s`
-        connection.style.transform = `rotate(${Math.random() * 360}deg)`
-        connectionsContainer.appendChild(connection)
-      }
-    }
   }, [navigate])
+
+  // Create floating particles for dynamic effect
+  useEffect(() => {
+    if (!particlesRef.current) return
+
+    const container = particlesRef.current
+    container.innerHTML = ''
+
+    // Create multiple floating particles
+    for (let i = 0; i < 15; i++) {
+      const particle = document.createElement('div')
+      particle.className = styles.particle
+      particle.style.left = `${Math.random() * 100}%`
+      particle.style.top = `${Math.random() * 100}%`
+      particle.style.width = particle.style.height = `${Math.random() * 6 + 4}px`
+      particle.style.animationDelay = `${Math.random() * 20}s`
+      particle.style.animationDuration = `${Math.random() * 15 + 20}s`
+      container.appendChild(particle)
+    }
+
+    // Create additional floating orbs
+    for (let i = 0; i < 3; i++) {
+      const orb = document.createElement('div')
+      orb.className = styles.floatingOrb
+      orb.style.left = `${Math.random() * 100}%`
+      orb.style.top = `${Math.random() * 100}%`
+      orb.style.width = orb.style.height = `${Math.random() * 200 + 150}px`
+      orb.style.animationDelay = `${Math.random() * 10}s`
+      orb.style.animationDuration = `${Math.random() * 20 + 25}s`
+      container.appendChild(orb)
+    }
+  }, [])
 
   const onFinish = async (values: { username: string; password: string }) => {
     setLoading(true)
@@ -102,10 +100,7 @@ const LoginPage: React.FC = () => {
   if (checkingToken) {
     return (
       <div className={styles.loginContainer}>
-        <div className={styles.gridBackground}></div>
         <div className={styles.particles} ref={particlesRef}></div>
-        <div className={styles.connections} ref={connectionsRef}></div>
-        
         <div className={styles.contentWrapper}>
           <div
             style={{
@@ -113,20 +108,18 @@ const LoginPage: React.FC = () => {
               justifyContent: 'center',
               alignItems: 'center',
               flex: 1,
+              minHeight: '100vh',
             }}
           >
             <Card 
               className={styles.loginCard}
               style={{ 
-                width: 400, 
-                boxShadow: '0 8px 32px rgba(0,0,0,0.2)',
-                background: 'rgba(255, 255, 255, 0.95)',
-                backdropFilter: 'blur(10px)',
-                border: '1px solid rgba(255, 255, 255, 0.3)',
+                width: '100%',
+                maxWidth: 360,
               }}
-              bodyStyle={{ padding: '24px' }}
+              bodyStyle={{ padding: '32px' }}
             >
-              <div style={{ textAlign: 'center', padding: '40px' }}>
+              <div style={{ textAlign: 'center', padding: '50px' }}>
                 <Spin size="large" />
               </div>
             </Card>
@@ -138,10 +131,7 @@ const LoginPage: React.FC = () => {
 
   return (
     <div className={styles.loginContainer}>
-      <div className={styles.gridBackground}></div>
       <div className={styles.particles} ref={particlesRef}></div>
-      <div className={styles.connections} ref={connectionsRef}></div>
-      
       <div className={styles.contentWrapper}>
         <div
           style={{
@@ -149,60 +139,138 @@ const LoginPage: React.FC = () => {
             justifyContent: 'center',
             alignItems: 'center',
             flex: 1,
+            minHeight: '100vh',
+            padding: '24px',
           }}
         >
-          <Card 
-            className={styles.loginCard}
-            style={{ 
-              width: 400, 
-              boxShadow: '0 8px 32px rgba(0,0,0,0.2)',
-              background: 'rgba(255, 255, 255, 0.95)',
-              backdropFilter: 'blur(10px)',
-              border: '1px solid rgba(255, 255, 255, 0.3)',
-            }}
-            bodyStyle={{ padding: '24px' }}
-          >
-            <div style={{ textAlign: 'center', marginBottom: 20 }}>
-              <div style={{ marginBottom: 8 }}>
-                <img src="/logo-icon.svg" alt="kkArtifact" style={{ width: '48px', height: '48px' }} />
+            <Card 
+              className={styles.loginCard}
+              style={{ 
+                width: '100%',
+                maxWidth: 360,
+              }}
+              bodyStyle={{ padding: '32px' }}
+            >
+              <div style={{ textAlign: 'center', marginBottom: '32px' }}>
+                <div 
+                  style={{ 
+                    marginBottom: '16px',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    width: '56px',
+                    height: '56px',
+                    borderRadius: '12px',
+                    background: 'linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-hover) 100%)',
+                    boxShadow: '0 4px 12px rgba(22, 93, 255, 0.2)',
+                    transition: 'transform 0.3s ease',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = 'scale(1.05) rotate(5deg)'
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = 'scale(1) rotate(0deg)'
+                  }}
+                >
+                  <img 
+                    src="/logo-icon.svg" 
+                    alt="kkArtifact" 
+                    style={{ 
+                      width: '36px', 
+                      height: '36px',
+                      filter: 'brightness(0) invert(1)',
+                    }} 
+                  />
+                </div>
+                <Title 
+                  level={3} 
+                  style={{ 
+                    margin: 0, 
+                    marginBottom: '6px', 
+                    fontSize: '22px', 
+                    fontWeight: 600, 
+                    color: 'var(--color-text-primary)',
+                    letterSpacing: '-0.3px',
+                  }}
+                >
+                  kkArtifact
+                </Title>
+                <Text 
+                  type="secondary" 
+                  style={{ 
+                    fontSize: '13px', 
+                    color: 'var(--color-text-secondary)',
+                    fontWeight: 400,
+                  }}
+                >
+                  登录您的账户
+                </Text>
               </div>
-              <Title level={3} style={{ marginBottom: 4, fontSize: '20px' }}>kkArtifact</Title>
-              <Text type="secondary" style={{ fontSize: '13px' }}>登录您的账户</Text>
-            </div>
 
             <Form
               name="login"
               onFinish={onFinish}
               autoComplete="off"
-              size="middle"
+              size="large"
               layout="vertical"
             >
               <Form.Item
-                label="用户名"
+                label={<span style={{ fontSize: '13px', fontWeight: 500, color: 'var(--color-text-primary)' }}>用户名</span>}
                 name="username"
                 rules={[{ required: true, message: '请输入用户名！' }]}
+                style={{ marginBottom: '20px' }}
               >
                 <Input
-                  prefix={<UserOutlined />}
-                  placeholder="用户名"
+                  prefix={<UserOutlined style={{ color: 'var(--color-text-tertiary)' }} />}
+                  placeholder="请输入用户名"
                   autoComplete="username"
+                  style={{
+                    height: '40px',
+                    borderRadius: '8px',
+                  }}
                 />
               </Form.Item>
 
               <Form.Item
-                label="密码"
+                label={<span style={{ fontSize: '13px', fontWeight: 500, color: 'var(--color-text-primary)' }}>密码</span>}
                 name="password"
                 rules={[{ required: true, message: '请输入密码！' }]}
+                style={{ marginBottom: '24px' }}
               >
                 <Input.Password
-                  prefix={<LockOutlined />}
-                  placeholder="密码"
+                  prefix={<LockOutlined style={{ color: 'var(--color-text-tertiary)' }} />}
+                  placeholder="请输入密码"
                   autoComplete="current-password"
+                  style={{
+                    height: '40px',
+                    borderRadius: '8px',
+                  }}
                 />
               </Form.Item>
 
-              <Form.Item>
-                <Button type="primary" htmlType="submit" block loading={loading}>
+              <Form.Item style={{ marginBottom: 0 }}>
+                <Button 
+                  type="primary" 
+                  htmlType="submit" 
+                  block 
+                  loading={loading} 
+                  style={{ 
+                    height: '40px', 
+                    fontWeight: 500,
+                    fontSize: '14px',
+                    borderRadius: '8px',
+                    boxShadow: '0 2px 8px rgba(22, 93, 255, 0.2)',
+                    transition: 'all 0.2s ease',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.boxShadow = '0 4px 12px rgba(22, 93, 255, 0.3)'
+                    e.currentTarget.style.transform = 'translateY(-1px)'
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.boxShadow = '0 2px 8px rgba(22, 93, 255, 0.2)'
+                    e.currentTarget.style.transform = 'translateY(0)'
+                  }}
+                >
                   登录
                 </Button>
               </Form.Item>
@@ -213,13 +281,13 @@ const LoginPage: React.FC = () => {
           className={styles.footer}
           style={{
             textAlign: 'center',
-            padding: '16px',
-            background: 'rgba(255, 255, 255, 0.9)',
-            backdropFilter: 'blur(10px)',
-            borderTop: '1px solid rgba(255, 255, 255, 0.3)',
+            padding: '20px',
+            color: 'var(--color-text-secondary)',
+            fontSize: '13px',
+            background: 'transparent',
           }}
         >
-          本系统由系统部驱动
+          系统运行部驱动
         </div>
       </div>
     </div>

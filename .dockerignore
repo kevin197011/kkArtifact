@@ -1,0 +1,58 @@
+# Copyright (c) 2025 kk
+#
+# This software is released under the MIT License.
+# https://opensource.org/licenses/MIT
+
+# Git files
+.git
+.gitignore
+.gitattributes
+
+# Documentation
+*.md
+!README.md
+docs/
+
+# IDE files
+.vscode
+.idea
+.cursor
+.kiro
+
+# Build artifacts (will be built in Docker)
+bin/
+dist/
+server/static/agent/*
+
+# Development files
+.env
+.env.local
+*.log
+
+# Test files
+*_test.go
+test/
+tests/
+
+# CI/CD
+.github/
+.gitlab-ci.yml
+
+# Scripts (exclude build scripts, but keep install scripts for Docker image)
+scripts/*.rb
+scripts/build-*.sh
+scripts/update-*.rb
+scripts/test-*.rb
+scripts/setup-*.rb
+scripts/deploy-*.rb
+scripts/integrate-*.rb
+scripts/lint-*.rb
+
+# OpenSpec (not needed in Docker image)
+openspec/
+
+# Temporary files
+*.tmp
+*.swp
+*.swo
+*~

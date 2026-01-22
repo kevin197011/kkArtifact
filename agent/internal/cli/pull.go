@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
@@ -27,11 +28,15 @@ var pullCmd = &cobra.Command{
 }
 
 var (
-	pullProject string
-	pullApp     string
-	pullVersion string
-	pullPath    string
-	pullConfig  string
+	pullProject    string
+	pullApp        string
+	pullVersion    string
+	pullPath       string
+	pullConfig     string
+	pullServerURL  string
+	pullToken      string
+	pullConcurrency int
+	pullIgnore     []string
 )
 
 func init() {
@@ -42,6 +47,10 @@ func init() {
 	pullCmd.Flags().StringVar(&pullVersion, "version", "latest", "Version hash (use 'latest' for latest published version)")
 	pullCmd.Flags().StringVar(&pullPath, "path", ".", "Path to local directory")
 	pullCmd.Flags().StringVar(&pullConfig, "config", ".kkartifact.yml", "Config file path")
+	pullCmd.Flags().StringVar(&pullServerURL, "server-url", "", "Server URL (overrides config file)")
+	pullCmd.Flags().StringVar(&pullToken, "token", "", "Authentication token (overrides config file)")
+	pullCmd.Flags().IntVar(&pullConcurrency, "concurrency", 0, "Number of concurrent downloads (overrides config file, 0 = use config)")
+	pullCmd.Flags().StringArrayVar(&pullIgnore, "ignore", []string{}, "Ignore patterns (can be specified multiple times or comma-separated, merges with config file)")
 	
 	pullCmd.MarkFlagRequired("project")
 	pullCmd.MarkFlagRequired("app")
@@ -54,8 +63,35 @@ func runPull(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("project and app are required")
 	}
 
-	// Load config
-	cfg, err := config.Load(pullConfig)
+	// Parse ignore patterns from command-line (support comma-separated values)
+	ignorePatterns := make([]string, 0)
+	for _, ignoreFlag := range pullIgnore {
+		// Split by comma and trim whitespace
+		patterns := strings.Split(ignoreFlag, ",")
+		for _, pattern := range patterns {
+			trimmed := strings.TrimSpace(pattern)
+			if trimmed != "" {
+				ignorePatterns = append(ignorePatterns, trimmed)
+			}
+		}
+	}
+
+	// Prepare command-line overrides
+	overrides := &config.Overrides{
+		ServerURL:   pullServerURL,
+		Token:        pullToken,
+		Concurrency: pullConcurrency,
+		Ignore:      ignorePatterns,
+	}
+	if len(ignorePatterns) == 0 {
+		overrides.Ignore = nil // Don't override if no ignore patterns provided
+	}
+	if pullConcurrency == 0 {
+		overrides.Concurrency = 0 // 0 means not set
+	}
+
+	// Load config with overrides
+	cfg, err := config.Load(pullConfig, overrides)
 	if err != nil {
 		return fmt.Errorf("failed to load config: %w", err)
 	}

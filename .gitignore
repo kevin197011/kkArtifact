@@ -7,3 +7,7 @@ storage
 dist
 node_modules
 .kkartifact.yml
+
+# Agent binaries (now built during Docker build)
+server/static/agent/*
+!server/static/agent/.gitkeep

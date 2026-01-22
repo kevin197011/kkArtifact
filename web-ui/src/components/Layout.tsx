@@ -138,47 +138,126 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   }
 
   return (
-    <Layout style={{ minHeight: '100vh' }}>
-      <Sider collapsible theme="dark">
+    <Layout style={{ minHeight: '100vh', background: 'var(--color-bg-tertiary)' }}>
+      <Sider 
+        collapsible 
+        theme="light"
+        width={240}
+        style={{
+          background: 'var(--color-bg-primary)',
+          borderRight: '1px solid var(--color-border-light)',
+        }}
+      >
         <div
           style={{ 
-            padding: '16px', 
+            padding: '24px 20px', 
             display: 'flex', 
             alignItems: 'center', 
             gap: '12px', 
             cursor: 'pointer',
-            color: 'white'
+            color: 'var(--color-text-primary)',
+            transition: 'background-color 0.2s',
+            borderRadius: 'var(--radius-sm)',
+            margin: '8px',
           }}
           onClick={() => navigate('/dashboard')}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor = 'var(--color-bg-secondary)'
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = 'transparent'
+          }}
         >
-          <img src="/logo-icon.svg" alt="kkArtifact" style={{ width: '32px', height: '32px' }} />
-          <span style={{ fontSize: '18px', fontWeight: 'bold' }}>kkArtifact</span>
+          <img src="/logo-icon.svg" alt="kkArtifact" style={{ width: '28px', height: '28px' }} />
+          <span style={{ fontSize: '16px', fontWeight: 600, letterSpacing: '-0.2px' }}>kkArtifact</span>
         </div>
         <Menu
-          theme="dark"
+          theme="light"
           mode="inline"
           selectedKeys={[selectedKey]}
           items={menuItems}
           onClick={({ key }) => navigate(key)}
+          style={{
+            borderRight: 'none',
+            background: 'transparent',
+            padding: '8px',
+          }}
         />
       </Sider>
       <Layout>
-        <Header style={{ background: '#fff', padding: '0 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <h1 style={{ margin: 0, fontSize: '20px' }}>制品管理</h1>
-          <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
-            <Button type="default" icon={<HomeOutlined />} onClick={() => navigate('/')}>
-              查看版本清单
+        <Header 
+          style={{ 
+            background: 'var(--color-bg-primary)', 
+            padding: '0 32px', 
+            display: 'flex', 
+            justifyContent: 'space-between', 
+            alignItems: 'center',
+            borderBottom: '1px solid var(--color-border-light)',
+            height: '64px',
+            position: 'sticky',
+            top: 0,
+            zIndex: 100,
+          }}
+        >
+          <h1 style={{ margin: 0, fontSize: '18px', fontWeight: 600, color: 'var(--color-text-primary)', letterSpacing: '-0.2px' }}>
+            制品管理
+          </h1>
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            <Button 
+              type="text" 
+              icon={<HomeOutlined />} 
+              onClick={() => navigate('/')}
+              style={{
+                height: '36px',
+                padding: '0 12px',
+                color: 'var(--color-text-secondary)',
+              }}
+            >
+              版本清单
             </Button>
-            <Button type="text" icon={<LogoutOutlined />} onClick={handleLogout}>
-              退出登录
+            <Button 
+              type="text" 
+              icon={<LogoutOutlined />} 
+              onClick={handleLogout}
+              style={{
+                height: '36px',
+                padding: '0 12px',
+                color: 'var(--color-text-secondary)',
+              }}
+            >
+              退出
             </Button>
           </div>
         </Header>
-        <Content style={{ margin: '24px', padding: '24px', background: '#fff', minHeight: 280 }}>
-          {children}
+        <Content 
+          style={{ 
+            margin: '24px', 
+            padding: 0,
+            minHeight: 280,
+          }}
+        >
+          <div
+            style={{
+              background: 'var(--color-bg-primary)',
+              borderRadius: 'var(--radius-md)',
+              padding: '32px',
+              border: '1px solid var(--color-border-light)',
+            }}
+          >
+            {children}
+          </div>
         </Content>
-        <Footer style={{ textAlign: 'center', background: '#fff', borderTop: '1px solid #f0f0f0' }}>
-          本系统由系统部驱动
+        <Footer 
+          style={{ 
+            textAlign: 'center', 
+            background: 'var(--color-bg-primary)', 
+            borderTop: '1px solid var(--color-border-light)',
+            padding: '20px 24px',
+            color: 'var(--color-text-secondary)',
+            fontSize: '13px',
+          }}
+        >
+          系统运行部驱动
         </Footer>
       </Layout>
     </Layout>

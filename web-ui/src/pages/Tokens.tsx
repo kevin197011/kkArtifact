@@ -142,12 +142,15 @@ const TokensPage: React.FC = () => {
 
   const columns: ColumnsType<Token> = [
     {
-      title: '名称',
+      title: <span style={{ fontWeight: 600 }}>名称</span>,
       dataIndex: 'name',
       key: 'name',
+      render: (text: string) => (
+        <span style={{ fontWeight: 500, color: '#1a1a1a' }}>{text}</span>
+      ),
     },
     {
-      title: '令牌',
+      title: <span style={{ fontWeight: 600 }}>令牌</span>,
       key: 'token',
       width: 400,
       render: (_, record) => {
@@ -190,7 +193,7 @@ const TokensPage: React.FC = () => {
       },
     },
     {
-      title: '权限',
+      title: <span style={{ fontWeight: 600 }}>权限</span>,
       dataIndex: 'permissions',
       key: 'permissions',
       render: (permissions: string[]) => (
@@ -207,27 +210,45 @@ const TokensPage: React.FC = () => {
       ),
     },
     {
-      title: '过期时间',
+      title: <span style={{ fontWeight: 600 }}>过期时间</span>,
       dataIndex: 'expires_at',
       key: 'expires_at',
-      render: (expiresAt?: string) => expiresAt ? new Date(expiresAt).toLocaleString('zh-CN') : '永不过期',
+      render: (expiresAt?: string) => (
+        <span style={{ color: '#8c8c8c', fontSize: '14px' }}>
+          {expiresAt ? new Date(expiresAt).toLocaleString('zh-CN') : '永不过期'}
+        </span>
+      ),
     },
     {
-      title: '创建时间',
+      title: <span style={{ fontWeight: 600 }}>创建时间</span>,
       dataIndex: 'created_at',
       key: 'created_at',
-      render: (date: string) => new Date(date).toLocaleString('zh-CN'),
+      render: (date: string) => (
+        <span style={{ color: '#8c8c8c', fontSize: '14px' }}>
+          {new Date(date).toLocaleString('zh-CN')}
+        </span>
+      ),
     },
     {
-      title: '操作',
+      title: <span style={{ fontWeight: 600 }}>操作</span>,
       key: 'actions',
+      width: 120,
       render: (_, record) => (
         <Space>
           <Popconfirm
             title="确定要删除此令牌吗？"
             onConfirm={() => deleteMutation.mutate(record.id)}
           >
-            <Button type="link" size="small" danger icon={<DeleteOutlined />}>
+            <Button 
+              type="link" 
+              size="small" 
+              danger 
+              icon={<DeleteOutlined />}
+              style={{
+                padding: '0 8px',
+                height: '32px',
+              }}
+            >
               删除
             </Button>
           </Popconfirm>
@@ -238,23 +259,58 @@ const TokensPage: React.FC = () => {
 
   return (
     <div>
-      <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between' }}>
-        <h2>令牌</h2>
-        <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate}>
-          创建令牌
-        </Button>
+      <div style={{ marginBottom: '24px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
+          <div>
+            <h2 style={{ margin: 0, fontSize: '24px', fontWeight: 600, color: 'var(--color-text-primary)', letterSpacing: '-0.3px' }}>
+              令牌
+            </h2>
+            <div style={{ marginTop: '6px', color: 'var(--color-text-secondary)', fontSize: '13px' }}>
+              管理 API 访问令牌
+            </div>
+          </div>
+          <Button 
+            type="primary" 
+            icon={<PlusOutlined />} 
+            onClick={handleCreate}
+            style={{
+              borderRadius: '6px',
+              height: '36px',
+              padding: '0 16px',
+              fontWeight: 500,
+            }}
+          >
+            创建令牌
+          </Button>
+        </div>
       </div>
       {error && (
-        <div style={{ marginBottom: 16, padding: 16, background: '#fff1f0', border: '1px solid #ffccc7', borderRadius: 4 }}>
+        <div style={{ 
+          marginBottom: '16px', 
+          padding: '16px', 
+          background: '#fff1f0', 
+          border: '1px solid #ffccc7', 
+          borderRadius: '6px',
+          color: '#cf1322',
+        }}>
           加载令牌失败，请重试。
         </div>
       )}
-      <Table
-        columns={columns}
-        dataSource={data || []}
-        loading={isLoading}
-        rowKey="id"
-      />
+      <div
+        style={{
+          background: 'var(--color-bg-primary)',
+          borderRadius: 'var(--radius-md)',
+          border: '1px solid var(--color-border-light)',
+          overflow: 'hidden',
+        }}
+      >
+        <Table
+          columns={columns}
+          dataSource={data || []}
+          loading={isLoading}
+          rowKey="id"
+        />
+      </div>
       <Modal
         title="创建令牌"
         open={isModalVisible}

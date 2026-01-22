@@ -132,33 +132,38 @@ const VersionsPage: React.FC = () => {
 
   const columns: ColumnsType<Version> = [
     {
-      title: '版本',
+      title: <span style={{ fontWeight: 600 }}>版本</span>,
       dataIndex: 'version',
       key: 'version',
       width: 300,
       render: (version: string) => (
-        <Text style={{ fontFamily: 'monospace', fontSize: '12px' }} copyable>
+        <Text style={{ fontFamily: 'monospace', fontSize: '13px', color: '#1a1a1a' }} copyable>
           {version}
         </Text>
       ),
     },
     {
-      title: '创建时间',
+      title: <span style={{ fontWeight: 600 }}>创建时间</span>,
       dataIndex: 'created_at',
       key: 'created_at',
       width: 180,
-      render: (date: string) => new Date(date).toLocaleString('zh-CN', {
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit',
-      }),
+      render: (date: string) => (
+        <span style={{ color: '#8c8c8c', fontSize: '14px' }}>
+          {new Date(date).toLocaleString('zh-CN', {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+          })}
+        </span>
+      ),
     },
     {
-      title: '操作',
+      title: <span style={{ fontWeight: 600 }}>操作</span>,
       key: 'actions',
+      width: 280,
       render: (_, record) => (
         <Space>
           <Tooltip title="查看清单">
@@ -167,6 +172,11 @@ const VersionsPage: React.FC = () => {
               size="small"
               icon={<EyeOutlined />}
               onClick={() => handleViewManifest(record.version)}
+              style={{
+                padding: '0 8px',
+                height: '32px',
+                fontWeight: 500,
+              }}
             >
               清单
             </Button>
@@ -177,7 +187,16 @@ const VersionsPage: React.FC = () => {
               description={record.is_published ? "取消发布后，将无法通过 pull latest 获取此版本" : "发布此版本后，其他已发布版本将被取消发布"}
               onConfirm={() => handleTogglePublish(record.version, record.is_published)}
             >
-              <Button type="link" size="small" icon={record.is_published ? <StarFilled style={{ color: '#faad14' }} /> : <StarOutlined />}>
+              <Button 
+                type="link" 
+                size="small" 
+                icon={record.is_published ? <StarFilled style={{ color: '#faad14' }} /> : <StarOutlined />}
+                style={{
+                  padding: '0 8px',
+                  height: '32px',
+                  fontWeight: 500,
+                }}
+              >
                 {record.is_published ? '已发布' : '发布'}
               </Button>
             </Popconfirm>
@@ -191,7 +210,16 @@ const VersionsPage: React.FC = () => {
               cancelText="取消"
               okButtonProps={{ danger: true }}
             >
-              <Button type="link" size="small" danger icon={<DeleteOutlined />}>
+              <Button 
+                type="link" 
+                size="small" 
+                danger 
+                icon={<DeleteOutlined />}
+                style={{
+                  padding: '0 8px',
+                  height: '32px',
+                }}
+              >
                 删除
               </Button>
             </Popconfirm>
@@ -203,42 +231,64 @@ const VersionsPage: React.FC = () => {
 
   return (
     <div>
-      <Breadcrumb style={{ marginBottom: 16 }}>
-        <Breadcrumb.Item>
-          <a onClick={() => navigate('/projects')}>项目</a>
-        </Breadcrumb.Item>
-        <Breadcrumb.Item>
-          <a onClick={() => navigate(`/projects/${project}/apps`)}>{project}</a>
-        </Breadcrumb.Item>
-        <Breadcrumb.Item>{app}</Breadcrumb.Item>
-      </Breadcrumb>
-      <h2>
-        版本 - {project}/{app}
-      </h2>
-      <Table
-        columns={columns}
-        dataSource={data}
-        loading={isLoading}
-        rowKey="id"
-        pagination={{
-          current: page,
-          pageSize,
-          total: data && data.length < pageSize 
-            ? (page - 1) * pageSize + data.length 
-            : data 
-            ? page * pageSize + 1 
-            : 0,
-          onChange: setPage,
-          showSizeChanger: true,
-          showTotal: (total, range) => {
-            if (data && data.length < pageSize) {
-              return `共 ${total} 个版本`
-            }
-            return `第 ${range[0]}-${range[1]} 项，至少 ${total} 个版本`
+      <Breadcrumb 
+        style={{ marginBottom: '24px', fontSize: '14px' }}
+        items={[
+          {
+            title: <a onClick={() => navigate('/projects')} style={{ color: '#1890ff' }}>项目</a>,
           },
-        }}
-        scroll={{ x: 'max-content' }}
+          {
+            title: <a onClick={() => navigate(`/projects/${project}/apps`)} style={{ color: '#1890ff' }}>{project}</a>,
+          },
+          {
+            title: <span style={{ color: '#8c8c8c' }}>{app}</span>,
+          },
+        ]}
       />
+      <div style={{ marginBottom: '24px' }}>
+        <h2 style={{ margin: 0, fontSize: '24px', fontWeight: 600, color: 'var(--color-text-primary)', letterSpacing: '-0.3px' }}>
+          版本 - {project}/{app}
+        </h2>
+        <div style={{ marginTop: '6px', color: 'var(--color-text-secondary)', fontSize: '13px' }}>
+          管理应用的所有版本
+        </div>
+      </div>
+      <div
+        style={{
+          background: 'var(--color-bg-primary)',
+          borderRadius: 'var(--radius-md)',
+          border: '1px solid var(--color-border-light)',
+          overflow: 'hidden',
+        }}
+      >
+        <Table
+          columns={columns}
+          dataSource={data}
+          loading={isLoading}
+          rowKey="id"
+          pagination={{
+            current: page,
+            pageSize,
+            total: data && data.length < pageSize 
+              ? (page - 1) * pageSize + data.length 
+              : data 
+              ? page * pageSize + 1 
+              : 0,
+            onChange: setPage,
+            showSizeChanger: true,
+            showTotal: (total, range) => {
+              if (data && data.length < pageSize) {
+                return `共 ${total} 个版本`
+              }
+              return `第 ${range[0]}-${range[1]} 项，至少 ${total} 个版本`
+            },
+            style: {
+              padding: '16px 24px',
+            },
+          }}
+          scroll={{ x: 'max-content' }}
+        />
+      </div>
       <Modal
         title={
           <span>

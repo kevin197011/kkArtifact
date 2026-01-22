@@ -83,6 +83,7 @@ func (h *Handler) RegisterRoutes(router *gin.Engine) {
 		downloads.GET("/agent/version", h.handleGetAgentVersionInfo)
 		downloads.GET("/agent/:filename", h.handleDownloadAgent)
 		downloads.GET("/server/version", h.handleGetServerVersion)
+		downloads.GET("/scripts/:filename", h.handleDownloadScript)
 	}
 	
 	// Protected routes

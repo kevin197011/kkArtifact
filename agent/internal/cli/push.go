@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
@@ -27,11 +28,15 @@ var pushCmd = &cobra.Command{
 }
 
 var (
-	pushProject  string
-	pushApp      string
-	pushVersion  string
-	pushPath     string
-	pushConfig   string
+	pushProject    string
+	pushApp        string
+	pushVersion    string
+	pushPath       string
+	pushConfig     string
+	pushServerURL  string
+	pushToken      string
+	pushConcurrency int
+	pushIgnore     []string
 )
 
 func init() {
@@ -42,6 +47,10 @@ func init() {
 	pushCmd.Flags().StringVar(&pushVersion, "version", "", "Version hash (required)")
 	pushCmd.Flags().StringVar(&pushPath, "path", ".", "Path to local directory")
 	pushCmd.Flags().StringVar(&pushConfig, "config", ".kkartifact.yml", "Config file path")
+	pushCmd.Flags().StringVar(&pushServerURL, "server-url", "", "Server URL (overrides config file)")
+	pushCmd.Flags().StringVar(&pushToken, "token", "", "Authentication token (overrides config file)")
+	pushCmd.Flags().IntVar(&pushConcurrency, "concurrency", 0, "Number of concurrent uploads (overrides config file, 0 = use config)")
+	pushCmd.Flags().StringArrayVar(&pushIgnore, "ignore", []string{}, "Ignore patterns (can be specified multiple times or comma-separated, merges with config file)")
 	
 	pushCmd.MarkFlagRequired("project")
 	pushCmd.MarkFlagRequired("app")
@@ -55,8 +64,35 @@ func runPush(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("project, app, and version are required")
 	}
 
-	// Load config
-	cfg, err := config.Load(pushConfig)
+	// Parse ignore patterns from command-line (support comma-separated values)
+	ignorePatterns := make([]string, 0)
+	for _, ignoreFlag := range pushIgnore {
+		// Split by comma and trim whitespace
+		patterns := strings.Split(ignoreFlag, ",")
+		for _, pattern := range patterns {
+			trimmed := strings.TrimSpace(pattern)
+			if trimmed != "" {
+				ignorePatterns = append(ignorePatterns, trimmed)
+			}
+		}
+	}
+
+	// Prepare command-line overrides
+	overrides := &config.Overrides{
+		ServerURL:   pushServerURL,
+		Token:        pushToken,
+		Concurrency: pushConcurrency,
+		Ignore:      ignorePatterns,
+	}
+	if len(ignorePatterns) == 0 {
+		overrides.Ignore = nil // Don't override if no ignore patterns provided
+	}
+	if pushConcurrency == 0 {
+		overrides.Concurrency = 0 // 0 means not set
+	}
+
+	// Load config with overrides
+	cfg, err := config.Load(pushConfig, overrides)
 	if err != nil {
 		return fmt.Errorf("failed to load config: %w", err)
 	}

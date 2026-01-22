@@ -24,7 +24,7 @@ const AuditLogsPage: React.FC = () => {
 
   const columns: ColumnsType<AuditLog> = [
     {
-      title: '操作',
+      title: <span style={{ fontWeight: 600 }}>操作</span>,
       dataIndex: 'operation',
       key: 'operation',
       render: (op: string) => {
@@ -40,7 +40,7 @@ const AuditLogsPage: React.FC = () => {
       },
     },
     {
-      title: '版本哈希',
+      title: <span style={{ fontWeight: 600 }}>版本哈希</span>,
       dataIndex: 'version_hash',
       key: 'version_hash',
       render: (hash: string | undefined, record: AuditLog) => {
@@ -55,60 +55,85 @@ const AuditLogsPage: React.FC = () => {
       },
     },
     {
-      title: '代理ID',
+      title: <span style={{ fontWeight: 600 }}>代理ID</span>,
       dataIndex: 'agent_id',
       key: 'agent_id',
-      render: (id?: string) => id || '-',
+      render: (id?: string) => (
+        <span style={{ color: '#8c8c8c', fontSize: '14px' }}>{id || '-'}</span>
+      ),
     },
     {
-      title: '元数据',
+      title: <span style={{ fontWeight: 600 }}>元数据</span>,
       dataIndex: 'metadata',
       key: 'metadata',
       render: (meta?: string) => {
-        if (!meta) return '-'
+        if (!meta) return <span style={{ color: '#8c8c8c' }}>-</span>
         try {
           const parsed = JSON.parse(meta)
-          return <pre style={{ margin: 0, fontSize: '12px' }}>{JSON.stringify(parsed, null, 2)}</pre>
+          return <pre style={{ margin: 0, fontSize: '12px', fontFamily: 'monospace', color: '#1a1a1a' }}>{JSON.stringify(parsed, null, 2)}</pre>
         } catch {
-          return meta
+          return <span style={{ color: '#8c8c8c', fontSize: '14px' }}>{meta}</span>
         }
       },
     },
     {
-      title: '创建时间',
+      title: <span style={{ fontWeight: 600 }}>创建时间</span>,
       dataIndex: 'created_at',
       key: 'created_at',
-      render: (date: string) => new Date(date).toLocaleString('zh-CN'),
+      render: (date: string) => (
+        <span style={{ color: '#8c8c8c', fontSize: '14px' }}>
+          {new Date(date).toLocaleString('zh-CN')}
+        </span>
+      ),
       width: 200,
     },
   ]
 
   return (
     <div>
-      <h2>审计日志</h2>
-      <Table
-        columns={columns}
-        dataSource={data}
-        loading={isLoading}
-        rowKey="id"
-        pagination={{
-          current: page,
-          pageSize,
-          total: data && data.length < pageSize 
-            ? (page - 1) * pageSize + data.length 
-            : data 
-            ? page * pageSize + 1 
-            : 0,
-          onChange: setPage,
-          showSizeChanger: false,
-          showTotal: (total, range) => {
-            if (data && data.length < pageSize) {
-              return `共 ${total} 条审计日志`
-            }
-            return `第 ${range[0]}-${range[1]} 项，至少 ${total} 条审计日志`
-          },
+      <div style={{ marginBottom: '24px' }}>
+        <h2 style={{ margin: 0, fontSize: '24px', fontWeight: 600, color: 'var(--color-text-primary)', letterSpacing: '-0.3px' }}>
+          审计日志
+        </h2>
+        <div style={{ marginTop: '6px', color: 'var(--color-text-secondary)', fontSize: '13px' }}>
+          查看系统操作记录
+        </div>
+      </div>
+      <div
+        style={{
+          background: 'var(--color-bg-primary)',
+          borderRadius: 'var(--radius-md)',
+          border: '1px solid var(--color-border-light)',
+          overflow: 'hidden',
         }}
-      />
+      >
+        <Table
+          columns={columns}
+          dataSource={data}
+          loading={isLoading}
+          rowKey="id"
+          pagination={{
+            current: page,
+            pageSize,
+            total: data && data.length < pageSize 
+              ? (page - 1) * pageSize + data.length 
+              : data 
+              ? page * pageSize + 1 
+              : 0,
+            onChange: setPage,
+            showSizeChanger: false,
+            showTotal: (total, range) => {
+              if (data && data.length < pageSize) {
+                return `共 ${total} 条审计日志`
+              }
+              return `第 ${range[0]}-${range[1]} 项，至少 ${total} 条审计日志`
+            },
+            style: {
+              padding: '16px 24px',
+            },
+          }}
+        />
+      </div>
     </div>
   )
 }

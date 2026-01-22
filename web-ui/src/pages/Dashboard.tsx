@@ -55,7 +55,7 @@ const Dashboard: React.FC = () => {
       width: 180,
       render: (text: string) => {
         const date = new Date(text)
-        return date.toLocaleString('zh-CN')
+        return <span style={{ color: 'var(--color-text-secondary)', fontSize: '13px' }}>{date.toLocaleString('zh-CN')}</span>
       },
     },
     {
@@ -64,13 +64,13 @@ const Dashboard: React.FC = () => {
       key: 'operation',
       width: 120,
       render: (text: string) => {
-        const colors: Record<string, string> = {
-          push: 'blue',
-          pull: 'green',
-          publish: 'orange',
-          unpublish: 'orange',
-          token_create: 'purple',
-          token_delete: 'red',
+        const colorMap: Record<string, string> = {
+          push: 'var(--color-primary)',
+          pull: 'var(--color-success)',
+          publish: 'var(--color-warning)',
+          unpublish: 'var(--color-warning)',
+          token_create: '#722ed1',
+          token_delete: 'var(--color-error)',
         }
         const labels: Record<string, string> = {
           push: '推送',
@@ -80,7 +80,7 @@ const Dashboard: React.FC = () => {
           token_create: '创建令牌',
           token_delete: '删除令牌',
         }
-        return <span style={{ color: colors[text] || 'default' }}>{labels[text] || text}</span>
+        return <span style={{ color: colorMap[text] || 'var(--color-text-primary)', fontWeight: 500, fontSize: '13px' }}>{labels[text] || text}</span>
       },
     },
     {
@@ -89,6 +89,7 @@ const Dashboard: React.FC = () => {
       key: 'agent_id',
       width: 200,
       ellipsis: true,
+      render: (text: string) => <span style={{ color: 'var(--color-text-secondary)', fontSize: '13px', fontFamily: 'monospace' }}>{text || '-'}</span>,
     },
     {
       title: '版本',
@@ -97,65 +98,95 @@ const Dashboard: React.FC = () => {
       width: 200,
       ellipsis: true,
       render: (hash: string, record: AuditLog) => {
-        if (record.project_name && record.app_name) {
-          return `${record.project_name}_${record.app_name}_${hash}`
-        }
-        return hash
+        const displayText = record.project_name && record.app_name
+          ? `${record.project_name}_${record.app_name}_${hash}`
+          : hash
+        return <span style={{ color: 'var(--color-text-secondary)', fontSize: '13px', fontFamily: 'monospace' }}>{displayText}</span>
       },
     },
   ]
 
   return (
     <div>
-      <Title level={2}>仪表盘</Title>
+      <div style={{ marginBottom: '32px' }}>
+        <Title level={2} style={{ margin: 0, fontSize: '24px', fontWeight: 600, color: 'var(--color-text-primary)', letterSpacing: '-0.3px' }}>
+          仪表盘
+        </Title>
+        <div style={{ marginTop: '6px', color: 'var(--color-text-secondary)', fontSize: '13px' }}>
+          系统概览和最近活动
+        </div>
+      </div>
 
-      <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
+      <Row gutter={[16, 16]} style={{ marginBottom: '32px' }}>
         <Col xs={24} sm={12} lg={6}>
-          <Card loading={isLoading}>
+          <Card 
+            loading={isLoading}
+            hoverable
+            onClick={() => window.location.href = '/projects'}
+            style={{ cursor: 'pointer' }}
+            bodyStyle={{ padding: '20px' }}
+          >
             <Statistic
-              title="项目数"
+              title={<span style={{ color: 'var(--color-text-secondary)', fontSize: '13px', fontWeight: 500 }}>项目数</span>}
               value={projectsCount}
-              prefix={<ProjectOutlined />}
-              valueStyle={{ color: '#1890ff' }}
+              prefix={<ProjectOutlined style={{ color: 'var(--color-primary)', fontSize: '18px', marginRight: '8px' }} />}
+              valueStyle={{ color: 'var(--color-text-primary)', fontSize: '24px', fontWeight: 600 }}
             />
           </Card>
         </Col>
         <Col xs={24} sm={12} lg={6}>
-          <Card loading={isLoading}>
+          <Card 
+            loading={isLoading}
+            hoverable
+            bodyStyle={{ padding: '20px' }}
+          >
             <Statistic
-              title="应用总数"
+              title={<span style={{ color: 'var(--color-text-secondary)', fontSize: '13px', fontWeight: 500 }}>应用总数</span>}
               value={appsCount}
-              prefix={<AppstoreOutlined />}
-              valueStyle={{ color: '#52c41a' }}
+              prefix={<AppstoreOutlined style={{ color: 'var(--color-success)', fontSize: '18px', marginRight: '8px' }} />}
+              valueStyle={{ color: 'var(--color-text-primary)', fontSize: '24px', fontWeight: 600 }}
             />
           </Card>
         </Col>
         <Col xs={24} sm={12} lg={6}>
-          <Card>
+          <Card
+            hoverable
+            onClick={() => window.location.href = '/audit-logs'}
+            style={{ cursor: 'pointer' }}
+            bodyStyle={{ padding: '20px' }}
+          >
             <Statistic
-              title="最近活动"
+              title={<span style={{ color: 'var(--color-text-secondary)', fontSize: '13px', fontWeight: 500 }}>最近活动</span>}
               value={auditLogsData?.length || 0}
-              prefix={<ClockCircleOutlined />}
-              valueStyle={{ color: '#fa8c16' }}
-              // suffix={auditLogsData?.length ? `最近${auditLogsData.length}条` : '条'}
+              prefix={<ClockCircleOutlined style={{ color: 'var(--color-warning)', fontSize: '18px', marginRight: '8px' }} />}
+              valueStyle={{ color: 'var(--color-text-primary)', fontSize: '24px', fontWeight: 600 }}
             />
           </Card>
         </Col>
         <Col xs={24} sm={12} lg={6}>
-          <Card>
+          <Card
+            bodyStyle={{ padding: '20px' }}
+          >
             <Statistic
-              title="系统状态"
+              title={<span style={{ color: 'var(--color-text-secondary)', fontSize: '13px', fontWeight: 500 }}>系统状态</span>}
               value="运行中"
-              prefix={<FileOutlined />}
-              valueStyle={{ color: '#52c41a' }}
+              prefix={<FileOutlined style={{ color: 'var(--color-success)', fontSize: '18px', marginRight: '8px' }} />}
+              valueStyle={{ color: 'var(--color-success)', fontSize: '16px', fontWeight: 600 }}
             />
           </Card>
         </Col>
       </Row>
 
-      <Card title="最近活动" style={{ marginBottom: 24 }}>
+      <Card 
+        title={
+          <span style={{ fontSize: '16px', fontWeight: 600, color: 'var(--color-text-primary)' }}>
+            最近活动
+          </span>
+        }
+        bodyStyle={{ padding: '20px' }}
+      >
         {auditLogsLoading ? (
-          <div style={{ textAlign: 'center', padding: '40px' }}>
+          <div style={{ textAlign: 'center', padding: '60px' }}>
             <Spin size="large" />
           </div>
         ) : (
@@ -164,7 +195,7 @@ const Dashboard: React.FC = () => {
             dataSource={auditLogsData || []}
             rowKey="id"
             pagination={false}
-            size="small"
+            size="middle"
           />
         )}
       </Card>
