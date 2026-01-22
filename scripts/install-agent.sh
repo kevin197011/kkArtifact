@@ -109,17 +109,23 @@ main() {
     # Extract binary filename for this platform
     local filename=""
     if command -v jq >/dev/null 2>&1; then
-        filename=$(echo "${version_info}" | jq -r ".binaries[] | select(.platform == \"${platform}\") | .filename")
+        # Check if binaries array exists and is not empty
+        local binaries_count=$(echo "${version_info}" | jq -r '.binaries | if type == "array" then length else 0 end' 2>/dev/null || echo "0")
+        if [ "${binaries_count}" -gt 0 ] 2>/dev/null; then
+            filename=$(echo "${version_info}" | jq -r ".binaries[]? | select(.platform == \"${platform}\") | .filename" 2>/dev/null | head -n1)
+        fi
+        # If jq returned null or empty, fallback to manual construction
+        if [ -z "${filename}" ] || [ "${filename}" = "null" ] || [ "${filename}" = "" ]; then
+            filename=""
+        fi
     elif command -v python3 >/dev/null 2>&1; then
-        filename=$(echo "${version_info}" | python3 -c "import sys, json; data=json.load(sys.stdin); print(next((b['filename'] for b in data['binaries'] if b['platform'] == '${platform}'), ''))")
-    else
-        # Fallback: construct filename manually
-        filename="kkartifact-agent-${os}-${arch}"
+        filename=$(echo "${version_info}" | python3 -c "import sys, json; data=json.load(sys.stdin); binaries = data.get('binaries', []); print(next((b['filename'] for b in binaries if b.get('platform') == '${platform}'), ''))" 2>/dev/null || echo "")
     fi
     
-    if [ -z "${filename}" ] || [ "${filename}" = "null" ]; then
-        echo -e "${RED}Error: No binary available for platform ${platform}${NC}" >&2
-        exit 1
+    # Fallback: construct filename manually if not found
+    if [ -z "${filename}" ] || [ "${filename}" = "null" ] || [ "${filename}" = "" ]; then
+        filename="kkartifact-agent-${os}-${arch}"
+        echo -e "${YELLOW}Warning: Version info not available or binaries array is empty, using default filename: ${filename}${NC}"
     fi
     
     echo -e "Target binary: ${GREEN}${filename}${NC}"

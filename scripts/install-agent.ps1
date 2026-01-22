@@ -92,14 +92,20 @@ function Main {
     $versionInfo = Get-VersionInfo
     
     # Extract binary filename for this platform
-    $binary = $versionInfo.binaries | Where-Object { $_.platform -eq $platform } | Select-Object -First 1
-    
-    if (-not $binary) {
-        Write-Host "Error: No binary available for platform $platform" -ForegroundColor Red
-        exit 1
+    $filename = $null
+    if ($versionInfo.binaries -and $versionInfo.binaries.Count -gt 0) {
+        $binary = $versionInfo.binaries | Where-Object { $_.platform -eq $platform } | Select-Object -First 1
+        if ($binary -and $binary.filename) {
+            $filename = $binary.filename
+        }
     }
     
-    $filename = $binary.filename
+    # Fallback: construct filename manually if not found
+    if (-not $filename) {
+        $filename = "kkartifact-agent-${os}-${arch}.exe"
+        Write-Host "Warning: Version info not available or binaries array is empty, using default filename: $filename" -ForegroundColor Yellow
+    }
+    
     Write-Host "Target binary: $filename" -ForegroundColor Green
     Write-Host ""
     
