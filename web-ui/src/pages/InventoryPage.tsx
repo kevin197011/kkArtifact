@@ -10,6 +10,7 @@ import { SearchOutlined, FolderOutlined, AppstoreOutlined, LoginOutlined, Downlo
 import { useNavigate } from 'react-router-dom'
 import { publicProjectsApi, Project, App, Version } from '../api/projects'
 import { downloadsApi } from '../api/downloads'
+import ThemeToggle from '../components/ThemeToggle'
 import type { DataNode } from 'antd/es/tree'
 import styles from './InventoryPage.module.css'
 
@@ -382,21 +383,24 @@ const InventoryPage: React.FC = () => {
               </div>
             </div>
           </div>
-          <Button
-            type="primary"
-            icon={<LoginOutlined />}
-            onClick={() => navigate('/login')}
-            style={{
-              height: '40px',
-              padding: '0 20px',
-              fontWeight: 500,
-              fontSize: '14px',
-              borderRadius: '8px',
-              boxShadow: '0 2px 8px rgba(22, 93, 255, 0.2)',
-            }}
-          >
-            登录后台
-          </Button>
+          <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+            <ThemeToggle scope="frontend" type="text" />
+            <Button
+              type="primary"
+              icon={<LoginOutlined />}
+              onClick={() => navigate('/login')}
+              style={{
+                height: '40px',
+                padding: '0 20px',
+                fontWeight: 500,
+                fontSize: '14px',
+                borderRadius: '8px',
+                boxShadow: '0 2px 8px rgba(22, 93, 255, 0.2)',
+              }}
+            >
+              登录后台
+            </Button>
+          </div>
         </div>
 
       {/* Agent Download Section */}

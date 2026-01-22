@@ -12,6 +12,11 @@
   flex-direction: column;
 }
 
+/* Dark theme background */
+:global(.theme-dark) .inventoryContainer {
+  background: linear-gradient(135deg, #1a1d29 0%, #1e212e 50%, #232633 100%);
+}
+
 @keyframes gradientShift {
   0% {
     background-position: 0% 50%;
@@ -40,6 +45,14 @@
   pointer-events: none;
   z-index: 0;
   opacity: 0.5;
+}
+
+/* Dark theme grid pattern */
+:global(.theme-dark) .inventoryContainer::before {
+  background-image: 
+    linear-gradient(rgba(64, 128, 255, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(64, 128, 255, 0.05) 1px, transparent 1px);
+  opacity: 0.3;
 }
 
 @keyframes gridMove {
@@ -560,6 +573,8 @@
   position: fixed;
   bottom: 0;
   left: 0;
+  background: var(--color-bg-primary);
+  color: var(--color-text-secondary);
   right: 0;
   text-align: center;
   padding: 20px;
@@ -683,12 +698,12 @@
 }
 
 .downloadUsage code {
-  background: #f5f5f5;
+  background: var(--color-bg-secondary);
   padding: 2px 6px;
   border-radius: 4px;
   font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
   font-size: 13px;
-  color: #e83e8c;
+  color: var(--color-primary);
 }
 
 .binariesList {

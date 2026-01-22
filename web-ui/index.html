@@ -5,6 +5,22 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>kkArtifact - Artifact Management</title>
+    <script>
+      // Apply theme immediately to prevent flash
+      (function() {
+        const frontendTheme = localStorage.getItem('kkartifact_theme_frontend') || 'light';
+        const backendTheme = localStorage.getItem('kkartifact_theme_backend') || 'light';
+        // Default to frontend theme for initial load (can be overridden by page-specific scope)
+        const initialTheme = frontendTheme;
+        if (initialTheme === 'dark') {
+          document.documentElement.classList.add('theme-dark');
+          document.documentElement.classList.remove('theme-light');
+        } else {
+          document.documentElement.classList.add('theme-light');
+          document.documentElement.classList.remove('theme-dark');
+        }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

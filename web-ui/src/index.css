@@ -10,7 +10,7 @@
 }
 
 :root {
-  /* Modern color palette - minimal and elegant */
+  /* Modern color palette - minimal and elegant (Light theme) */
   --color-bg-primary: #ffffff;
   --color-bg-secondary: #fafbfc;
   --color-bg-tertiary: #f5f7fa;
@@ -44,6 +44,30 @@
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04);
   --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.06);
   --shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.08);
+}
+
+/* Dark theme */
+.theme-dark {
+  --color-bg-primary: #1a1d29;
+  --color-bg-secondary: #232633;
+  --color-bg-tertiary: #1e212e;
+  --color-border: #2d3142;
+  --color-border-light: #252836;
+  --color-text-primary: #e4e6eb;
+  --color-text-secondary: #9ca3af;
+  --color-text-tertiary: #6b7280;
+  --color-primary: #4080ff;
+  --color-primary-hover: #5a9aff;
+  --color-primary-light: rgba(64, 128, 255, 0.15);
+  --color-success: #00d26a;
+  --color-warning: #ff9a2e;
+  --color-error: #ff4d4f;
+  --color-info: #4080ff;
+  
+  /* Shadows adjusted for dark mode */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.5);
 }
 
 body {
@@ -332,6 +356,24 @@ code {
   font-size: 16px;
 }
 
+/* Dark theme menu adjustments */
+.theme-dark .ant-menu-light {
+  background: var(--color-bg-primary);
+}
+
+.theme-dark .ant-menu-light .ant-menu-item {
+  color: var(--color-text-primary);
+}
+
+.theme-dark .ant-menu-light .ant-menu-item-selected {
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+}
+
+.theme-dark .ant-menu-light .ant-menu-item:hover {
+  background: var(--color-bg-secondary);
+}
+
 /* Statistic - Clean numbers */
 .ant-statistic-title {
   color: var(--color-text-secondary);
@@ -380,4 +422,42 @@ code {
 
 .ant-tree-node-content-wrapper:hover {
   background: var(--color-bg-secondary);
+}
+
+/* Dark theme transitions */
+* {
+  transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+
+/* Ant Design dark theme overrides */
+.theme-dark .ant-card {
+  background: var(--color-bg-primary);
+  border-color: var(--color-border-light);
+}
+
+.theme-dark .ant-table-thead > tr > th {
+  background: var(--color-bg-secondary);
+  color: var(--color-text-primary);
+  border-color: var(--color-border-light);
+}
+
+.theme-dark .ant-table-tbody > tr:hover > td {
+  background: var(--color-bg-secondary);
+}
+
+.theme-dark .ant-input,
+.theme-dark .ant-select-selector {
+  background: var(--color-bg-primary);
+  border-color: var(--color-border);
+  color: var(--color-text-primary);
+}
+
+.theme-dark .ant-modal-content {
+  background: var(--color-bg-primary);
+}
+
+.theme-dark .ant-popover-inner,
+.theme-dark .ant-tooltip-inner {
+  background: var(--color-bg-secondary);
+  color: var(--color-text-primary);
 }

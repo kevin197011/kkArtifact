@@ -7,6 +7,7 @@ import React, { useEffect, useState } from 'react'
 import { Layout, Menu, Button, message } from 'antd'
 import { useNavigate, useLocation } from 'react-router-dom'
 import client, { publicClient } from '../api/client'
+import ThemeToggle from './ThemeToggle'
 import {
   DashboardOutlined,
   ProjectOutlined,
@@ -203,6 +204,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
             制品管理
           </h1>
           <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            <ThemeToggle scope="backend" type="text" />
             <Button 
               type="text" 
               icon={<HomeOutlined />} 

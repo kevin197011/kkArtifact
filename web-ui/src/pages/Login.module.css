@@ -9,6 +9,11 @@
   overflow: hidden;
 }
 
+/* Dark theme background */
+:global(.theme-dark) .loginContainer {
+  background: linear-gradient(135deg, #1a1d29 0%, #1e212e 25%, #232633 50%, #1e212e 75%, #1a1d29 100%);
+}
+
 @keyframes gradientShift {
   0% {
     background-position: 0% 50%;
@@ -187,6 +192,16 @@
     inset 0 1px 0 rgba(255, 255, 255, 0.9);
   border: 1px solid rgba(255, 255, 255, 0.8);
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Dark theme login card */
+:global(.theme-dark) .loginCard {
+  background: rgba(26, 29, 41, 0.95);
+  border: 1px solid rgba(45, 49, 66, 0.8);
+  box-shadow: 
+    0 8px 32px rgba(0, 0, 0, 0.4),
+    0 2px 8px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 
 .loginCard:hover {

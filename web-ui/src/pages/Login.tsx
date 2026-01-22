@@ -9,6 +9,7 @@ import { Form, Input, Button, Card, message, Typography, Spin } from 'antd'
 import { UserOutlined, LockOutlined } from '@ant-design/icons'
 import { authApi } from '../api/auth'
 import client from '../api/client'
+import ThemeToggle from '../components/ThemeToggle'
 import styles from './Login.module.css'
 
 const { Title, Text } = Typography
@@ -133,6 +134,9 @@ const LoginPage: React.FC = () => {
     <div className={styles.loginContainer}>
       <div className={styles.particles} ref={particlesRef}></div>
       <div className={styles.contentWrapper}>
+        <div style={{ position: 'absolute', top: '24px', right: '24px', zIndex: 10 }}>
+          <ThemeToggle scope="backend" type="text" />
+        </div>
         <div
           style={{
             display: 'flex',
