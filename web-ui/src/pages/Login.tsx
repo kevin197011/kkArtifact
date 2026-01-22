@@ -161,7 +161,7 @@ const LoginPage: React.FC = () => {
                     width: '56px',
                     height: '56px',
                     borderRadius: '12px',
-                    background: 'linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-hover) 100%)',
+                    background: 'linear-gradient(135deg, #165dff 0%, #4080ff 100%)',
                     boxShadow: '0 4px 12px rgba(22, 93, 255, 0.2)',
                     transition: 'transform 0.3s ease',
                   }}

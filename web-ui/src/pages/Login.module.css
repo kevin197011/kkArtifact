@@ -222,7 +222,7 @@
 @media (prefers-reduced-motion: reduce) {
   .loginContainer {
     animation: none;
-    background: var(--color-bg-tertiary);
+    background: #f5f7fa;
   }
   
   .loginContainer::before,
@@ -253,6 +253,7 @@
 }
 
 /* Force light theme for all login page elements - override dark theme */
+/* This ensures login page is completely isolated from theme switching */
 :global(.theme-dark) .loginContainer :global(.ant-input),
 :global(.theme-dark) .loginContainer :global(.ant-input-password),
 :global(.theme-dark) .loginContainer :global(.ant-input-password .ant-input) {
@@ -271,6 +272,7 @@
   background: #ffffff !important;
   border-color: #165dff !important;
   color: #1d2129 !important;
+  box-shadow: 0 0 0 2px rgba(22, 93, 255, 0.1) !important;
 }
 
 :global(.theme-dark) .loginContainer :global(.ant-form-item-label > label) {
@@ -279,4 +281,33 @@
 
 :global(.theme-dark) .loginContainer :global(.ant-typography) {
   color: #1d2129 !important;
+}
+
+:global(.theme-dark) .loginContainer :global(.ant-typography h1),
+:global(.theme-dark) .loginContainer :global(.ant-typography h2),
+:global(.theme-dark) .loginContainer :global(.ant-typography h3),
+:global(.theme-dark) .loginContainer :global(.ant-typography h4),
+:global(.theme-dark) .loginContainer :global(.ant-typography h5),
+:global(.theme-dark) .loginContainer :global(.ant-typography h6) {
+  color: #1d2129 !important;
+}
+
+:global(.theme-dark) .loginContainer :global(.ant-btn-primary) {
+  background: #165dff !important;
+  border-color: #165dff !important;
+  color: #ffffff !important;
+}
+
+:global(.theme-dark) .loginContainer :global(.ant-btn-primary):hover {
+  background: #4080ff !important;
+  border-color: #4080ff !important;
+  color: #ffffff !important;
+}
+
+:global(.theme-dark) .loginContainer :global(.ant-spin) {
+  color: #165dff !important;
+}
+
+:global(.theme-dark) .loginContainer :global(.ant-spin-dot-item) {
+  background-color: #165dff !important;
 }
