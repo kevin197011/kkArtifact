@@ -163,10 +163,9 @@ function Main {
         exit 1
     }
     
-    # Install (move to target location)
+    # Install (move to target location) - force overwrite existing version
     if (Test-Path $installPath) {
-        Write-Host "Warning: $installPath already exists. Overwriting..." -ForegroundColor Yellow
-        Remove-Item $installPath -Force
+        Remove-Item $installPath -Force -ErrorAction SilentlyContinue
     }
     
     Move-Item -Path $tempFile -Destination $installPath -Force

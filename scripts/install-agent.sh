@@ -216,9 +216,9 @@ main() {
     # Make executable
     chmod +x "${temp_file}"
     
-    # Install (move to target location)
+    # Install (move to target location) - force overwrite existing version
     if [ -f "${install_path}" ]; then
-        echo -e "${YELLOW}Warning: ${install_path} already exists. Overwriting...${NC}"
+        rm -f "${install_path}"
     fi
     
     mv "${temp_file}" "${install_path}"
