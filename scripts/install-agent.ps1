@@ -12,12 +12,28 @@ $ErrorActionPreference = "Stop"
 
 # Server URL is automatically injected by the server when serving this script
 # This allows the script to work with simple "irm URL | iex" format
-# Priority: 1) Injected SERVER_URL, 2) SERVER_URL env var, 3) Default
-# SERVER_URL will be replaced by the server at runtime
-$SERVER_URL = if ($env:SERVER_URL) { $env:SERVER_URL } else { "__SERVER_URL__" }
-# If still contains placeholder, try environment variable or default
-if ($SERVER_URL -eq "__SERVER_URL__") {
-    $SERVER_URL = if ($env:SERVER_URL_ENV) { $env:SERVER_URL_ENV } else { "http://localhost:8080" }
+# Priority: 1) SERVER_URL env var (if set), 2) Injected SERVER_URL, 3) Default localhost
+# The server replaces __SERVER_URL__ with the actual server URL when serving the script
+# Note: Server uses strings.ReplaceAll, so ALL occurrences of __SERVER_URL__ are replaced
+# We use a workaround: check if value looks like a URL (contains ://) to detect server injection
+if ($env:SERVER_URL) {
+    # SERVER_URL env var is set, use it (highest priority)
+    $SERVER_URL = $env:SERVER_URL
+} else {
+    # SERVER_URL env var not set, use default value
+    # Server will replace __SERVER_URL__ with actual URL (e.g., http://packages.slileisure.com)
+    $SERVER_URL = "__SERVER_URL__"
+    # If SERVER_URL_ENV is set, use it
+    if ($env:SERVER_URL_ENV) {
+        $SERVER_URL = $env:SERVER_URL_ENV
+    # Check if value looks like a URL (contains ://) - means server injected it
+    } elseif ($SERVER_URL -match "://") {
+        # SERVER_URL contains ://, so it was replaced by server, use it as-is
+        # $SERVER_URL already set to injected value
+    } else {
+        # SERVER_URL doesn't look like a URL, still contains placeholder, use localhost
+        $SERVER_URL = "http://localhost:8080"
+    }
 }
 
 # Detect platform and architecture

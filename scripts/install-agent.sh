@@ -17,12 +17,25 @@ NC='\033[0m' # No Color
 
 # Server URL is automatically injected by the server when serving this script
 # This allows the script to work with simple "curl URL | bash" format
-# Priority: 1) Injected SERVER_URL, 2) SERVER_URL env var, 3) Default
-# SERVER_URL will be replaced by the server at runtime
-SERVER_URL="${SERVER_URL:-__SERVER_URL__}"
-# If still contains placeholder, try environment variable or default
-if [ "$SERVER_URL" = "__SERVER_URL__" ]; then
-    SERVER_URL="${SERVER_URL_ENV:-http://localhost:8080}"
+# Priority: 1) SERVER_URL env var (if set), 2) Injected SERVER_URL, 3) Default localhost
+# The server replaces __SERVER_URL__ with the actual server URL when serving the script
+# Note: Server uses strings.ReplaceAll, so ALL occurrences of __SERVER_URL__ are replaced
+# We use a workaround: check if value looks like a URL (contains ://) to detect server injection
+if [ -z "${SERVER_URL}" ]; then
+    # SERVER_URL env var not set, use default value
+    # Server will replace __SERVER_URL__ with actual URL (e.g., http://packages.slileisure.com)
+    SERVER_URL="__SERVER_URL__"
+    # If SERVER_URL_ENV is set, use it
+    if [ -n "${SERVER_URL_ENV}" ]; then
+        SERVER_URL="${SERVER_URL_ENV}"
+    # Check if value looks like a URL (contains ://) - means server injected it
+    elif echo "$SERVER_URL" | grep -q "://"; then
+        # SERVER_URL contains ://, so it was replaced by server, use it as-is
+        : # SERVER_URL already set to injected value
+    else
+        # SERVER_URL doesn't look like a URL, still contains placeholder, use localhost
+        SERVER_URL="http://localhost:8080"
+    fi
 fi
 
 # Detect platform and architecture
