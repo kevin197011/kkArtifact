@@ -320,6 +320,11 @@ func (c *Client) FinishUpload(req interface{}) error {
 
 // GetManifest retrieves a manifest
 func (c *Client) GetManifest(project, app, version string) (interface{}, error) {
+	// Ensure token is set before making request
+	if c.token == "" {
+		return nil, fmt.Errorf("token is empty, cannot get manifest. Please check your config file (global: /etc/kkArtifact/config.yml or local: .kkartifact.yml)")
+	}
+
 	url := fmt.Sprintf("%s/api/v1/manifest/%s/%s/%s", c.serverURL, project, app, version)
 
 	httpReq, err := http.NewRequest("GET", url, nil)
@@ -336,7 +341,16 @@ func (c *Client) GetManifest(project, app, version string) (interface{}, error) 
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("get manifest failed with status %d", resp.StatusCode)
+		// Read error response body for more details
+		body, _ := io.ReadAll(resp.Body)
+		errorMsg := fmt.Sprintf("get manifest failed with status %d", resp.StatusCode)
+		if resp.StatusCode == http.StatusUnauthorized {
+			errorMsg += " (unauthorized). Please check your token in the config file (global: /etc/kkArtifact/config.yml or local: .kkartifact.yml)"
+		}
+		if len(body) > 0 {
+			errorMsg += fmt.Sprintf(": %s", string(body))
+		}
+		return nil, fmt.Errorf(errorMsg)
 	}
 
 	var manifest interface{}
@@ -356,6 +370,11 @@ type LatestVersionResponse struct {
 
 // GetLatestVersion retrieves the latest published version for an app
 func (c *Client) GetLatestVersion(project, app string) (*LatestVersionResponse, error) {
+	// Ensure token is set before making request
+	if c.token == "" {
+		return nil, fmt.Errorf("token is empty, cannot get latest version. Please check your config file (global: /etc/kkArtifact/config.yml or local: .kkartifact.yml)")
+	}
+
 	url := fmt.Sprintf("%s/api/v1/projects/%s/apps/%s/latest", c.serverURL, project, app)
 
 	httpReq, err := http.NewRequest("GET", url, nil)
@@ -373,7 +392,14 @@ func (c *Client) GetLatestVersion(project, app string) (*LatestVersionResponse, 
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
-		return nil, fmt.Errorf("get latest version failed with status %d: %s", resp.StatusCode, string(body))
+		errorMsg := fmt.Sprintf("get latest version failed with status %d", resp.StatusCode)
+		if resp.StatusCode == http.StatusUnauthorized {
+			errorMsg += " (unauthorized). Please check your token in the config file (global: /etc/kkArtifact/config.yml or local: .kkartifact.yml)"
+		}
+		if len(body) > 0 {
+			errorMsg += fmt.Sprintf(": %s", string(body))
+		}
+		return nil, fmt.Errorf(errorMsg)
 	}
 
 	var latestResp LatestVersionResponse

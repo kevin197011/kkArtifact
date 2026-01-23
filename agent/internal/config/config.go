@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 
 	"gopkg.in/yaml.v3"
 )
@@ -61,6 +62,10 @@ func loadConfigFile(configPath string) (*Config, error) {
 	if err := yaml.Unmarshal(data, &config); err != nil {
 		return nil, fmt.Errorf("failed to parse config file: %w", err)
 	}
+
+	// Trim whitespace from token and server_url to handle YAML formatting issues
+	config.Token = strings.TrimSpace(config.Token)
+	config.ServerURL = strings.TrimSpace(config.ServerURL)
 
 	return &config, nil
 }
@@ -127,8 +132,8 @@ func mergeConfigsWithOverrides(global, local *Config, overrides *Overrides) *Con
 
 	// Start with global config
 	if global != nil {
-		result.ServerURL = global.ServerURL
-		result.Token = global.Token
+		result.ServerURL = strings.TrimSpace(global.ServerURL)
+		result.Token = strings.TrimSpace(global.Token)
 		result.Project = global.Project
 		result.App = global.App
 		result.Ignore = global.Ignore
@@ -137,12 +142,14 @@ func mergeConfigsWithOverrides(global, local *Config, overrides *Overrides) *Con
 	}
 
 	// Override with local config (if present)
+	// Only override if local config has non-empty values (empty strings don't override)
 	if local != nil {
 		if local.ServerURL != "" {
-			result.ServerURL = local.ServerURL
+			result.ServerURL = strings.TrimSpace(local.ServerURL)
 		}
 		if local.Token != "" {
-			result.Token = local.Token
+			// Only override if local token is non-empty (preserve global token if local is empty)
+			result.Token = strings.TrimSpace(local.Token)
 		}
 		if local.Project != "" {
 			result.Project = local.Project
@@ -162,10 +169,10 @@ func mergeConfigsWithOverrides(global, local *Config, overrides *Overrides) *Con
 	// Apply command-line overrides (highest priority)
 	if overrides != nil {
 		if overrides.ServerURL != "" {
-			result.ServerURL = overrides.ServerURL
+			result.ServerURL = strings.TrimSpace(overrides.ServerURL)
 		}
 		if overrides.Token != "" {
-			result.Token = overrides.Token
+			result.Token = strings.TrimSpace(overrides.Token)
 		}
 		if overrides.Project != "" {
 			result.Project = overrides.Project

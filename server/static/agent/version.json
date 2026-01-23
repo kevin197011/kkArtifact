@@ -1,11 +1,11 @@
 {
-  "version": "v20260123120723",
-  "build_time": "2026-01-23T07:20:55Z",
+  "version": "v20260123152056",
+  "build_time": "2026-01-23T07:36:31Z",
   "binaries": [
     {
       "platform": "linux/amd64",
       "filename": "kkartifact-agent-linux-amd64",
-      "size": 8605880,
+      "size": 8609976,
       "url": "/api/v1/downloads/agent/kkartifact-agent-linux-amd64"
     },
     {
@@ -23,13 +23,13 @@
     {
       "platform": "darwin/arm64",
       "filename": "kkartifact-agent-darwin-arm64",
-      "size": 8222114,
+      "size": 8222130,
       "url": "/api/v1/downloads/agent/kkartifact-agent-darwin-arm64"
     },
     {
       "platform": "windows/amd64",
       "filename": "kkartifact-agent-windows-amd64.exe",
-      "size": 8980480,
+      "size": 8982528,
       "url": "/api/v1/downloads/agent/kkartifact-agent-windows-amd64.exe"
     }
   ]
