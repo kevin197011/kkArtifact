@@ -9,8 +9,7 @@ import { Row, Col, Card, Table, Typography, Spin } from 'antd'
 import { ProjectOutlined, AppstoreOutlined, TagOutlined, ClockCircleOutlined, HistoryOutlined } from '@ant-design/icons'
 import { useNavigate } from 'react-router-dom'
 import { projectsApi } from '../api/projects'
-import { auditApi } from '../api/audit'
-import type { AuditLog } from '../api/audit'
+import { auditApi, type AuditLog, type AuditLogsListResponse } from '../api/audit'
 import type { ColumnType } from 'antd/es/table'
 import styles from './Dashboard.module.css'
 
@@ -28,7 +27,11 @@ const Dashboard: React.FC = () => {
   // Fetch audit logs for recent activity
   const { data: auditLogsData, isLoading: auditLogsLoading } = useQuery<AuditLog[]>({
     queryKey: ['audit-logs', 'dashboard'],
-    queryFn: () => auditApi.list(10, 0).then((res) => res.data.data),
+    queryFn: async (): Promise<AuditLog[]> => {
+      const response = await auditApi.list(10, 0)
+      const listResponse: AuditLogsListResponse = response.data
+      return listResponse.data
+    },
   })
 
   // Fetch apps for all projects to calculate total count
