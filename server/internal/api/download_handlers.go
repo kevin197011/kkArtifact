@@ -239,10 +239,27 @@ func (h *Handler) handleDownloadScript(c *gin.Context) {
 	}
 
 	// Extract server URL from request
-	// Get scheme (http/https)
+	// Get scheme (http/https) - check multiple sources for reverse proxy compatibility
 	scheme := "http"
-	if c.GetHeader("X-Forwarded-Proto") == "https" || c.Request.TLS != nil {
+	
+	// Check X-Forwarded-Proto header (most common reverse proxy header)
+	if c.GetHeader("X-Forwarded-Proto") == "https" {
 		scheme = "https"
+	} else if c.GetHeader("X-Forwarded-Ssl") == "on" {
+		// Check X-Forwarded-Ssl header (alternative header)
+		scheme = "https"
+	} else if c.GetHeader("X-Forwarded-Scheme") == "https" {
+		// Check X-Forwarded-Scheme header (another alternative)
+		scheme = "https"
+	} else if c.Request.TLS != nil {
+		// Direct TLS connection (no reverse proxy)
+		scheme = "https"
+	} else {
+		// Check Forwarded header (RFC 7239 standard)
+		forwarded := c.GetHeader("Forwarded")
+		if strings.Contains(strings.ToLower(forwarded), "proto=https") {
+			scheme = "https"
+		}
 	}
 	
 	// Get host from request
