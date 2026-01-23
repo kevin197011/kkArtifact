@@ -136,6 +136,36 @@ irm http://your-server:8080/api/v1/downloads/scripts/install-agent.ps1 | iex
 - ✅ 自动配置 `server_url` 为当前服务器地址
 - ✅ 强制覆盖旧版本，无需手动删除
 
+**环境变量覆盖：**
+
+如果需要指定自定义的服务器地址，可以通过环境变量覆盖：
+
+**Linux/macOS：**
+```bash
+# 使用 server_url 环境变量（推荐，小写，与配置文件格式一致）
+curl -fsSL https://packages.slileisure.com/api/v1/downloads/scripts/install-agent.sh | server_url="https://your-api-endpoint.com" bash
+
+# 或使用 SERVER_URL 环境变量（大写，向后兼容）
+curl -fsSL https://packages.slileisure.com/api/v1/downloads/scripts/install-agent.sh | SERVER_URL="https://your-api-endpoint.com" bash
+```
+
+**Windows (PowerShell)：**
+```powershell
+# 使用 server_url 环境变量（推荐，小写）
+$env:server_url="https://your-api-endpoint.com"
+irm https://packages.slileisure.com/api/v1/downloads/scripts/install-agent.ps1 | iex
+
+# 或使用 SERVER_URL 环境变量（大写，向后兼容）
+$env:SERVER_URL="https://your-api-endpoint.com"
+irm https://packages.slileisure.com/api/v1/downloads/scripts/install-agent.ps1 | iex
+```
+
+**服务器 URL 优先级顺序：**
+1. `server_url` 环境变量（小写，最高优先级）
+2. `SERVER_URL` 环境变量（大写，向后兼容）
+3. 服务器注入的 URL（从脚本下载端点自动检测）
+4. 默认 `http://localhost:8080`（回退）
+
 **注意**：将 `http://your-server:8080` 替换为你的实际服务器地址。
 
 **方式二：从 GitHub Releases 下载**

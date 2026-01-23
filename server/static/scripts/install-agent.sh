@@ -17,12 +17,18 @@ NC='\033[0m' # No Color
 
 # Server URL is automatically injected by the server when serving this script
 # This allows the script to work with simple "curl URL | bash" format
-# Priority: 1) SERVER_URL env var (if set), 2) Injected SERVER_URL, 3) Default localhost
+# Priority: 1) server_url env var (lowercase, highest priority), 2) SERVER_URL env var (uppercase, backward compatibility), 3) Injected SERVER_URL, 4) Default localhost
 # The server replaces __SERVER_URL__ with the actual server URL when serving the script
 # Note: Server uses strings.ReplaceAll, so ALL occurrences of __SERVER_URL__ are replaced
 # We use a workaround: check if value looks like a URL (contains ://) to detect server injection
-if [ -z "${SERVER_URL}" ]; then
-    # SERVER_URL env var not set, use default value
+if [ -n "${server_url}" ]; then
+    # server_url env var is set (lowercase, highest priority)
+    SERVER_URL="${server_url}"
+elif [ -n "${SERVER_URL}" ]; then
+    # SERVER_URL env var is set (uppercase, backward compatibility)
+    : # SERVER_URL already set from environment
+else
+    # Neither env var is set, use default value
     # Server will replace __SERVER_URL__ with actual URL (e.g., http://packages.slileisure.com)
     SERVER_URL="__SERVER_URL__"
     # If SERVER_URL_ENV is set, use it

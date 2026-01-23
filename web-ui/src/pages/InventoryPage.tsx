@@ -61,6 +61,11 @@ const InventoryPage: React.FC = () => {
     return `${window.location.origin}${scriptPath}`
   }
 
+  // Get current server URL (origin) for server_url environment variable
+  const getCurrentServerUrl = () => {
+    return window.location.origin
+  }
+
   // Format date for display
   const formatDate = useCallback((dateString: string): string => {
     try {
@@ -443,7 +448,7 @@ const InventoryPage: React.FC = () => {
                           position: 'relative',
                         }}>
                           <code style={{ color: 'var(--color-text-primary)' }}>
-                            {`curl -fsSL ${getScriptUrl('install-agent.sh')} | bash`}
+                            {`curl -fsSL ${getScriptUrl('install-agent.sh')} | server_url="${getCurrentServerUrl()}" bash`}
                           </code>
                           <CopyOutlined
                             style={{ 
@@ -459,7 +464,8 @@ const InventoryPage: React.FC = () => {
                             }}
                             onClick={() => {
                               const scriptUrl = getScriptUrl('install-agent.sh')
-                              const cmd = `curl -fsSL ${scriptUrl} | bash`
+                              const serverUrl = getCurrentServerUrl()
+                              const cmd = `curl -fsSL ${scriptUrl} | server_url="${serverUrl}" bash`
                               navigator.clipboard.writeText(cmd)
                               message.success('命令已复制到剪贴板')
                             }}
@@ -487,7 +493,7 @@ const InventoryPage: React.FC = () => {
                           position: 'relative',
                         }}>
                           <code style={{ color: 'var(--color-text-primary)' }}>
-                            {`irm ${getScriptUrl('install-agent.ps1')} | iex`}
+                            {`$env:server_url="${getCurrentServerUrl()}"; irm ${getScriptUrl('install-agent.ps1')} | iex`}
                           </code>
                           <CopyOutlined
                             style={{ 
@@ -503,7 +509,8 @@ const InventoryPage: React.FC = () => {
                             }}
                             onClick={() => {
                               const scriptUrl = getScriptUrl('install-agent.ps1')
-                              const cmd = `irm ${scriptUrl} | iex`
+                              const serverUrl = getCurrentServerUrl()
+                              const cmd = `$env:server_url="${serverUrl}"; irm ${scriptUrl} | iex`
                               navigator.clipboard.writeText(cmd)
                               message.success('命令已复制到剪贴板')
                             }}

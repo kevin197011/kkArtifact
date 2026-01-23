@@ -12,15 +12,18 @@ $ErrorActionPreference = "Stop"
 
 # Server URL is automatically injected by the server when serving this script
 # This allows the script to work with simple "irm URL | iex" format
-# Priority: 1) SERVER_URL env var (if set), 2) Injected SERVER_URL, 3) Default localhost
+# Priority: 1) server_url env var (lowercase, highest priority), 2) SERVER_URL env var (uppercase, backward compatibility), 3) Injected SERVER_URL, 4) Default localhost
 # The server replaces __SERVER_URL__ with the actual server URL when serving the script
 # Note: Server uses strings.ReplaceAll, so ALL occurrences of __SERVER_URL__ are replaced
 # We use a workaround: check if value looks like a URL (contains ://) to detect server injection
-if ($env:SERVER_URL) {
-    # SERVER_URL env var is set, use it (highest priority)
+if ($env:server_url) {
+    # server_url env var is set (lowercase, highest priority)
+    $SERVER_URL = $env:server_url
+} elseif ($env:SERVER_URL) {
+    # SERVER_URL env var is set (uppercase, backward compatibility)
     $SERVER_URL = $env:SERVER_URL
 } else {
-    # SERVER_URL env var not set, use default value
+    # Neither env var is set, use default value
     # Server will replace __SERVER_URL__ with actual URL (e.g., http://packages.slileisure.com)
     $SERVER_URL = "__SERVER_URL__"
     # If SERVER_URL_ENV is set, use it
