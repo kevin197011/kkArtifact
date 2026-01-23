@@ -205,8 +205,53 @@ func (h *Handler) handleGetServerVersion(c *gin.Context) {
 	c.JSON(http.StatusOK, versionInfo)
 }
 
-// handleDownloadScript serves installation scripts
-// handleDownloadScript godoc
+// detectScheme detects the HTTP scheme (http/https) from the request
+// Checks multiple sources for reverse proxy compatibility
+func detectScheme(c *gin.Context) string {
+	// Check environment variable first (for forced HTTPS)
+	if os.Getenv("FORCE_HTTPS") == "true" || os.Getenv("FORCE_HTTPS") == "1" {
+		return "https"
+	}
+	
+	// Check X-Forwarded-Proto header (most common reverse proxy header)
+	xForwardedProto := c.GetHeader("X-Forwarded-Proto")
+	if xForwardedProto == "https" {
+		return "https"
+	}
+	
+	// Check X-Forwarded-Ssl header (alternative header)
+	if c.GetHeader("X-Forwarded-Ssl") == "on" {
+		return "https"
+	}
+	
+	// Check X-Forwarded-Scheme header (another alternative)
+	if c.GetHeader("X-Forwarded-Scheme") == "https" {
+		return "https"
+	}
+	
+	// Check direct TLS connection (no reverse proxy)
+	if c.Request.TLS != nil {
+		return "https"
+	}
+	
+	// Check Forwarded header (RFC 7239 standard)
+	forwarded := c.GetHeader("Forwarded")
+	if strings.Contains(strings.ToLower(forwarded), "proto=https") {
+		return "https"
+	}
+	
+	// Fallback: check Referer or Origin header for https
+	referer := c.GetHeader("Referer")
+	origin := c.GetHeader("Origin")
+	if strings.HasPrefix(strings.ToLower(referer), "https://") ||
+		strings.HasPrefix(strings.ToLower(origin), "https://") {
+		return "https"
+	}
+	
+	// Default to http
+	return "http"
+}
+
 // @Summary      Download installation script
 // @Description  Download installation script for Unix (install-agent.sh) or Windows (install-agent.ps1)
 // @Tags         downloads
@@ -240,27 +285,7 @@ func (h *Handler) handleDownloadScript(c *gin.Context) {
 
 	// Extract server URL from request
 	// Get scheme (http/https) - check multiple sources for reverse proxy compatibility
-	scheme := "http"
-	
-	// Check X-Forwarded-Proto header (most common reverse proxy header)
-	if c.GetHeader("X-Forwarded-Proto") == "https" {
-		scheme = "https"
-	} else if c.GetHeader("X-Forwarded-Ssl") == "on" {
-		// Check X-Forwarded-Ssl header (alternative header)
-		scheme = "https"
-	} else if c.GetHeader("X-Forwarded-Scheme") == "https" {
-		// Check X-Forwarded-Scheme header (another alternative)
-		scheme = "https"
-	} else if c.Request.TLS != nil {
-		// Direct TLS connection (no reverse proxy)
-		scheme = "https"
-	} else {
-		// Check Forwarded header (RFC 7239 standard)
-		forwarded := c.GetHeader("Forwarded")
-		if strings.Contains(strings.ToLower(forwarded), "proto=https") {
-			scheme = "https"
-		}
-	}
+	scheme := detectScheme(c)
 	
 	// Get host from request
 	host := c.GetHeader("Host")
