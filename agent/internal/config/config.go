@@ -9,8 +9,10 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"runtime"
 	"strings"
+	"unicode"
 
 	"gopkg.in/yaml.v3"
 )
@@ -78,8 +80,21 @@ func cleanTokenValue(token string) string {
 		return ""
 	}
 	
-	// First, trim all leading and trailing whitespace
-	token = strings.TrimSpace(token)
+	// Remove UTF-8 BOM if present
+	if len(token) >= 3 && token[0] == 0xEF && token[1] == 0xBB && token[2] == 0xBF {
+		token = token[3:]
+	}
+	
+	// Remove all types of whitespace and invisible characters
+	// Use a more comprehensive approach to remove all Unicode whitespace
+	var cleaned strings.Builder
+	for _, r := range token {
+		// Skip all Unicode whitespace characters and zero-width characters
+		if !unicode.IsSpace(r) && r != '\u200B' && r != '\u200C' && r != '\u200D' && r != '\uFEFF' {
+			cleaned.WriteRune(r)
+		}
+	}
+	token = cleaned.String()
 	
 	// Remove any inline comments that might have been parsed as part of the value
 	// YAML parser should handle this correctly, but we'll be extra safe
@@ -112,14 +127,47 @@ func cleanTokenValue(token string) string {
 		return ""
 	}
 	
-	// Remove any newlines, tabs, or other whitespace characters that might have been included
-	// Base64 URL-encoded tokens shouldn't contain these characters
-	token = strings.ReplaceAll(token, "\n", "")
-	token = strings.ReplaceAll(token, "\r", "")
-	token = strings.ReplaceAll(token, "\t", "")
-	
-	// Final trim
+	// Final trim to remove any remaining leading/trailing whitespace
 	return strings.TrimSpace(token)
+}
+
+// ValidateTokenFormat validates that a token matches the expected base64 URL encoding pattern
+// Base64 URL encoding uses: A-Z, a-z, 0-9, - (hyphen), _ (underscore)
+// No padding characters (=) in the middle, only at the end
+func ValidateTokenFormat(token string) error {
+	if token == "" {
+		return fmt.Errorf("token is empty")
+	}
+	
+	// Base64 URL encoding pattern: ^[A-Za-z0-9_-]+$
+	// Tokens are typically 32-44 characters (32 bytes = 43 chars, 44 with padding)
+	base64URLPattern := regexp.MustCompile(`^[A-Za-z0-9_-]+$`)
+	if !base64URLPattern.MatchString(token) {
+		return fmt.Errorf("token format is invalid: tokens must be base64 URL encoded strings (A-Z, a-z, 0-9, -, _)")
+	}
+	
+	// Check length (base64 encoding of 32 bytes = 43 chars, with padding = 44)
+	// Allow some flexibility: 20-100 characters
+	if len(token) < 20 {
+		return fmt.Errorf("token is too short: expected at least 20 characters, got %d", len(token))
+	}
+	if len(token) > 100 {
+		return fmt.Errorf("token is too long: expected at most 100 characters, got %d", len(token))
+	}
+	
+	return nil
+}
+
+// MaskToken returns a masked version of a token for display in error messages
+// Shows first 5 and last 5 characters: "YVza5...b_rc="
+func MaskToken(token string) string {
+	if token == "" {
+		return "<empty>"
+	}
+	if len(token) <= 10 {
+		return strings.Repeat("*", len(token))
+	}
+	return token[:5] + "..." + token[len(token)-5:]
 }
 
 // mergeIgnorePatterns merges ignore patterns from multiple sources

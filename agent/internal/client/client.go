@@ -17,6 +17,8 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/kk/kkartifact-agent/internal/config"
 )
 
 // Client is the API client
@@ -27,12 +29,20 @@ type Client struct {
 }
 
 // New creates a new API client with optimized HTTP transport for high concurrency
-func New(serverURL, token string) *Client {
+func New(serverURL, token string) (*Client, error) {
 	// Clean token: remove any existing "Bearer " prefix to avoid duplication
 	cleanToken := strings.TrimSpace(token)
 	if strings.HasPrefix(cleanToken, "Bearer ") {
 		cleanToken = strings.TrimPrefix(cleanToken, "Bearer ")
 		cleanToken = strings.TrimSpace(cleanToken)
+	}
+	
+	// Validate token format before creating client (only if token is provided)
+	// Empty token is allowed for public endpoints (e.g., update command)
+	if cleanToken != "" {
+		if err := config.ValidateTokenFormat(cleanToken); err != nil {
+			return nil, fmt.Errorf("token validation failed: %w. Token preview: %s", err, config.MaskToken(cleanToken))
+		}
 	}
 
 	// Configure HTTP transport with connection pooling for better performance
@@ -58,7 +68,7 @@ func New(serverURL, token string) *Client {
 			Transport: transport,
 			Timeout:   600 * time.Second, // Total request timeout (10 minutes for large files)
 		},
-	}
+	}, nil
 }
 
 // UploadInitRequest represents upload init request
@@ -140,6 +150,9 @@ func (c *Client) InitUpload(project, app, version string, fileCount int) (*Uploa
 		fmt.Fprintf(os.Stderr, "Response Body: %s\n", string(body))
 		fmt.Fprintf(os.Stderr, "====================================\n\n")
 
+		if resp.StatusCode == http.StatusUnauthorized {
+			return nil, fmt.Errorf("upload init failed with status %d (unauthorized)\nToken preview: %s\nToken length: %d\nPlease verify:\n  - Token is correct in config file (global: /etc/kkArtifact/config.yml or local: .kkartifact.yml)\n  - Token exists and is valid in the server\n  - Token has required permissions (push)\nServer response: %s", resp.StatusCode, config.MaskToken(c.token), len(c.token), string(body))
+		}
 		return nil, fmt.Errorf("upload init failed with status %d: %s", resp.StatusCode, string(body))
 	}
 
@@ -245,7 +258,7 @@ func (c *Client) UploadFile(project, app, hash, filePath, localPath string) erro
 		fmt.Fprintf(os.Stderr, "==============================\n\n")
 
 		if resp.StatusCode == http.StatusUnauthorized {
-			return fmt.Errorf("upload failed with status %d (unauthorized): %s. Please check your token in the config file", resp.StatusCode, string(body))
+			return fmt.Errorf("upload failed with status %d (unauthorized)\nToken preview: %s\nToken length: %d\nPlease verify:\n  - Token is correct in config file (global: /etc/kkArtifact/config.yml or local: .kkartifact.yml)\n  - Token exists and is valid in the server\n  - Token has required permissions (push)\nServer response: %s", resp.StatusCode, config.MaskToken(c.token), len(c.token), string(body))
 		}
 		return fmt.Errorf("upload failed with status %d: %s", resp.StatusCode, string(body))
 	}
@@ -312,6 +325,9 @@ func (c *Client) FinishUpload(req interface{}) error {
 		fmt.Fprintf(os.Stderr, "Response Body: %s\n", string(body))
 		fmt.Fprintf(os.Stderr, "======================================\n\n")
 
+		if resp.StatusCode == http.StatusUnauthorized {
+			return fmt.Errorf("finish upload failed with status %d (unauthorized)\nToken preview: %s\nToken length: %d\nPlease verify:\n  - Token is correct in config file (global: /etc/kkArtifact/config.yml or local: .kkartifact.yml)\n  - Token exists and is valid in the server\n  - Token has required permissions (push)\nServer response: %s", resp.StatusCode, config.MaskToken(c.token), len(c.token), string(body))
+		}
 		return fmt.Errorf("finish upload failed with status %d: %s", resp.StatusCode, string(body))
 	}
 
@@ -345,10 +361,10 @@ func (c *Client) GetManifest(project, app, version string) (interface{}, error) 
 		body, _ := io.ReadAll(resp.Body)
 		errorMsg := fmt.Sprintf("get manifest failed with status %d", resp.StatusCode)
 		if resp.StatusCode == http.StatusUnauthorized {
-			errorMsg += " (unauthorized). Please check your token in the config file (global: /etc/kkArtifact/config.yml or local: .kkartifact.yml)"
+			errorMsg += fmt.Sprintf(" (unauthorized)\nToken preview: %s\nToken length: %d\nPlease verify:\n  - Token is correct in config file (global: /etc/kkArtifact/config.yml or local: .kkartifact.yml)\n  - Token exists and is valid in the server\n  - Token has required permissions (pull)", config.MaskToken(c.token), len(c.token))
 		}
 		if len(body) > 0 {
-			errorMsg += fmt.Sprintf(": %s", string(body))
+			errorMsg += fmt.Sprintf("\nServer response: %s", string(body))
 		}
 		return nil, fmt.Errorf(errorMsg)
 	}
@@ -394,10 +410,10 @@ func (c *Client) GetLatestVersion(project, app string) (*LatestVersionResponse, 
 		body, _ := io.ReadAll(resp.Body)
 		errorMsg := fmt.Sprintf("get latest version failed with status %d", resp.StatusCode)
 		if resp.StatusCode == http.StatusUnauthorized {
-			errorMsg += " (unauthorized). Please check your token in the config file (global: /etc/kkArtifact/config.yml or local: .kkartifact.yml)"
+			errorMsg += fmt.Sprintf(" (unauthorized)\nToken preview: %s\nToken length: %d\nPlease verify:\n  - Token is correct in config file (global: /etc/kkArtifact/config.yml or local: .kkartifact.yml)\n  - Token exists and is valid in the server\n  - Token has required permissions (pull)", config.MaskToken(c.token), len(c.token))
 		}
 		if len(body) > 0 {
-			errorMsg += fmt.Sprintf(": %s", string(body))
+			errorMsg += fmt.Sprintf("\nServer response: %s", string(body))
 		}
 		return nil, fmt.Errorf(errorMsg)
 	}

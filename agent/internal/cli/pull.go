@@ -101,13 +101,10 @@ func runPull(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("token is required but not found in config. Please check:\n  - Global config: /etc/kkArtifact/config.yml\n  - Local config: %s\n  - Or use --token flag", pullConfig)
 	}
 
-	// Debug: Print token info (masked for security)
-	if len(cfg.Token) > 10 {
-		fmt.Fprintf(os.Stderr, "Using token: %s...%s (length: %d)\n", cfg.Token[:5], cfg.Token[len(cfg.Token)-5:], len(cfg.Token))
-	} else {
-		fmt.Fprintf(os.Stderr, "Using token: %s (length: %d)\n", strings.Repeat("*", len(cfg.Token)), len(cfg.Token))
+	// Validate token format before creating client
+	if err := config.ValidateTokenFormat(cfg.Token); err != nil {
+		return fmt.Errorf("token validation failed: %w\nToken preview: %s\nConfig file: %s", err, config.MaskToken(cfg.Token), pullConfig)
 	}
-	fmt.Fprintf(os.Stderr, "Server URL: %s\n", cfg.ServerURL)
 
 	// Use config values if not provided via flags
 	if pullProject == "" {
@@ -128,8 +125,11 @@ func runPull(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
 
-	// Create API client
-	apiClient := client.New(cfg.ServerURL, cfg.Token)
+	// Create API client with validation
+	apiClient, err := client.New(cfg.ServerURL, cfg.Token)
+	if err != nil {
+		return fmt.Errorf("failed to create API client: %w", err)
+	}
 
 	// Handle "latest" version
 	actualVersion := pullVersion

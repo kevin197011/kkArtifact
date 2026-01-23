@@ -201,6 +201,8 @@ func (ta *TokenAuthenticator) AuthenticateAPIToken(req *http.Request) (*TokenInf
 	}
 
 	token := strings.TrimPrefix(authHeader, "Bearer ")
+	// Trim whitespace from token to handle edge cases
+	token = strings.TrimSpace(token)
 
 	// Check cache first (using token as key)
 	if cached, ok := ta.tokenCache.Load(token); ok {
@@ -244,7 +246,18 @@ func (ta *TokenAuthenticator) AuthenticateAPIToken(req *http.Request) (*TokenInf
 		}
 	}
 
-	return nil, fmt.Errorf("invalid token")
+	// Log authentication failure (without exposing full token)
+	maskedToken := maskTokenForLogging(token)
+	return nil, fmt.Errorf("invalid token (masked: %s)", maskedToken)
+}
+
+// maskTokenForLogging returns a masked version of a token for logging
+// Shows first 5 and last 5 characters: "YVza5...b_rc="
+func maskTokenForLogging(token string) string {
+	if len(token) <= 10 {
+		return strings.Repeat("*", len(token))
+	}
+	return token[:5] + "..." + token[len(token)-5:]
 }
 
 // InvalidateTokenCache invalidates the token cache (call this when tokens are created/deleted)

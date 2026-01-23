@@ -102,6 +102,11 @@ func runPush(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("token is required but not found in config. Please check:\n  - Global config: /etc/kkArtifact/config.yml\n  - Local config: %s\n  - Or use --token flag", pushConfig)
 	}
 
+	// Validate token format before creating client
+	if err := config.ValidateTokenFormat(cfg.Token); err != nil {
+		return fmt.Errorf("token validation failed: %w\nToken preview: %s\nConfig file: %s", err, config.MaskToken(cfg.Token), pushConfig)
+	}
+
 	// Use config values if not provided via flags
 	if pushProject == "" {
 		pushProject = cfg.Project
@@ -131,8 +136,11 @@ func runPush(cmd *cobra.Command, args []string) error {
 
 	fmt.Printf("Found %d files\n", len(m.Files))
 
-	// Create API client
-	apiClient := client.New(cfg.ServerURL, cfg.Token)
+	// Create API client with validation
+	apiClient, err := client.New(cfg.ServerURL, cfg.Token)
+	if err != nil {
+		return fmt.Errorf("failed to create API client: %w", err)
+	}
 
 	// Initialize upload
 	fmt.Println("Initializing upload...")

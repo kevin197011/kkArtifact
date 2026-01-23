@@ -11,6 +11,8 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+
+	"github.com/kk/kkartifact-agent/internal/config"
 )
 
 // DownloadFile downloads a file from the server with resume support
@@ -62,7 +64,15 @@ func (c *Client) fullDownload(project, app, version, filePath, localPath string)
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusPartialContent {
-		return fmt.Errorf("download failed with status %d", resp.StatusCode)
+		body, _ := io.ReadAll(resp.Body)
+		errorMsg := fmt.Sprintf("download failed with status %d", resp.StatusCode)
+		if resp.StatusCode == http.StatusUnauthorized {
+			errorMsg += fmt.Sprintf(" (unauthorized)\nToken preview: %s\nToken length: %d\nPlease verify:\n  - Token is correct in config file (global: /etc/kkArtifact/config.yml or local: .kkartifact.yml)\n  - Token exists and is valid in the server\n  - Token has required permissions (pull)", config.MaskToken(c.token), len(c.token))
+		}
+		if len(body) > 0 {
+			errorMsg += fmt.Sprintf("\nServer response: %s", string(body))
+		}
+		return fmt.Errorf(errorMsg)
 	}
 
 	// Create directory if needed
@@ -130,7 +140,15 @@ func (c *Client) resumeDownload(project, app, version, filePath, localPath strin
 		// Server doesn't support Range requests, fallback to full download
 		return c.fullDownload(project, app, version, filePath, localPath)
 	} else {
-		return fmt.Errorf("resume download failed with status %d", resp.StatusCode)
+		body, _ := io.ReadAll(resp.Body)
+		errorMsg := fmt.Sprintf("resume download failed with status %d", resp.StatusCode)
+		if resp.StatusCode == http.StatusUnauthorized {
+			errorMsg += fmt.Sprintf(" (unauthorized)\nToken preview: %s\nToken length: %d\nPlease verify:\n  - Token is correct in config file (global: /etc/kkArtifact/config.yml or local: .kkartifact.yml)\n  - Token exists and is valid in the server\n  - Token has required permissions (pull)", config.MaskToken(c.token), len(c.token))
+		}
+		if len(body) > 0 {
+			errorMsg += fmt.Sprintf("\nServer response: %s", string(body))
+		}
+		return fmt.Errorf(errorMsg)
 	}
 }
 

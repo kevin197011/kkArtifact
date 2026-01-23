@@ -44,8 +44,11 @@ func runUpdate(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to load config: %w", err)
 	}
 
-	// Create API client (no token needed for public endpoints)
-	apiClient := client.New(cfg.ServerURL, "")
+	// Create API client (no token needed for public endpoints like update)
+	apiClient, err := client.New(cfg.ServerURL, "")
+	if err != nil {
+		return fmt.Errorf("failed to create API client: %w", err)
+	}
 
 	// Get current binary path
 	currentBinary, err := os.Executable()

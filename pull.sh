@@ -1,4 +1,4 @@
-./bin/kkartifact-agent pull \
+kkartifact-agent pull \
   --project devops \
   --app app01 \
   --version test-1767338416 \
