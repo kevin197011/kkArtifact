@@ -53,36 +53,72 @@ function Download-Binary {
     )
     
     try {
-        $response = Invoke-WebRequest -Uri $Url -OutFile $OutputPath -ErrorAction Stop
-        
-        # Verify HTTP status code
-        if ($response.StatusCode -ne 200) {
-            Write-Host "Error: Download failed with HTTP status $($response.StatusCode)" -ForegroundColor Red
-            if (Test-Path $OutputPath) {
-                Remove-Item $OutputPath -Force
-            }
-            exit 1
-        }
-        
-        # Verify downloaded file is not JSON (error response)
-        if (Test-Path $OutputPath) {
-            $firstLine = Get-Content $OutputPath -TotalCount 1 -ErrorAction SilentlyContinue
-            if ($firstLine -and $firstLine.Trim().StartsWith("{")) {
-                Write-Host "Error: Server returned JSON error instead of binary file" -ForegroundColor Red
-                Write-Host "Response content:"
-                Get-Content $OutputPath -TotalCount 5
-                Remove-Item $OutputPath -Force
+        # Use System.Net.WebClient for reliable binary file download
+        # WebClient.DownloadFile will throw an exception for non-2xx status codes
+        $webClient = New-Object System.Net.WebClient
+        try {
+            # Download file (will throw exception if status code is not 2xx)
+            $webClient.DownloadFile($Url, $OutputPath)
+            
+            # Verify file was created and has reasonable size (at least 1KB for a binary)
+            if (-not (Test-Path $OutputPath) -or (Get-Item $OutputPath).Length -lt 1024) {
+                Write-Host "Error: Downloaded file is too small or empty (may be an error response)" -ForegroundColor Red
+                if (Test-Path $OutputPath) {
+                    # Check if it's a JSON error
+                    $firstLine = Get-Content $OutputPath -TotalCount 1 -ErrorAction SilentlyContinue
+                    if ($firstLine -and $firstLine.Trim().StartsWith("{")) {
+                        Write-Host "Error: Server returned JSON error instead of binary file" -ForegroundColor Red
+                        Write-Host "Response content:"
+                        Get-Content $OutputPath -TotalCount 10 -ErrorAction SilentlyContinue
+                    }
+                    Remove-Item $OutputPath -Force
+                }
                 exit 1
             }
+            
+        } finally {
+            $webClient.Dispose()
         }
+        
+    } catch [System.Net.WebException] {
+        # Handle HTTP errors (404, 500, etc.)
+        $statusCode = 0
+        $errorContent = ""
+        
+        if ($_.Exception.Response) {
+            $statusCode = [int]$_.Exception.Response.StatusCode
+            Write-Host "Error: Download failed with HTTP status $statusCode" -ForegroundColor Red
+            
+            # Try to read error response body
+            try {
+                $errorStream = $_.Exception.Response.GetResponseStream()
+                $reader = New-Object System.IO.StreamReader($errorStream)
+                $errorContent = $reader.ReadToEnd()
+                $reader.Close()
+                $errorStream.Close()
+                
+                if ($errorContent) {
+                    Write-Host "Server returned error:" -ForegroundColor Red
+                    Write-Host $errorContent
+                }
+            } catch {
+                # Ignore errors reading error response
+            }
+        } else {
+            Write-Host "Error: Failed to download binary: $_" -ForegroundColor Red
+        }
+        
+        # Clean up any partial download
+        if (Test-Path $OutputPath) {
+            Remove-Item $OutputPath -Force -ErrorAction SilentlyContinue
+        }
+        exit 1
+        
     } catch {
         Write-Host "Error: Failed to download binary: $_" -ForegroundColor Red
+        
+        # Clean up any partial download
         if (Test-Path $OutputPath) {
-            $content = Get-Content $OutputPath -Raw -ErrorAction SilentlyContinue
-            if ($content -and $content.Trim().StartsWith("{")) {
-                Write-Host "Server returned error response:" -ForegroundColor Red
-                Write-Host $content
-            }
             Remove-Item $OutputPath -Force -ErrorAction SilentlyContinue
         }
         exit 1

@@ -97,11 +97,48 @@ docker-compose down
 - **API Server**: http://localhost:8080
 - **默认管理员账号**: `admin` / `admin123`
 
+### 安装 Agent（命令行工具）
+
+**快速安装（推荐）：**
+```bash
+# Linux/macOS
+curl -fsSL http://localhost:8080/api/v1/downloads/scripts/install-agent.sh | bash
+
+# Windows (PowerShell)
+irm http://localhost:8080/api/v1/downloads/scripts/install-agent.ps1 | iex
+```
+
+安装脚本会自动检测平台、下载对应二进制文件并配置服务器地址。更多安装方式请参考下方详细说明。
+
 ### 使用 Agent
 
 #### 安装
 
-**方式一：从 GitHub Releases 下载（推荐）**
+**方式一：使用安装脚本（推荐，最简单）**
+
+安装脚本会自动检测平台并下载对应二进制文件，无需手动选择：
+
+**Linux/macOS/Unix-like 系统：**
+```bash
+curl -fsSL http://your-server:8080/api/v1/downloads/scripts/install-agent.sh | bash
+```
+
+**Windows (PowerShell)：**
+```powershell
+irm http://your-server:8080/api/v1/downloads/scripts/install-agent.ps1 | iex
+```
+
+**特性：**
+- ✅ 自动检测平台和架构（Linux/macOS/Windows, amd64/arm64）
+- ✅ 自动下载对应平台的二进制文件
+- ✅ 自动安装到系统路径（`/usr/local/bin` 或 `~/.local/bin`）
+- ✅ 自动创建全局配置文件（`/etc/kkArtifact/config.yml`）
+- ✅ 自动配置 `server_url` 为当前服务器地址
+- ✅ 强制覆盖旧版本，无需手动删除
+
+**注意**：将 `http://your-server:8080` 替换为你的实际服务器地址。
+
+**方式二：从 GitHub Releases 下载**
 
 访问 [GitHub Releases](https://github.com/kevin197011/kkArtifact/releases) 下载对应平台的二进制文件：
 
@@ -117,7 +154,7 @@ chmod +x kkartifact-agent-linux-amd64
 mv kkartifact-agent-linux-amd64 /usr/local/bin/kkartifact-agent
 ```
 
-**方式二：从源码构建**
+**方式三：从源码构建**
 
 ```bash
 # 从源码构建

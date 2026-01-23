@@ -60,8 +60,12 @@ download_binary() {
     trap "rm -f ${temp_output}" EXIT
     
     if command -v curl >/dev/null 2>&1; then
-        # Use -w to write HTTP code to stderr, download to temp file first
-        http_code=$(curl -L -w "%{http_code}" -o "${temp_output}" -s "${url}" 2>&1 | tail -n1)
+        # Download to temp file and get HTTP status code
+        # -w "%{http_code}" outputs status code to stdout (not affected by -s)
+        # -o writes response body to file
+        # -s silences progress bar but -w output still goes to stdout
+        # Don't merge stderr (2>&1) to avoid mixing error messages with status code
+        http_code=$(curl -L -w "%{http_code}" -o "${temp_output}" -s "${url}" 2>/dev/null)
         # Move temp file to output if successful
         if [ "${http_code}" = "200" ]; then
             mv "${temp_output}" "${output}"
@@ -69,11 +73,24 @@ download_binary() {
             mv "${temp_output}" "${output}" 2>/dev/null || true
         fi
     elif command -v wget >/dev/null 2>&1; then
-        if wget -O "${temp_output}" "${url}" 2>&1 | grep -q "200 OK"; then
-            http_code="200"
+        # Use --server-response to get HTTP headers, then extract status code
+        # --server-response prints headers to stderr, -O writes to file
+        local wget_output=$(wget --server-response --quiet -O "${temp_output}" "${url}" 2>&1)
+        # Extract HTTP status code from headers (format: "  HTTP/1.1 200 OK" or "HTTP/1.1 200 OK")
+        http_code=$(echo "${wget_output}" | grep -iE "^[[:space:]]*HTTP/" | tail -n1 | awk '{print $2}')
+        # If status code extraction failed, check if file was downloaded successfully
+        if [ -z "${http_code}" ] || [ "${http_code}" = "000" ]; then
+            # Check if file exists and has reasonable size (fallback)
+            if [ -f "${temp_output}" ] && [ -s "${temp_output}" ]; then
+                http_code="200"
+            else
+                http_code="000"
+            fi
+        fi
+        # Move temp file to output if successful
+        if [ "${http_code}" = "200" ]; then
             mv "${temp_output}" "${output}"
         else
-            http_code="000"
             mv "${temp_output}" "${output}" 2>/dev/null || true
         fi
     else
