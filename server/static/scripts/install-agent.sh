@@ -15,8 +15,15 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
-# Default server URL (can be overridden with SERVER_URL environment variable)
-SERVER_URL="${SERVER_URL:-http://localhost:8080}"
+# Server URL is automatically injected by the server when serving this script
+# This allows the script to work with simple "curl URL | bash" format
+# Priority: 1) Injected SERVER_URL, 2) SERVER_URL env var, 3) Default
+# SERVER_URL will be replaced by the server at runtime
+SERVER_URL="${SERVER_URL:-__SERVER_URL__}"
+# If still contains placeholder, try environment variable or default
+if [ "$SERVER_URL" = "__SERVER_URL__" ]; then
+    SERVER_URL="${SERVER_URL_ENV:-http://localhost:8080}"
+fi
 
 # Detect platform and architecture
 detect_platform() {
@@ -43,30 +50,84 @@ detect_platform() {
     echo "${os}/${arch}"
 }
 
-# Get agent version info from server
-get_version_info() {
-    local version_url="${SERVER_URL}/api/v1/downloads/agent/version"
-    if command -v curl >/dev/null 2>&1; then
-        curl -s "${version_url}"
-    elif command -v wget >/dev/null 2>&1; then
-        wget -qO- "${version_url}"
-    else
-        echo "Error: curl or wget is required but not found" >&2
-        exit 1
-    fi
-}
-
 # Download binary
 download_binary() {
     local url="$1"
     local output="$2"
     
+    local http_code=""
+    local temp_output=$(mktemp)
+    trap "rm -f ${temp_output}" EXIT
+    
     if command -v curl >/dev/null 2>&1; then
-        curl -L -o "${output}" "${url}"
+        # Download to temp file and get HTTP status code
+        # -w "%{http_code}" outputs status code to stdout (not affected by -s)
+        # -o writes response body to file
+        # -s silences progress bar but -w output still goes to stdout
+        # Don't merge stderr (2>&1) to avoid mixing error messages with status code
+        http_code=$(curl -L -w "%{http_code}" -o "${temp_output}" -s "${url}" 2>/dev/null)
+        # Move temp file to output if successful
+        if [ "${http_code}" = "200" ]; then
+            mv "${temp_output}" "${output}"
+        else
+            mv "${temp_output}" "${output}" 2>/dev/null || true
+        fi
     elif command -v wget >/dev/null 2>&1; then
-        wget -O "${output}" "${url}"
+        # Use --server-response to get HTTP headers, then extract status code
+        # --server-response prints headers to stderr, -O writes to file
+        local wget_output=$(wget --server-response --quiet -O "${temp_output}" "${url}" 2>&1)
+        # Extract HTTP status code from headers (format: "  HTTP/1.1 200 OK" or "HTTP/1.1 200 OK")
+        http_code=$(echo "${wget_output}" | grep -iE "^[[:space:]]*HTTP/" | tail -n1 | awk '{print $2}')
+        # If status code extraction failed, check if file was downloaded successfully
+        if [ -z "${http_code}" ] || [ "${http_code}" = "000" ]; then
+            # Check if file exists and has reasonable size (fallback)
+            if [ -f "${temp_output}" ] && [ -s "${temp_output}" ]; then
+                http_code="200"
+            else
+                http_code="000"
+            fi
+        fi
+        # Move temp file to output if successful
+        if [ "${http_code}" = "200" ]; then
+            mv "${temp_output}" "${output}"
+        else
+            mv "${temp_output}" "${output}" 2>/dev/null || true
+        fi
     else
         echo "Error: curl or wget is required but not found" >&2
+        exit 1
+    fi
+    
+    # Check HTTP status code
+    if [ "${http_code}" != "200" ]; then
+        echo -e "${RED}Error: Download failed with HTTP status ${http_code}${NC}" >&2
+        # Check if output is JSON error response
+        if [ -f "${output}" ] && head -n1 "${output}" 2>/dev/null | grep -q "^{"; then
+            echo "Server returned error:" >&2
+            cat "${output}" >&2
+            echo "" >&2
+        fi
+        rm -f "${output}"
+        exit 1
+    fi
+    
+    # Verify downloaded file is not JSON (error response)
+    if [ -f "${output}" ] && head -n1 "${output}" 2>/dev/null | grep -q "^{"; then
+        echo -e "${RED}Error: Server returned JSON error instead of binary file${NC}" >&2
+        echo "Response content:" >&2
+        head -n5 "${output}" >&2
+        rm -f "${output}"
+        exit 1
+    fi
+    
+    # Verify file is not empty and has reasonable size (at least 1KB for a binary)
+    if [ ! -s "${output}" ] || [ $(stat -f%z "${output}" 2>/dev/null || stat -c%s "${output}" 2>/dev/null || echo 0) -lt 1024 ]; then
+        echo -e "${RED}Error: Downloaded file is too small or empty (may be an error response)${NC}" >&2
+        if [ -f "${output}" ]; then
+            echo "File content (first 10 lines):" >&2
+            head -n10 "${output}" >&2
+        fi
+        rm -f "${output}"
         exit 1
     fi
 }
@@ -90,31 +151,8 @@ main() {
     
     echo -e "Detected platform: ${GREEN}${platform}${NC}"
     
-    # Get version info
-    echo "Fetching agent version information..."
-    local version_info=$(get_version_info)
-    if [ -z "${version_info}" ]; then
-        echo -e "${RED}Error: Failed to fetch version information from server${NC}" >&2
-        echo "Please check that the server is running at ${SERVER_URL}" >&2
-        exit 1
-    fi
-    
-    # Extract binary filename for this platform
-    local filename=""
-    if command -v jq >/dev/null 2>&1; then
-        filename=$(echo "${version_info}" | jq -r ".binaries[] | select(.platform == \"${platform}\") | .filename")
-    elif command -v python3 >/dev/null 2>&1; then
-        filename=$(echo "${version_info}" | python3 -c "import sys, json; data=json.load(sys.stdin); print(next((b['filename'] for b in data['binaries'] if b['platform'] == '${platform}'), ''))")
-    else
-        # Fallback: construct filename manually
-        filename="kkartifact-agent-${os}-${arch}"
-    fi
-    
-    if [ -z "${filename}" ] || [ "${filename}" = "null" ]; then
-        echo -e "${RED}Error: No binary available for platform ${platform}${NC}" >&2
-        exit 1
-    fi
-    
+    # Construct binary filename directly based on platform
+    local filename="kkartifact-agent-${os}-${arch}"
     echo -e "Target binary: ${GREEN}${filename}${NC}"
     
     # Determine installation path
@@ -153,9 +191,9 @@ main() {
     # Make executable
     chmod +x "${temp_file}"
     
-    # Install (move to target location)
+    # Install (move to target location) - force overwrite existing version
     if [ -f "${install_path}" ]; then
-        echo -e "${YELLOW}Warning: ${install_path} already exists. Overwriting...${NC}"
+        rm -f "${install_path}"
     fi
     
     mv "${temp_file}" "${install_path}"
@@ -168,6 +206,9 @@ main() {
     
     # Get version
     local agent_version=$("${install_path}" version 2>/dev/null | head -n1 || echo "unknown")
+    
+    # Create global configuration file
+    create_global_config
     
     echo ""
     echo -e "${GREEN}✓ Installation successful!${NC}"
@@ -184,6 +225,73 @@ main() {
     else
         echo "  Add to ~/.bashrc or ~/.zshrc:"
         echo "    export PATH=\"\${HOME}/.local/bin:\${PATH}\""
+    fi
+}
+
+# Create global configuration file
+create_global_config() {
+    local config_dir="/etc/kkArtifact"
+    local config_file="${config_dir}/config.yml"
+    
+    # Check if we can write to /etc (requires root/sudo)
+    if [ ! -w "/etc" ]; then
+        echo -e "${YELLOW}Note: Cannot create global config at ${config_file} (requires root privileges)${NC}"
+        echo "You can create it manually later with:"
+        echo "  sudo mkdir -p ${config_dir}"
+        echo "  sudo tee ${config_file} > /dev/null <<EOF"
+        echo "server_url: ${SERVER_URL}"
+        echo "EOF"
+        return 0
+    fi
+    
+    # Create config directory if it doesn't exist
+    if [ ! -d "${config_dir}" ]; then
+        mkdir -p "${config_dir}"
+        echo "Created global config directory: ${config_dir}"
+    fi
+    
+    # Create or update config file
+    if [ -f "${config_file}" ]; then
+        # Check if server_url needs to be updated (if it's localhost or placeholder)
+        local current_url=$(grep -E "^server_url:" "${config_file}" 2>/dev/null | sed 's/^server_url:[[:space:]]*//' | tr -d '"' || echo "")
+        if [ -z "${current_url}" ] || [ "${current_url}" = "http://localhost:8080" ] || [ "${current_url}" = "__SERVER_URL__" ]; then
+            # Update server_url if it's using default/placeholder value
+            if command -v sed >/dev/null 2>&1; then
+                # Use sed to update server_url line
+                if grep -q "^server_url:" "${config_file}"; then
+                    sed -i "s|^server_url:.*|server_url: ${SERVER_URL}|" "${config_file}"
+                    echo -e "${GREEN}✓ Updated server_url in global config file: ${config_file}${NC}"
+                    echo "  Updated to: ${SERVER_URL}"
+                else
+                    # Add server_url if it doesn't exist
+                    sed -i "/^# kkArtifact Agent Global Configuration/a\\server_url: ${SERVER_URL}" "${config_file}"
+                    echo -e "${GREEN}✓ Added server_url to global config file: ${config_file}${NC}"
+                fi
+            else
+                echo -e "${YELLOW}Global config file exists but server_url may need updating${NC}"
+                echo "  Current: ${current_url:-not set}"
+                echo "  Should be: ${SERVER_URL}"
+                echo "  Please update manually if needed."
+            fi
+        else
+            echo -e "${YELLOW}Global config file already exists: ${config_file}${NC}"
+            echo "  Current server_url: ${current_url}"
+            echo "  Skipping update to preserve existing settings."
+        fi
+    else
+        cat > "${config_file}" <<EOF
+# kkArtifact Agent Global Configuration
+# This file is automatically created by the installation script
+# You can modify this file to change global settings
+
+server_url: ${SERVER_URL}
+# token: YOUR_TOKEN_HERE  # Uncomment and set your token here
+# concurrency: 50          # Number of concurrent uploads/downloads (default: 50)
+# ignore: []               # Global ignore patterns
+EOF
+        chmod 644 "${config_file}"
+        echo -e "${GREEN}✓ Created global config file: ${config_file}${NC}"
+        echo "  You can edit this file to set your token and other global settings."
     fi
 }
 

@@ -10,8 +10,15 @@
 
 $ErrorActionPreference = "Stop"
 
-# Default server URL (can be overridden with SERVER_URL environment variable)
-$SERVER_URL = if ($env:SERVER_URL) { $env:SERVER_URL } else { "http://localhost:8080" }
+# Server URL is automatically injected by the server when serving this script
+# This allows the script to work with simple "irm URL | iex" format
+# Priority: 1) Injected SERVER_URL, 2) SERVER_URL env var, 3) Default
+# SERVER_URL will be replaced by the server at runtime
+$SERVER_URL = if ($env:SERVER_URL) { $env:SERVER_URL } else { "__SERVER_URL__" }
+# If still contains placeholder, try environment variable or default
+if ($SERVER_URL -eq "__SERVER_URL__") {
+    $SERVER_URL = if ($env:SERVER_URL_ENV) { $env:SERVER_URL_ENV } else { "http://localhost:8080" }
+}
 
 # Detect platform and architecture
 function Get-Platform {
@@ -38,20 +45,6 @@ function Get-Platform {
     return "${os}/${arch}"
 }
 
-# Get agent version info from server
-function Get-VersionInfo {
-    $versionUrl = "${SERVER_URL}/api/v1/downloads/agent/version"
-    
-    try {
-        $response = Invoke-RestMethod -Uri $versionUrl -Method Get -ErrorAction Stop
-        return $response
-    } catch {
-        Write-Host "Error: Failed to fetch version information from server" -ForegroundColor Red
-        Write-Host "Please check that the server is running at ${SERVER_URL}" -ForegroundColor Red
-        exit 1
-    }
-}
-
 # Download binary
 function Download-Binary {
     param(
@@ -60,9 +53,74 @@ function Download-Binary {
     )
     
     try {
-        Invoke-WebRequest -Uri $Url -OutFile $OutputPath -ErrorAction Stop
+        # Use System.Net.WebClient for reliable binary file download
+        # WebClient.DownloadFile will throw an exception for non-2xx status codes
+        $webClient = New-Object System.Net.WebClient
+        try {
+            # Download file (will throw exception if status code is not 2xx)
+            $webClient.DownloadFile($Url, $OutputPath)
+            
+            # Verify file was created and has reasonable size (at least 1KB for a binary)
+            if (-not (Test-Path $OutputPath) -or (Get-Item $OutputPath).Length -lt 1024) {
+                Write-Host "Error: Downloaded file is too small or empty (may be an error response)" -ForegroundColor Red
+                if (Test-Path $OutputPath) {
+                    # Check if it's a JSON error
+                    $firstLine = Get-Content $OutputPath -TotalCount 1 -ErrorAction SilentlyContinue
+                    if ($firstLine -and $firstLine.Trim().StartsWith("{")) {
+                        Write-Host "Error: Server returned JSON error instead of binary file" -ForegroundColor Red
+                        Write-Host "Response content:"
+                        Get-Content $OutputPath -TotalCount 10 -ErrorAction SilentlyContinue
+                    }
+                    Remove-Item $OutputPath -Force
+                }
+                exit 1
+            }
+            
+        } finally {
+            $webClient.Dispose()
+        }
+        
+    } catch [System.Net.WebException] {
+        # Handle HTTP errors (404, 500, etc.)
+        $statusCode = 0
+        $errorContent = ""
+        
+        if ($_.Exception.Response) {
+            $statusCode = [int]$_.Exception.Response.StatusCode
+            Write-Host "Error: Download failed with HTTP status $statusCode" -ForegroundColor Red
+            
+            # Try to read error response body
+            try {
+                $errorStream = $_.Exception.Response.GetResponseStream()
+                $reader = New-Object System.IO.StreamReader($errorStream)
+                $errorContent = $reader.ReadToEnd()
+                $reader.Close()
+                $errorStream.Close()
+                
+                if ($errorContent) {
+                    Write-Host "Server returned error:" -ForegroundColor Red
+                    Write-Host $errorContent
+                }
+            } catch {
+                # Ignore errors reading error response
+            }
+        } else {
+            Write-Host "Error: Failed to download binary: $_" -ForegroundColor Red
+        }
+        
+        # Clean up any partial download
+        if (Test-Path $OutputPath) {
+            Remove-Item $OutputPath -Force -ErrorAction SilentlyContinue
+        }
+        exit 1
+        
     } catch {
         Write-Host "Error: Failed to download binary: $_" -ForegroundColor Red
+        
+        # Clean up any partial download
+        if (Test-Path $OutputPath) {
+            Remove-Item $OutputPath -Force -ErrorAction SilentlyContinue
+        }
         exit 1
     }
 }
@@ -78,21 +136,9 @@ function Main {
     $os, $arch = $platform -split '/'
     
     Write-Host "Detected platform: $platform" -ForegroundColor Green
-    Write-Host ""
     
-    # Get version info
-    Write-Host "Fetching agent version information..."
-    $versionInfo = Get-VersionInfo
-    
-    # Extract binary filename for this platform
-    $binary = $versionInfo.binaries | Where-Object { $_.platform -eq $platform } | Select-Object -First 1
-    
-    if (-not $binary) {
-        Write-Host "Error: No binary available for platform $platform" -ForegroundColor Red
-        exit 1
-    }
-    
-    $filename = $binary.filename
+    # Construct binary filename directly based on platform
+    $filename = "kkartifact-agent-${os}-${arch}.exe"
     Write-Host "Target binary: $filename" -ForegroundColor Green
     Write-Host ""
     
@@ -121,10 +167,9 @@ function Main {
         exit 1
     }
     
-    # Install (move to target location)
+    # Install (move to target location) - force overwrite existing version
     if (Test-Path $installPath) {
-        Write-Host "Warning: $installPath already exists. Overwriting..." -ForegroundColor Yellow
-        Remove-Item $installPath -Force
+        Remove-Item $installPath -Force -ErrorAction SilentlyContinue
     }
     
     Move-Item -Path $tempFile -Destination $installPath -Force
@@ -146,6 +191,9 @@ function Main {
         # Ignore version check errors
     }
     
+    # Create global configuration file
+    New-GlobalConfig
+    
     Write-Host ""
     Write-Host "✓ Installation successful!" -ForegroundColor Green
     Write-Host ""
@@ -158,6 +206,74 @@ function Main {
     Write-Host "Note: Add the installation directory to your PATH to use 'kkartifact-agent' command:"
     Write-Host "  [Environment]::SetEnvironmentVariable('Path', `$env:Path + ';$installDir', 'User')"
     Write-Host ""
+}
+
+# Create global configuration file
+function New-GlobalConfig {
+    # Windows global config location: C:\ProgramData\kkArtifact\config.yml
+    $configDir = Join-Path $env:ProgramData "kkArtifact"
+    $configFile = Join-Path $configDir "config.yml"
+    
+    # Check if we can write to ProgramData (requires admin privileges)
+    try {
+        if (-not (Test-Path $configDir)) {
+            New-Item -ItemType Directory -Path $configDir -Force | Out-Null
+            Write-Host "Created global config directory: $configDir"
+        }
+        
+        # Create or update config file
+        if (Test-Path $configFile) {
+            # Check if server_url needs to be updated (if it's localhost or placeholder)
+            $content = Get-Content $configFile -Raw -ErrorAction SilentlyContinue
+            $currentUrl = ""
+            if ($content) {
+                $match = [regex]::Match($content, '(?m)^server_url:\s*(.+)$')
+                if ($match.Success) {
+                    $currentUrl = $match.Groups[1].Value.Trim()
+                }
+            }
+            
+            if ([string]::IsNullOrEmpty($currentUrl) -or $currentUrl -eq "http://localhost:8080" -or $currentUrl -eq "__SERVER_URL__") {
+                # Update server_url if it's using default/placeholder value
+                $newContent = $content -replace '(?m)^server_url:\s*.+$', "server_url: $SERVER_URL"
+                if ($newContent -ne $content) {
+                    Set-Content -Path $configFile -Value $newContent -Encoding UTF8
+                    Write-Host "✓ Updated server_url in global config file: $configFile" -ForegroundColor Green
+                    Write-Host "  Updated to: $SERVER_URL"
+                } else {
+                    # Add server_url if it doesn't exist
+                    $newContent = $content + "`nserver_url: $SERVER_URL`n"
+                    Set-Content -Path $configFile -Value $newContent -Encoding UTF8
+                    Write-Host "✓ Added server_url to global config file: $configFile" -ForegroundColor Green
+                }
+            } else {
+                Write-Host "Global config file already exists: $configFile" -ForegroundColor Yellow
+                Write-Host "  Current server_url: $currentUrl"
+                Write-Host "  Skipping update to preserve existing settings."
+            }
+        } else {
+            $configContent = @"
+# kkArtifact Agent Global Configuration
+# This file is automatically created by the installation script
+# You can modify this file to change global settings
+
+server_url: $SERVER_URL
+# token: YOUR_TOKEN_HERE  # Uncomment and set your token here
+# concurrency: 50          # Number of concurrent uploads/downloads (default: 50)
+# ignore: []               # Global ignore patterns
+"@
+            Set-Content -Path $configFile -Value $configContent -Encoding UTF8
+            Write-Host "✓ Created global config file: $configFile" -ForegroundColor Green
+            Write-Host "  You can edit this file to set your token and other global settings."
+        }
+    } catch {
+        Write-Host "Note: Cannot create global config at $configFile (requires admin privileges)" -ForegroundColor Yellow
+        Write-Host "You can create it manually later with:"
+        Write-Host "  New-Item -ItemType Directory -Path `"$configDir`" -Force"
+        Write-Host "  @'"
+        Write-Host "server_url: $SERVER_URL"
+        Write-Host "'@ | Set-Content -Path `"$configFile`" -Encoding UTF8"
+    }
 }
 
 # Run main function
