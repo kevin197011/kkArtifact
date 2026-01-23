@@ -45,20 +45,6 @@ function Get-Platform {
     return "${os}/${arch}"
 }
 
-# Get agent version info from server
-function Get-VersionInfo {
-    $versionUrl = "${SERVER_URL}/api/v1/downloads/agent/version"
-    
-    try {
-        $response = Invoke-RestMethod -Uri $versionUrl -Method Get -ErrorAction Stop
-        return $response
-    } catch {
-        Write-Host "Error: Failed to fetch version information from server" -ForegroundColor Red
-        Write-Host "Please check that the server is running at ${SERVER_URL}" -ForegroundColor Red
-        exit 1
-    }
-}
-
 # Download binary
 function Download-Binary {
     param(
@@ -114,27 +100,9 @@ function Main {
     $os, $arch = $platform -split '/'
     
     Write-Host "Detected platform: $platform" -ForegroundColor Green
-    Write-Host ""
     
-    # Get version info
-    Write-Host "Fetching agent version information..."
-    $versionInfo = Get-VersionInfo
-    
-    # Extract binary filename for this platform
-    $filename = $null
-    if ($versionInfo.binaries -and $versionInfo.binaries.Count -gt 0) {
-        $binary = $versionInfo.binaries | Where-Object { $_.platform -eq $platform } | Select-Object -First 1
-        if ($binary -and $binary.filename) {
-            $filename = $binary.filename
-        }
-    }
-    
-    # Fallback: construct filename manually if not found
-    if (-not $filename) {
-        $filename = "kkartifact-agent-${os}-${arch}.exe"
-        Write-Host "Warning: Version info not available or binaries array is empty, using default filename: $filename" -ForegroundColor Yellow
-    }
-    
+    # Construct binary filename directly based on platform
+    $filename = "kkartifact-agent-${os}-${arch}.exe"
     Write-Host "Target binary: $filename" -ForegroundColor Green
     Write-Host ""
     

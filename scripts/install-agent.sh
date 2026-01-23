@@ -50,19 +50,6 @@ detect_platform() {
     echo "${os}/${arch}"
 }
 
-# Get agent version info from server
-get_version_info() {
-    local version_url="${SERVER_URL}/api/v1/downloads/agent/version"
-    if command -v curl >/dev/null 2>&1; then
-        curl -s "${version_url}"
-    elif command -v wget >/dev/null 2>&1; then
-        wget -qO- "${version_url}"
-    else
-        echo "Error: curl or wget is required but not found" >&2
-        exit 1
-    fi
-}
-
 # Download binary
 download_binary() {
     local url="$1"
@@ -147,37 +134,8 @@ main() {
     
     echo -e "Detected platform: ${GREEN}${platform}${NC}"
     
-    # Get version info
-    echo "Fetching agent version information..."
-    local version_info=$(get_version_info)
-    if [ -z "${version_info}" ]; then
-        echo -e "${RED}Error: Failed to fetch version information from server${NC}" >&2
-        echo "Please check that the server is running at ${SERVER_URL}" >&2
-        exit 1
-    fi
-    
-    # Extract binary filename for this platform
-    local filename=""
-    if command -v jq >/dev/null 2>&1; then
-        # Check if binaries array exists and is not empty
-        local binaries_count=$(echo "${version_info}" | jq -r '.binaries | if type == "array" then length else 0 end' 2>/dev/null || echo "0")
-        if [ "${binaries_count}" -gt 0 ] 2>/dev/null; then
-            filename=$(echo "${version_info}" | jq -r ".binaries[]? | select(.platform == \"${platform}\") | .filename" 2>/dev/null | head -n1)
-        fi
-        # If jq returned null or empty, fallback to manual construction
-        if [ -z "${filename}" ] || [ "${filename}" = "null" ] || [ "${filename}" = "" ]; then
-            filename=""
-        fi
-    elif command -v python3 >/dev/null 2>&1; then
-        filename=$(echo "${version_info}" | python3 -c "import sys, json; data=json.load(sys.stdin); binaries = data.get('binaries', []); print(next((b['filename'] for b in binaries if b.get('platform') == '${platform}'), ''))" 2>/dev/null || echo "")
-    fi
-    
-    # Fallback: construct filename manually if not found
-    if [ -z "${filename}" ] || [ "${filename}" = "null" ] || [ "${filename}" = "" ]; then
-        filename="kkartifact-agent-${os}-${arch}"
-        echo -e "${YELLOW}Warning: Version info not available or binaries array is empty, using default filename: ${filename}${NC}"
-    fi
-    
+    # Construct binary filename directly based on platform
+    local filename="kkartifact-agent-${os}-${arch}"
     echo -e "Target binary: ${GREEN}${filename}${NC}"
     
     # Determine installation path
