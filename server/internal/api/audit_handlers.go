@@ -27,9 +27,15 @@ type AuditLogResponse struct {
 	CreatedAt   string  `json:"created_at"` // RFC3339 format
 }
 
+// AuditLogsListResponse represents the paginated audit logs API response
+type AuditLogsListResponse struct {
+	Data  []AuditLogResponse `json:"data"`
+	Total int                `json:"total"`
+}
+
 // handleListAuditLogs godoc
 // @Summary      List audit logs
-// @Description  Get a list of audit logs with optional filtering by project and app
+// @Description  Get a list of audit logs with optional filtering by project and app. Returns paginated results with total count.
 // @Tags         audit
 // @Accept       json
 // @Produce      json
@@ -37,14 +43,14 @@ type AuditLogResponse struct {
 // @Param        app_id      query     int  false  "Filter by app ID"
 // @Param        limit       query     int  false  "Limit number of results (default: 50)"
 // @Param        offset      query     int  false  "Offset for pagination (default: 0)"
-// @Success      200         {array}   AuditLogResponse
+// @Success      200         {object}  AuditLogsListResponse
 // @Failure      401         {object}  ErrorResponse
 // @Failure      500         {object}  ErrorResponse
 // @Security     Bearer
 // @Router       /audit-logs [get]
 func (h *Handler) handleListAuditLogs(c *gin.Context) {
-	projectID := getIntParam(c, "project_id", 0)
-	appID := getIntParam(c, "app_id", 0)
+	projectID := getIntQuery(c, "project_id", 0)
+	appID := getIntQuery(c, "app_id", 0)
 	limit := getIntQuery(c, "limit", 50)
 	offset := getIntQuery(c, "offset", 0)
 
@@ -57,6 +63,15 @@ func (h *Handler) handleListAuditLogs(c *gin.Context) {
 	}
 
 	auditRepo := database.NewAuditRepository(h.db)
+	
+	// Get total count with same filters
+	total, err := auditRepo.Count(projectIDPtr, appIDPtr)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Get paginated logs
 	logs, err := auditRepo.List(projectIDPtr, appIDPtr, limit, offset)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -116,7 +131,11 @@ func (h *Handler) handleListAuditLogs(c *gin.Context) {
 		}
 	}
 
-	c.JSON(http.StatusOK, responses)
+	// Return paginated response with total count
+	c.JSON(http.StatusOK, AuditLogsListResponse{
+		Data:  responses,
+		Total: total,
+	})
 }
 
 // getIntParam is in helpers.go

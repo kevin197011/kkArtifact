@@ -18,8 +18,13 @@ export interface AuditLog {
   created_at: string
 }
 
+export interface AuditLogsListResponse {
+  data: AuditLog[]
+  total: number
+}
+
 export const auditApi = {
   list: (limit = 50, offset = 0) =>
-    client.get<AuditLog[]>('/audit-logs', { params: { limit, offset } }),
+    client.get<AuditLogsListResponse>('/audit-logs', { params: { limit, offset } }),
 }
 

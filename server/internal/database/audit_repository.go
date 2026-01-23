@@ -94,6 +94,33 @@ func (r *AuditRepository) List(projectID, appID *int, limit, offset int) ([]*Aud
 	return logs, rows.Err()
 }
 
+// Count counts audit logs with optional filters
+func (r *AuditRepository) Count(projectID, appID *int) (int, error) {
+	query := `SELECT COUNT(*) 
+	          FROM audit_logs 
+	          WHERE ($1::int IS NULL OR project_id = $1)
+	          AND ($2::int IS NULL OR app_id = $2)`
+	
+	var projectIDVal, appIDVal interface{}
+	if projectID != nil {
+		projectIDVal = *projectID
+	} else {
+		projectIDVal = nil
+	}
+	if appID != nil {
+		appIDVal = *appID
+	} else {
+		appIDVal = nil
+	}
+
+	var count int
+	err := r.db.QueryRow(query, projectIDVal, appIDVal).Scan(&count)
+	if err != nil {
+		return 0, fmt.Errorf("failed to count audit logs: %w", err)
+	}
+	return count, nil
+}
+
 // DeleteOldLogs deletes audit logs older than the specified number of days
 func (r *AuditRepository) DeleteOldLogs(days int) (int64, error) {
 	query := `DELETE FROM audit_logs WHERE created_at < NOW() - INTERVAL '1 day' * $1`

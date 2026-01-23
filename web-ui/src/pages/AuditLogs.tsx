@@ -11,14 +11,20 @@ import type { ColumnsType } from 'antd/es/table'
 
 const AuditLogsPage: React.FC = () => {
   const [page, setPage] = useState(1)
-  const pageSize = 50
+  const [pageSize, setPageSize] = useState(50)
 
   const { data, isLoading, error } = useQuery({
-    queryKey: ['audit-logs', page],
-    queryFn: () => auditApi.list(pageSize, (page - 1) * pageSize).then((res) => res.data),
+    queryKey: ['audit-logs', page, pageSize],
+    queryFn: async () => {
+      const response = await auditApi.list(pageSize, (page - 1) * pageSize)
+      // Debug: log response structure
+      console.log('Audit logs API response:', response.data)
+      return response.data
+    },
   })
 
   if (error) {
+    console.error('Audit logs error:', error)
     message.error('加载审计日志失败')
   }
 
@@ -109,24 +115,24 @@ const AuditLogsPage: React.FC = () => {
       >
         <Table
           columns={columns}
-          dataSource={data}
+          dataSource={data?.data || []}
           loading={isLoading}
           rowKey="id"
           pagination={{
             current: page,
             pageSize,
-            total: data && data.length < pageSize 
-              ? (page - 1) * pageSize + data.length 
-              : data 
-              ? page * pageSize + 1 
-              : 0,
-            onChange: setPage,
-            showSizeChanger: false,
-            showTotal: (total, range) => {
-              if (data && data.length < pageSize) {
-                return `共 ${total} 条审计日志`
+            total: data?.total || 0,
+            onChange: (newPage, newPageSize) => {
+              setPage(newPage)
+              if (newPageSize !== pageSize) {
+                setPageSize(newPageSize)
+                setPage(1) // Reset to first page when page size changes
               }
-              return `第 ${range[0]}-${range[1]} 项，至少 ${total} 条审计日志`
+            },
+            showSizeChanger: true,
+            pageSizeOptions: ['10', '20', '50', '100'],
+            showTotal: (total, range) => {
+              return `共 ${total} 条审计日志，显示第 ${range[0]}-${range[1]} 项`
             },
             style: {
               padding: '16px 24px',
