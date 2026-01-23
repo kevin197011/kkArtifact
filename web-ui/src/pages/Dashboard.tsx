@@ -26,9 +26,9 @@ const Dashboard: React.FC = () => {
   })
 
   // Fetch audit logs for recent activity
-  const { data: auditLogsData, isLoading: auditLogsLoading } = useQuery({
+  const { data: auditLogsData, isLoading: auditLogsLoading } = useQuery<AuditLog[]>({
     queryKey: ['audit-logs', 'dashboard'],
-    queryFn: () => auditApi.list(10, 0).then((res) => res.data),
+    queryFn: () => auditApi.list(10, 0).then((res) => res.data.data),
   })
 
   // Fetch apps for all projects to calculate total count
