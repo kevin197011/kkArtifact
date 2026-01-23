@@ -133,17 +133,18 @@ func cleanTokenValue(token string) string {
 
 // ValidateTokenFormat validates that a token matches the expected base64 URL encoding pattern
 // Base64 URL encoding uses: A-Z, a-z, 0-9, - (hyphen), _ (underscore)
-// No padding characters (=) in the middle, only at the end
+// Padding characters (=) are allowed only at the end (0, 1, or 2 padding characters)
 func ValidateTokenFormat(token string) error {
 	if token == "" {
 		return fmt.Errorf("token is empty")
 	}
 	
-	// Base64 URL encoding pattern: ^[A-Za-z0-9_-]+$
+	// Base64 URL encoding pattern: ^[A-Za-z0-9_-]+={0,2}$
+	// Allows padding characters (=) only at the end (0, 1, or 2 padding characters)
 	// Tokens are typically 32-44 characters (32 bytes = 43 chars, 44 with padding)
-	base64URLPattern := regexp.MustCompile(`^[A-Za-z0-9_-]+$`)
+	base64URLPattern := regexp.MustCompile(`^[A-Za-z0-9_-]+={0,2}$`)
 	if !base64URLPattern.MatchString(token) {
-		return fmt.Errorf("token format is invalid: tokens must be base64 URL encoded strings (A-Z, a-z, 0-9, -, _)")
+		return fmt.Errorf("token format is invalid: tokens must be base64 URL encoded strings (A-Z, a-z, 0-9, -, _), with optional = padding at the end")
 	}
 	
 	// Check length (base64 encoding of 32 bytes = 43 chars, with padding = 44)
