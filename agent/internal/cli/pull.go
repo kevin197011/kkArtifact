@@ -96,6 +96,11 @@ func runPull(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to load config: %w", err)
 	}
 
+	// Validate token is set
+	if cfg.Token == "" {
+		return fmt.Errorf("token is required but not found in config. Please check:\n  - Global config: /etc/kkArtifact/config.yml\n  - Local config: %s\n  - Or use --token flag", pullConfig)
+	}
+
 	// Use config values if not provided via flags
 	if pullProject == "" {
 		pullProject = cfg.Project

@@ -1,6 +1,6 @@
 {
-  "version": "v20260123152056",
-  "build_time": "2026-01-23T07:36:31Z",
+  "version": "v20260123153632",
+  "build_time": "2026-01-23T07:45:02Z",
   "binaries": [
     {
       "platform": "linux/amd64",
@@ -29,7 +29,7 @@
     {
       "platform": "windows/amd64",
       "filename": "kkartifact-agent-windows-amd64.exe",
-      "size": 8982528,
+      "size": 8983552,
       "url": "/api/v1/downloads/agent/kkartifact-agent-windows-amd64.exe"
     }
   ]

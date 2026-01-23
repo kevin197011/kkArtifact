@@ -64,8 +64,23 @@ func loadConfigFile(configPath string) (*Config, error) {
 	}
 
 	// Trim whitespace from token and server_url to handle YAML formatting issues
+	// YAML parser should handle inline comments correctly, but we'll trim whitespace
 	config.Token = strings.TrimSpace(config.Token)
 	config.ServerURL = strings.TrimSpace(config.ServerURL)
+	
+	// Additional safety: Remove any trailing comment-like text that might have been parsed incorrectly
+	// This handles edge cases where YAML parser might include comment text in the value
+	// Only remove if it looks like a comment pattern (starts with # after whitespace)
+	if idx := strings.Index(config.Token, " #"); idx >= 0 {
+		// Check if the part after # looks like a comment (common comment phrases)
+		afterHash := strings.TrimSpace(config.Token[idx+2:])
+		if strings.HasPrefix(afterHash, "Uncomment") || 
+		   strings.HasPrefix(afterHash, "set your token") ||
+		   strings.HasPrefix(afterHash, "YOUR_TOKEN") {
+			// This looks like a comment, remove it
+			config.Token = strings.TrimSpace(config.Token[:idx])
+		}
+	}
 
 	return &config, nil
 }
