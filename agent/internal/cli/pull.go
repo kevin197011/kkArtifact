@@ -101,6 +101,14 @@ func runPull(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("token is required but not found in config. Please check:\n  - Global config: /etc/kkArtifact/config.yml\n  - Local config: %s\n  - Or use --token flag", pullConfig)
 	}
 
+	// Debug: Print token info (masked for security)
+	if len(cfg.Token) > 10 {
+		fmt.Fprintf(os.Stderr, "Using token: %s...%s (length: %d)\n", cfg.Token[:5], cfg.Token[len(cfg.Token)-5:], len(cfg.Token))
+	} else {
+		fmt.Fprintf(os.Stderr, "Using token: %s (length: %d)\n", strings.Repeat("*", len(cfg.Token)), len(cfg.Token))
+	}
+	fmt.Fprintf(os.Stderr, "Server URL: %s\n", cfg.ServerURL)
+
 	// Use config values if not provided via flags
 	if pullProject == "" {
 		pullProject = cfg.Project

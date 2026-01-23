@@ -63,26 +63,63 @@ func loadConfigFile(configPath string) (*Config, error) {
 		return nil, fmt.Errorf("failed to parse config file: %w", err)
 	}
 
-	// Trim whitespace from token and server_url to handle YAML formatting issues
-	// YAML parser should handle inline comments correctly, but we'll trim whitespace
-	config.Token = strings.TrimSpace(config.Token)
+	// Clean token: remove all whitespace (including newlines, tabs, etc.)
+	// YAML parser should handle inline comments correctly, but we need to be extra careful
+	config.Token = cleanTokenValue(config.Token)
 	config.ServerURL = strings.TrimSpace(config.ServerURL)
-	
-	// Additional safety: Remove any trailing comment-like text that might have been parsed incorrectly
-	// This handles edge cases where YAML parser might include comment text in the value
-	// Only remove if it looks like a comment pattern (starts with # after whitespace)
-	if idx := strings.Index(config.Token, " #"); idx >= 0 {
-		// Check if the part after # looks like a comment (common comment phrases)
-		afterHash := strings.TrimSpace(config.Token[idx+2:])
-		if strings.HasPrefix(afterHash, "Uncomment") || 
-		   strings.HasPrefix(afterHash, "set your token") ||
-		   strings.HasPrefix(afterHash, "YOUR_TOKEN") {
-			// This looks like a comment, remove it
-			config.Token = strings.TrimSpace(config.Token[:idx])
-		}
-	}
 
 	return &config, nil
+}
+
+// cleanTokenValue cleans a token value by removing whitespace and handling edge cases
+// This function is defensive and handles cases where YAML parser might include comment text
+func cleanTokenValue(token string) string {
+	if token == "" {
+		return ""
+	}
+	
+	// First, trim all leading and trailing whitespace
+	token = strings.TrimSpace(token)
+	
+	// Remove any inline comments that might have been parsed as part of the value
+	// YAML parser should handle this correctly, but we'll be extra safe
+	// Look for comment patterns: space followed by # followed by comment text
+	// Only remove if we're confident it's a comment (not part of the token value)
+	if idx := strings.Index(token, " #"); idx >= 0 {
+		beforeHash := token[:idx]
+		afterHash := strings.TrimSpace(token[idx+2:])
+		// Check if the part after # looks like a comment (common comment phrases)
+		// Base64 URL-encoded tokens shouldn't contain spaces, so " #" is likely a comment separator
+		commentPhrases := []string{
+			"Uncomment",
+			"set your token",
+			"YOUR_TOKEN",
+			"Uncomment and",
+			"token here",
+		}
+		for _, phrase := range commentPhrases {
+			if strings.HasPrefix(afterHash, phrase) {
+				// This looks like a comment, remove it
+				token = strings.TrimSpace(beforeHash)
+				break
+			}
+		}
+	}
+	
+	// Also check for # at the start (shouldn't happen with proper YAML, but be safe)
+	// If token starts with #, it's likely a mis-parsed comment line
+	if strings.HasPrefix(token, "#") {
+		return ""
+	}
+	
+	// Remove any newlines, tabs, or other whitespace characters that might have been included
+	// Base64 URL-encoded tokens shouldn't contain these characters
+	token = strings.ReplaceAll(token, "\n", "")
+	token = strings.ReplaceAll(token, "\r", "")
+	token = strings.ReplaceAll(token, "\t", "")
+	
+	// Final trim
+	return strings.TrimSpace(token)
 }
 
 // mergeIgnorePatterns merges ignore patterns from multiple sources
@@ -148,7 +185,7 @@ func mergeConfigsWithOverrides(global, local *Config, overrides *Overrides) *Con
 	// Start with global config
 	if global != nil {
 		result.ServerURL = strings.TrimSpace(global.ServerURL)
-		result.Token = strings.TrimSpace(global.Token)
+		result.Token = cleanTokenValue(global.Token)
 		result.Project = global.Project
 		result.App = global.App
 		result.Ignore = global.Ignore
@@ -164,7 +201,7 @@ func mergeConfigsWithOverrides(global, local *Config, overrides *Overrides) *Con
 		}
 		if local.Token != "" {
 			// Only override if local token is non-empty (preserve global token if local is empty)
-			result.Token = strings.TrimSpace(local.Token)
+			result.Token = cleanTokenValue(local.Token)
 		}
 		if local.Project != "" {
 			result.Project = local.Project
@@ -187,7 +224,7 @@ func mergeConfigsWithOverrides(global, local *Config, overrides *Overrides) *Con
 			result.ServerURL = strings.TrimSpace(overrides.ServerURL)
 		}
 		if overrides.Token != "" {
-			result.Token = strings.TrimSpace(overrides.Token)
+			result.Token = cleanTokenValue(overrides.Token)
 		}
 		if overrides.Project != "" {
 			result.Project = overrides.Project
