@@ -17,14 +17,11 @@ const AuditLogsPage: React.FC = () => {
     queryKey: ['audit-logs', page, pageSize],
     queryFn: async () => {
       const response = await auditApi.list(pageSize, (page - 1) * pageSize)
-      // Debug: log response structure
-      console.log('Audit logs API response:', response.data)
       return response.data
     },
   })
 
   if (error) {
-    console.error('Audit logs error:', error)
     message.error('加载审计日志失败')
   }
 

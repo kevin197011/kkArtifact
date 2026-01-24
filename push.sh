@@ -1,5 +1,5 @@
 
-  ./bin/kkArtifact-agent push \
+  ./bin/kkartifact-agent push \
   --project devops \
   --app app01 \
   --version test-$(date +%s) \

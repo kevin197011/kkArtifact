@@ -19,6 +19,7 @@ import (
 	"time"
 
 	"github.com/kk/kkartifact-agent/internal/config"
+	"github.com/kk/kkartifact-agent/internal/util"
 )
 
 // Client is the API client
@@ -116,39 +117,26 @@ func (c *Client) InitUpload(project, app, version string, fileCount int) (*Uploa
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
 
-		// Output detailed request information for debugging
-		fmt.Fprintf(os.Stderr, "\n=== Init Upload Request Details ===\n")
-		fmt.Fprintf(os.Stderr, "URL: %s\n", c.serverURL+"/api/v1/upload/init")
-		fmt.Fprintf(os.Stderr, "Method: %s\n", httpReq.Method)
-		fmt.Fprintf(os.Stderr, "Request Headers:\n")
-		for key, values := range httpReq.Header {
-			for _, value := range values {
-				// Print Authorization header in full for debugging (mask only the actual token value)
-				if key == "Authorization" {
-					// Print full header value to see if there's duplicate "Bearer"
-					// Mask the actual token part (after "Bearer " or "Bearer Bearer ")
-					prefix := ""
-					tokenPart := value
-					if strings.HasPrefix(value, "Bearer Bearer ") {
-						prefix = "Bearer Bearer "
-						tokenPart = value[len("Bearer Bearer "):]
-					} else if strings.HasPrefix(value, "Bearer ") {
-						prefix = "Bearer "
-						tokenPart = value[len("Bearer "):]
+		// Optional verbose debug dump (disabled by default)
+		if util.IsDebugMode() {
+			fmt.Fprintf(os.Stderr, "\n=== Init Upload Request Details ===\n")
+			fmt.Fprintf(os.Stderr, "URL: %s\n", c.serverURL+"/api/v1/upload/init")
+			fmt.Fprintf(os.Stderr, "Method: %s\n", httpReq.Method)
+			fmt.Fprintf(os.Stderr, "Request Headers:\n")
+			for key, values := range httpReq.Header {
+				for _, value := range values {
+					// Never print full token; only masked preview
+					if strings.EqualFold(key, "Authorization") {
+						fmt.Fprintf(os.Stderr, "  %s: Bearer %s\n", key, config.MaskToken(c.token))
+						continue
 					}
-					if len(tokenPart) > 20 {
-						fmt.Fprintf(os.Stderr, "  %s: %s%s...%s [FULL: %s]\n", key, prefix, tokenPart[:10], tokenPart[len(tokenPart)-10:], value)
-					} else {
-						fmt.Fprintf(os.Stderr, "  %s: %s%s [FULL: %s]\n", key, prefix, tokenPart, value)
-					}
-				} else {
 					fmt.Fprintf(os.Stderr, "  %s: %s\n", key, value)
 				}
 			}
+			fmt.Fprintf(os.Stderr, "Response Status: %d %s\n", resp.StatusCode, resp.Status)
+			fmt.Fprintf(os.Stderr, "Response Body: %s\n", string(body))
+			fmt.Fprintf(os.Stderr, "====================================\n\n")
 		}
-		fmt.Fprintf(os.Stderr, "Response Status: %d %s\n", resp.StatusCode, resp.Status)
-		fmt.Fprintf(os.Stderr, "Response Body: %s\n", string(body))
-		fmt.Fprintf(os.Stderr, "====================================\n\n")
 
 		if resp.StatusCode == http.StatusUnauthorized {
 			return nil, fmt.Errorf("upload init failed with status %d (unauthorized)\nToken preview: %s\nToken length: %d\nPlease verify:\n  - Token is correct in config file (global: /etc/kkArtifact/config.yml or local: .kkartifact.yml)\n  - Token exists and is valid in the server\n  - Token has required permissions (push)\nServer response: %s", resp.StatusCode, config.MaskToken(c.token), len(c.token), string(body))
@@ -217,45 +205,32 @@ func (c *Client) UploadFile(project, app, hash, filePath, localPath string) erro
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
 
-		// Output detailed request information for debugging
-		fmt.Fprintf(os.Stderr, "\n=== Upload Request Details ===\n")
-		fmt.Fprintf(os.Stderr, "URL: %s\n", url)
-		fmt.Fprintf(os.Stderr, "Method: %s\n", httpReq.Method)
-		fmt.Fprintf(os.Stderr, "Request Headers:\n")
-		for key, values := range httpReq.Header {
-			for _, value := range values {
-				// Print Authorization header in full for debugging (mask only the actual token value)
-				if key == "Authorization" {
-					// Print full header value to see if there's duplicate "Bearer"
-					// Mask the actual token part (after "Bearer " or "Bearer Bearer ")
-					prefix := ""
-					tokenPart := value
-					if strings.HasPrefix(value, "Bearer Bearer ") {
-						prefix = "Bearer Bearer "
-						tokenPart = value[len("Bearer Bearer "):]
-					} else if strings.HasPrefix(value, "Bearer ") {
-						prefix = "Bearer "
-						tokenPart = value[len("Bearer "):]
+		// Optional verbose debug dump (disabled by default)
+		if util.IsDebugMode() {
+			fmt.Fprintf(os.Stderr, "\n=== Upload Request Details ===\n")
+			fmt.Fprintf(os.Stderr, "URL: %s\n", url)
+			fmt.Fprintf(os.Stderr, "Method: %s\n", httpReq.Method)
+			fmt.Fprintf(os.Stderr, "Request Headers:\n")
+			for key, values := range httpReq.Header {
+				for _, value := range values {
+					// Never print full token; only masked preview
+					if strings.EqualFold(key, "Authorization") {
+						fmt.Fprintf(os.Stderr, "  %s: Bearer %s\n", key, config.MaskToken(c.token))
+						continue
 					}
-					if len(tokenPart) > 20 {
-						fmt.Fprintf(os.Stderr, "  %s: %s%s...%s [FULL: %s]\n", key, prefix, tokenPart[:10], tokenPart[len(tokenPart)-10:], value)
-					} else {
-						fmt.Fprintf(os.Stderr, "  %s: %s%s [FULL: %s]\n", key, prefix, tokenPart, value)
-					}
-				} else {
 					fmt.Fprintf(os.Stderr, "  %s: %s\n", key, value)
 				}
 			}
-		}
-		fmt.Fprintf(os.Stderr, "Response Status: %d %s\n", resp.StatusCode, resp.Status)
-		fmt.Fprintf(os.Stderr, "Response Headers:\n")
-		for key, values := range resp.Header {
-			for _, value := range values {
-				fmt.Fprintf(os.Stderr, "  %s: %s\n", key, value)
+			fmt.Fprintf(os.Stderr, "Response Status: %d %s\n", resp.StatusCode, resp.Status)
+			fmt.Fprintf(os.Stderr, "Response Headers:\n")
+			for key, values := range resp.Header {
+				for _, value := range values {
+					fmt.Fprintf(os.Stderr, "  %s: %s\n", key, value)
+				}
 			}
+			fmt.Fprintf(os.Stderr, "Response Body: %s\n", string(body))
+			fmt.Fprintf(os.Stderr, "==============================\n\n")
 		}
-		fmt.Fprintf(os.Stderr, "Response Body: %s\n", string(body))
-		fmt.Fprintf(os.Stderr, "==============================\n\n")
 
 		if resp.StatusCode == http.StatusUnauthorized {
 			return fmt.Errorf("upload failed with status %d (unauthorized)\nToken preview: %s\nToken length: %d\nPlease verify:\n  - Token is correct in config file (global: /etc/kkArtifact/config.yml or local: .kkartifact.yml)\n  - Token exists and is valid in the server\n  - Token has required permissions (push)\nServer response: %s", resp.StatusCode, config.MaskToken(c.token), len(c.token), string(body))
@@ -291,39 +266,26 @@ func (c *Client) FinishUpload(req interface{}) error {
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
 
-		// Output detailed request information for debugging
-		fmt.Fprintf(os.Stderr, "\n=== Finish Upload Request Details ===\n")
-		fmt.Fprintf(os.Stderr, "URL: %s\n", c.serverURL+"/api/v1/upload/finish")
-		fmt.Fprintf(os.Stderr, "Method: %s\n", httpReq.Method)
-		fmt.Fprintf(os.Stderr, "Request Headers:\n")
-		for key, values := range httpReq.Header {
-			for _, value := range values {
-				// Print Authorization header in full for debugging (mask only the actual token value)
-				if key == "Authorization" {
-					// Print full header value to see if there's duplicate "Bearer"
-					// Mask the actual token part (after "Bearer " or "Bearer Bearer ")
-					prefix := ""
-					tokenPart := value
-					if strings.HasPrefix(value, "Bearer Bearer ") {
-						prefix = "Bearer Bearer "
-						tokenPart = value[len("Bearer Bearer "):]
-					} else if strings.HasPrefix(value, "Bearer ") {
-						prefix = "Bearer "
-						tokenPart = value[len("Bearer "):]
+		// Optional verbose debug dump (disabled by default)
+		if util.IsDebugMode() {
+			fmt.Fprintf(os.Stderr, "\n=== Finish Upload Request Details ===\n")
+			fmt.Fprintf(os.Stderr, "URL: %s\n", c.serverURL+"/api/v1/upload/finish")
+			fmt.Fprintf(os.Stderr, "Method: %s\n", httpReq.Method)
+			fmt.Fprintf(os.Stderr, "Request Headers:\n")
+			for key, values := range httpReq.Header {
+				for _, value := range values {
+					// Never print full token; only masked preview
+					if strings.EqualFold(key, "Authorization") {
+						fmt.Fprintf(os.Stderr, "  %s: Bearer %s\n", key, config.MaskToken(c.token))
+						continue
 					}
-					if len(tokenPart) > 20 {
-						fmt.Fprintf(os.Stderr, "  %s: %s%s...%s [FULL: %s]\n", key, prefix, tokenPart[:10], tokenPart[len(tokenPart)-10:], value)
-					} else {
-						fmt.Fprintf(os.Stderr, "  %s: %s%s [FULL: %s]\n", key, prefix, tokenPart, value)
-					}
-				} else {
 					fmt.Fprintf(os.Stderr, "  %s: %s\n", key, value)
 				}
 			}
+			fmt.Fprintf(os.Stderr, "Response Status: %d %s\n", resp.StatusCode, resp.Status)
+			fmt.Fprintf(os.Stderr, "Response Body: %s\n", string(body))
+			fmt.Fprintf(os.Stderr, "======================================\n\n")
 		}
-		fmt.Fprintf(os.Stderr, "Response Status: %d %s\n", resp.StatusCode, resp.Status)
-		fmt.Fprintf(os.Stderr, "Response Body: %s\n", string(body))
-		fmt.Fprintf(os.Stderr, "======================================\n\n")
 
 		if resp.StatusCode == http.StatusUnauthorized {
 			return fmt.Errorf("finish upload failed with status %d (unauthorized)\nToken preview: %s\nToken length: %d\nPlease verify:\n  - Token is correct in config file (global: /etc/kkArtifact/config.yml or local: .kkartifact.yml)\n  - Token exists and is valid in the server\n  - Token has required permissions (push)\nServer response: %s", resp.StatusCode, config.MaskToken(c.token), len(c.token), string(body))

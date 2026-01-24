@@ -204,6 +204,21 @@
     0 2px 8px rgba(0, 0, 0, 0.04) !important;
 }
 
+/* Critical: override global .theme-dark .ant-card/.ant-card-body !important rules */
+/* Ensure the actual Ant Design Card element stays white */
+:global(.theme-dark) :global(.ant-card).loginCard {
+  background: #ffffff !important;
+  border-color: #e8eaed !important;
+}
+
+/* Ensure Card inner sections stay white as well */
+:global(.theme-dark) :global(.ant-card).loginCard :global(.ant-card-head),
+:global(.theme-dark) :global(.ant-card).loginCard :global(.ant-card-body) {
+  background: #ffffff !important;
+  color: #1d2129 !important;
+  border-color: #e8eaed !important;
+}
+
 .loginCard:hover {
   box-shadow: 
     0 12px 40px rgba(0, 0, 0, 0.12),

@@ -8,6 +8,7 @@ package scheduler
 import (
 	"context"
 	"fmt"
+	"log"
 	"strconv"
 
 	"github.com/kk/kkartifact-server/internal/database"
@@ -53,7 +54,7 @@ func (t *AuditCleanupTask) Run(ctx context.Context) error {
 	}
 
 	if deletedCount > 0 && util.IsDebugMode() {
-		fmt.Printf("Deleted %d audit log entries older than %d days\n", deletedCount, retentionDays)
+		log.Printf("Deleted %d audit log entries older than %d days", deletedCount, retentionDays)
 	}
 
 	return nil

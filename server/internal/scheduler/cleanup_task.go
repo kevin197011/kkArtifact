@@ -8,6 +8,7 @@ package scheduler
 import (
 	"context"
 	"fmt"
+	"log"
 	"strconv"
 
 	"github.com/kk/kkartifact-server/internal/database"
@@ -69,7 +70,7 @@ func (t *CleanupTask) Run(ctx context.Context) error {
 		for _, app := range apps {
 			if err := t.cleanupManager.CleanupOldVersions(ctx, project.Name, app.Name, retentionLimit); err != nil {
 				// Log error but continue
-				fmt.Printf("Failed to cleanup versions for %s/%s: %v\n", project.Name, app.Name, err)
+				log.Printf("Failed to cleanup versions for %s/%s: %v", project.Name, app.Name, err)
 			}
 		}
 	}

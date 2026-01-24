@@ -31,9 +31,7 @@ const TokensPage: React.FC = () => {
         setStoredTokens(JSON.parse(stored))
       }
     } catch (e) {
-      if (import.meta.env.DEV) {
-        console.error('Failed to load stored tokens:', e)
-      }
+      // Ignore storage parse failures; user can recreate tokens if needed.
     }
   }, [])
 
@@ -44,9 +42,7 @@ const TokensPage: React.FC = () => {
       setStoredTokens(updated)
       localStorage.setItem(TOKEN_STORAGE_KEY, JSON.stringify(updated))
     } catch (e) {
-      if (import.meta.env.DEV) {
-        console.error('Failed to save token to storage:', e)
-      }
+      // Ignore storage write failures; token value is still shown once after creation.
     }
   }
 
@@ -57,9 +53,7 @@ const TokensPage: React.FC = () => {
 
   // Log error for debugging
   if (error) {
-    if (import.meta.env.DEV) {
-      console.error('Failed to load tokens:', error)
-    }
+    // Error is rendered below as a user-facing message.
   }
 
   const createMutation = useMutation({
@@ -90,9 +84,7 @@ const TokensPage: React.FC = () => {
         setStoredTokens(updated)
         localStorage.setItem(TOKEN_STORAGE_KEY, JSON.stringify(updated))
       } catch (e) {
-        if (import.meta.env.DEV) {
-          console.error('Failed to remove token from storage:', e)
-        }
+        // Ignore storage write failures.
       }
       queryClient.invalidateQueries({ queryKey: ['tokens'] })
       message.success('Token deleted successfully')

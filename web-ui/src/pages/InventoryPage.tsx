@@ -108,9 +108,6 @@ const InventoryPage: React.FC = () => {
           const apps = await publicProjectsApi.getApps(project.name, 1000, 0).then((res) => res.data)
           return { projectName: project.name, apps }
           } catch (error) {
-            if (import.meta.env.DEV) {
-              console.error(`Failed to load apps for project ${project.name}:`, error)
-            }
             return { projectName: project.name, apps: [] }
         }
       })
@@ -139,9 +136,6 @@ const InventoryPage: React.FC = () => {
               .then((res) => res.data)
             versionsMap[`${projectName}/${app.name}`] = versions
           } catch (error) {
-            if (import.meta.env.DEV) {
-              console.error(`Failed to load versions for ${projectName}/${app.name}:`, error)
-            }
             versionsMap[`${projectName}/${app.name}`] = []
           }
         }
