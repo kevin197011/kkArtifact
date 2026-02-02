@@ -99,6 +99,7 @@ const Dashboard: React.FC = () => {
           unpublish: '取消发布',
           token_create: '创建令牌',
           token_delete: '删除令牌',
+          version_delete: '删除',
         }
         return (
           <span className={`${styles.operationBadge} ${styles[text] || ''}`}>
