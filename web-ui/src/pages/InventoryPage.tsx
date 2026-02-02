@@ -18,6 +18,9 @@ const { Panel } = Collapse
 
 const { Title } = Typography
 
+// 根节点 key，用于一键折叠/展开整棵树
+const INVENTORY_ROOT_KEY = 'inventory-root'
+
 type TreeDataNode = DataNode & {
   project?: Project
   app?: App
@@ -48,7 +51,7 @@ const InventoryPage: React.FC = () => {
   const navigate = useNavigate()
   const [searchTerm, setSearchTerm] = useState('')
   const debouncedSearchTerm = useDebounce(searchTerm, 300)
-  const [expandedKeys, setExpandedKeys] = useState<React.Key[]>([])
+  const [expandedKeys, setExpandedKeys] = useState<React.Key[]>([INVENTORY_ROOT_KEY])
   
   // Get full script URL for install commands
   const getScriptUrl = (filename: string) => {
@@ -316,10 +319,31 @@ const InventoryPage: React.FC = () => {
         return nameA.localeCompare(nameB)
       }) as TreeDataNode[]
 
-    return nodes
+    // 无数据时不渲染根节点，保持现有空状态
+    if (nodes.length === 0) return []
+
+    // 有数据时包装为单一根节点，便于一键折叠/展开
+    const rootNode: TreeDataNode = {
+      key: INVENTORY_ROOT_KEY,
+      title: (
+        <div
+          className={styles.rootNode}
+          onClick={(e) => {
+            e.stopPropagation()
+          }}
+        >
+          <AppstoreOutlined className={styles.rootNodeIcon} />
+          <span className={styles.rootNodeTitle}>全部项目</span>
+          <span className={styles.rootNodeCount}>{nodes.length} 个项目</span>
+        </div>
+      ),
+      children: nodes,
+      isLeaf: false,
+    }
+    return [rootNode]
   }, [allProjects, allAppsData, allVersionsData, debouncedSearchTerm, formatDate])
 
-  // Auto-expand when searching
+  // 搜索时展开整棵树（含根节点）以显示匹配项；无搜索时默认仅展开根节点
   useEffect(() => {
     if (debouncedSearchTerm.trim() && treeData.length > 0) {
       const keysToExpand: React.Key[] = []
@@ -334,7 +358,7 @@ const InventoryPage: React.FC = () => {
       collectKeys(treeData)
       setExpandedKeys(keysToExpand)
     } else if (!debouncedSearchTerm.trim()) {
-      setExpandedKeys([])
+      setExpandedKeys([INVENTORY_ROOT_KEY])
     }
   }, [debouncedSearchTerm, treeData])
 
