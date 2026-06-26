@@ -1,11 +1,12 @@
-server_url: https://packages.devops.io
-token: xxxxxxx
-project: g02  # 默认项目，push/push-tree 可省略 --project
-concurrency: 50  # 并发数：50（本地连接建议30-50，远程连接可适当提高）
+# Agent 配置示例 — 复制为 .kkartifact.yml
+server_url: https://packages.slileisure.com
+token: YOUR_TOKEN_HERE
+project: g02                    # 默认项目，push / push-tree 可省略 --project
+concurrency: 50                 # 本地 30–50，远程 50–100
 chunk_size: 4MB
-retain_versions: 5  # 全局保留最新 5 个版本
+retain_versions: 5
 ignore: []
   # - logs/
   # - tmp/
   # - '*.log'
-  # - run-migrations.rb
+  # - node_modules/
