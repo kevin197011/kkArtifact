@@ -80,14 +80,15 @@ graph TB
 ### 使用 Docker Compose（推荐）
 
 ```bash
-# 启动所有服务
-docker-compose up -d
+# 方式一：Ruby 脚本（构建 + 启动）
+ruby scripts/up.rb
 
-# 查看日志
-docker-compose logs -f
+# 方式二：直接使用 docker compose
+docker compose up -d --build
 
-# 停止服务
-docker-compose down
+# 查看日志 / 停止
+docker compose logs -f
+docker compose down
 ```
 
 服务启动后：
@@ -199,6 +200,7 @@ go build -o kkartifact-agent ./main.go
 ```yaml
 server_url: http://localhost:3000  # 服务器地址（使用前端代理时指向前端 URL）
 token: YOUR_TOKEN_HERE             # API Token（从 Web UI 获取）
+project: myproject                 # 默认项目名（push/push-tree 可省略 --project）
 concurrency: 50                    # 并发数量（本地连接建议30-50，远程连接可50-100）
 chunk_size: 4MB                    # 分块大小
 retain_versions: 5                  # 全局保留最新版本数
@@ -212,6 +214,7 @@ ignore: []                          # 忽略的文件/目录模式（空数组�
 
 **配置说明：**
 - `server_url`: 应指向前端 URL（如 `http://localhost:3000`）如果使用 Web UI，或直接指向后端（如 `http://localhost:8080`）如果仅使用 API
+- `project`: 默认项目名；配置后 `push` / `push-tree` 可省略 `--project`
 - `concurrency`: 并发数量，建议根据连接类型调整：
   - **本地连接（localhost）**：30-50（避免 TCP 缓冲区耗尽）
   - **远程连接**：50-100（根据网络和服务器能力调整）
@@ -221,12 +224,44 @@ ignore: []                          # 忽略的文件/目录模式（空数组�
 #### Push（上传）
 
 ```bash
+# 显式指定 project/app/version
 kkartifact-agent push \
   --project myproject \
   --app myapp \
   --version v1.0.0 \
   --path ./dist \
   --config .kkartifact.yml
+
+# 从路径推断 app/version（路径末尾两段：app/version）
+kkartifact-agent push \
+  --project g02 \
+  --path /data/vcs/G02/tidb/G02_agent_api/cd884eb289764b1a72b34782526adbcc21bd1aec
+
+# 推送后自动发布（pull latest 可拉取）
+kkartifact-agent push --project g02 --path /data/vcs/G02/tidb/G02_agent_api/<hash> --publish
+```
+
+#### Push-tree（批量上传）
+
+遍历 `root/{app}/{version}/` 目录结构，批量推送所有版本（适合 G02 等固定布局）：
+
+```bash
+kkartifact-agent push-tree /data/vcs/G02/tidb \
+  --project g02 \
+  --skip-existing \
+  --publish
+```
+
+| 参数 | 说明 |
+|------|------|
+| `--skip-existing` | 跳过服务器上已存在的版本 |
+| `--dry-run` | 仅打印计划，不上传 |
+| `--publish` | 每个版本推送成功后自动发布 |
+
+也可使用 Ruby 包装脚本：
+
+```bash
+ruby scripts/push-tree.rb /data/vcs/G02/tidb --project g02 --skip-existing
 ```
 
 **特性：**
@@ -320,10 +355,11 @@ concurrency: 300  # 推荐值：针对大规模文件传输（2000+ 文件）优
 #### 公开版本清单页面（无需登录）
 
 访问根路径 `http://localhost:3000/` 可以查看所有项目、应用和版本的公开清单：
-- 🌳 **三层树形视图**：项目 → 应用 → 版本
+- 🌳 **三层树形视图**：全部项目 → 项目 → 应用 → 版本（根节点可一键折叠）
 - 🔍 **实时搜索**：支持搜索项目、应用和版本名称
 - 🎨 **现代化设计**：柔和的配色和动态背景效果
 - 📱 **响应式布局**：适配不同屏幕尺寸
+- ⚡ **单次加载**：通过 `GET /api/v1/public/inventory` 一次获取完整清单
 
 #### 管理后台（需要登录）
 
@@ -359,6 +395,7 @@ concurrency: 300  # 推荐值：针对大规模文件传输（2000+ 文件）优
 |------|------|------|--------|------|
 | `server_url` | string | ✅ | - | 服务器地址 |
 | `token` | string | ✅ | - | API Token |
+| `project` | string | ❌ | - | 默认项目名（可省略 `--project`） |
 | `concurrency` | int | ❌ | 8 | 并发数量 |
 | `chunk_size` | string | ❌ | - | 分块大小 |
 | `retain_versions` | int | ❌ | - | 本地保留版本数 |
@@ -416,13 +453,29 @@ Swagger UI 包含：
 Authorization: Bearer YOUR_TOKEN
 ```
 
+API Token 支持细粒度权限，创建时需指定：
+
+| 权限 | 说明 |
+|------|------|
+| `push` | 上传制品（upload/init、upload/finish、file POST） |
+| `pull` | 下载制品（manifest、file GET、latest） |
+| `promote` | 发布/取消发布版本 |
+| `admin` | 管理操作（删除项目、同步存储、Token 管理等） |
+
+Token 还可限定作用域：全局、指定项目或指定应用。`admin` 权限包含以上所有权限。
+
 ### 主要端点
 
 #### 公开端点（无需认证）
 
-- `GET /api/v1/public/projects` - 获取项目列表（公开）
-- `GET /api/v1/public/projects/:project/apps` - 获取应用列表（公开）
-- `GET /api/v1/public/projects/:project/apps/:app/versions` - 获取版本列表（公开）
+- `GET /api/v1/public/inventory` - 获取完整公开清单（**推荐**，单次请求）
+- `GET /api/v1/health` - 健康检查
+
+以下分页端点已废弃（响应头含 `Deprecation: true`），请改用 `/public/inventory`：
+
+- `GET /api/v1/public/projects`
+- `GET /api/v1/public/projects/:project/apps`
+- `GET /api/v1/public/projects/:project/apps/:app/versions`
 
 #### 认证端点（需要 Token）
 
@@ -434,11 +487,53 @@ Authorization: Bearer YOUR_TOKEN
 - `POST /api/v1/upload/init` - 初始化上传
 - `POST /api/v1/file/:project/:app/:hash` - 上传文件
 - `POST /api/v1/upload/finish` - 完成上传
+- `POST /api/v1/publish` - 发布版本（需 `promote` 权限）
+- `POST /api/v1/unpublish` - 取消发布（需 `promote` 权限）
 - `POST /api/v1/login` - 用户登录（返回 JWT Token）
 - `GET /api/v1/tokens` - 获取 Token 列表
-- `POST /api/v1/tokens` - 创建 Token
-- `DELETE /api/v1/tokens/:id` - 删除 Token
-- `POST /api/v1/sync-storage` - 同步存储到数据库
+- `POST /api/v1/tokens` - 创建 Token（需 `admin` 权限）
+- `DELETE /api/v1/tokens/:id` - 删除 Token（需 `admin` 权限）
+- `POST /api/v1/webhooks` - 创建 Webhook（需 `admin` 权限）
+- `PUT /api/v1/webhooks/:id` - 更新 Webhook（需 `admin` 权限）
+- `DELETE /api/v1/webhooks/:id` - 删除 Webhook（需 `admin` 权限）
+- `POST /api/v1/sync-storage` - 同步存储到数据库（需 `admin` 权限）
+- `GET /api/v1/audit-logs` - 审计日志（分页，支持筛选，见下文）
+
+#### 审计日志 API
+
+```
+GET /api/v1/audit-logs?limit=50&offset=0&project_id=1&app_id=2&operation=push
+Authorization: Bearer YOUR_TOKEN
+```
+
+响应示例：
+
+```json
+{
+  "data": [
+    {
+      "id": 1,
+      "operation": "push",
+      "project_id": 1,
+      "app_id": 2,
+      "project_name": "g02",
+      "app_name": "G02_agent_api",
+      "version_hash": "cd884eb...",
+      "agent_id": "agent-1",
+      "created_at": "2026-06-25T10:00:00Z"
+    }
+  ],
+  "total": 100
+}
+```
+
+| 查询参数 | 说明 |
+|----------|------|
+| `project_id` | 按项目 ID 筛选 |
+| `app_id` | 按应用 ID 筛选 |
+| `operation` | 按操作类型筛选（`push`、`pull`、`publish`、`version_delete` 等） |
+| `limit` | 每页条数（默认 50，最大 500） |
+| `offset` | 分页偏移量 |
 
 ## 开发
 
@@ -504,65 +599,64 @@ npm run dev
 
 ## CI/CD 和发布
 
-项目使用 GitHub Actions 实现自动化构建和发布。
+### 流程一览
 
-### 自动构建和发布
+```
+本地开发                    GitHub                         生产
+─────────                  ──────                         ────
+ruby scripts/up.rb    →    PR → CI (测试+集成)      →    docker compose -f docker-compose.prod.yml up -d
+ruby scripts/build.rb      tag v* → 构建镜像 → GHCR
+     --test                 创建 Release
+```
 
-当推送版本标签（格式：`v*`，如 `v1.0.0`）到仓库时，GitHub Actions 会自动：
+详细说明见 [.github/workflows/README.md](.github/workflows/README.md)。
 
-1. **构建 Docker 镜像**
-   - Server 镜像：推送到 `ghcr.io/<OWNER>/<REPO>/server`
-   - Web UI 镜像：推送到 `ghcr.io/<OWNER>/<REPO>/web-ui`
-   - 使用 GitHub Packages (ghcr.io) 作为容器镜像仓库
-
-2. **构建 Agent 二进制文件**
-   - 支持多平台：Linux、macOS、Windows
-   - 支持多架构：amd64、arm64
-   - 生成 SHA256 校验和文件
-
-3. **创建 GitHub Release**
-   - 自动创建 Release
-   - 上传所有平台的二进制文件
-   - 生成并上传校验和文件
-
-### 使用 Docker 镜像
-
-**从 GitHub Packages 拉取镜像**
+### 本地构建（线下，推荐）
 
 ```bash
-# 登录 GitHub Packages（需要 Personal Access Token，scope: read:packages）
+# 构建镜像并启动
+ruby scripts/up.rb
+
+# 构建 + 启动 + 集成测试（与 CI 一致）
+ruby scripts/build.rb --test
+
+# 仅编译 agent 到 /tmp/kkartifact-agent
+ruby scripts/build.rb --agent
+
+# 无缓存重建 server
+ruby scripts/build.rb --server --no-cache --up
+```
+
+### 发布到 GitHub（自动）
+
+推送版本标签后自动构建并推送镜像：
+
+```bash
+git tag v1.0.0
+git push origin v1.0.0
+```
+
+| 产物 | 地址 |
+|------|------|
+| Server 镜像（含 Agent） | `ghcr.io/kevin197011/kkartifact/server:<tag>` |
+| Web UI 镜像 | `ghcr.io/kevin197011/kkartifact/web-ui:<tag>` |
+
+### 生产部署
+
+```bash
+# 登录 GHCR（私有仓库需要 PAT: read:packages）
 echo $GITHUB_TOKEN | docker login ghcr.io -u USERNAME --password-stdin
 
-# 拉取镜像
-docker pull ghcr.io/kevin197011/kkArtifact/server:v1.0.0
-docker pull ghcr.io/kevin197011/kkArtifact/web-ui:v1.0.0
+# 指定版本启动
+export KK_SERVER_IMAGE=ghcr.io/kevin197011/kkartifact/server:v1.0.0
+export KK_WEB_UI_IMAGE=ghcr.io/kevin197011/kkartifact/web-ui:v1.0.0
+docker compose -f docker-compose.prod.yml pull
+docker compose -f docker-compose.prod.yml up -d
 ```
 
-**在 docker-compose.yml 中使用**
+### 手动触发 GitHub 构建
 
-```yaml
-services:
-  server:
-    image: ghcr.io/kevin197011/kkArtifact/server:latest
-    # ...
-  web-ui:
-    image: ghcr.io/kevin197011/kkArtifact/web-ui:latest
-    # ...
-```
-
-**注意**：
-- GitHub Packages 镜像默认是私有的（如果是私有仓库）
-- 可以通过仓库的 Packages 页面设置为公开
-- 需要使用 Personal Access Token 进行认证
-
-### 手动触发构建
-
-1. 访问 GitHub 仓库的 Actions 页面
-2. 选择 "Build and Release" 工作流
-3. 点击 "Run workflow" 按钮
-4. 选择分支并点击 "Run workflow"
-
-更多详细信息请参考 [.github/workflows/README.md](.github/workflows/README.md)。
+Actions → **Build and Release** → Run workflow
 
 ## 性能优化
 

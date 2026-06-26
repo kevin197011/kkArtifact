@@ -36,7 +36,7 @@ services:
     restart: unless-stopped
 
   server:
-    image: ghcr.io/kevin197011/kkartifact/server:latest
+    image: ${KK_SERVER_IMAGE:-ghcr.io/kevin197011/kkartifact/server:latest}
     container_name: kkartifact-server
     environment:
       SERVER_HOST: ${SERVER_HOST:-0.0.0.0}
@@ -96,7 +96,7 @@ services:
       retries: 3
 
   web-ui:
-    image: ghcr.io/kevin197011/kkartifact/web-ui:latest
+    image: ${KK_WEB_UI_IMAGE:-ghcr.io/kevin197011/kkartifact/web-ui:latest}
     container_name: kkartifact-web-ui
     ports:
       - "3001:80"

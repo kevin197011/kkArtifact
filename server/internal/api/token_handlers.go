@@ -137,7 +137,7 @@ func (h *Handler) handleCreateToken(c *gin.Context) {
 	auditRepo := database.NewAuditRepository(h.db)
 	agentID := getAgentIDFromRequest(c)
 	metadata := map[string]interface{}{
-		"token_name": name,
+		"token_name":  name,
 		"permissions": permissions,
 	}
 	if projectID != nil {
@@ -227,7 +227,7 @@ func (h *Handler) handleDeleteToken(c *gin.Context) {
 	}
 
 	tokenRepo := database.NewTokenRepository(h.db)
-	
+
 	// Get token info before deleting for audit log
 	// List all tokens and find the one to delete
 	tokens, err := tokenRepo.List()
@@ -235,7 +235,7 @@ func (h *Handler) handleDeleteToken(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	
+
 	var tokenToDelete *database.Token
 	for _, token := range tokens {
 		if token.ID == id {
@@ -243,7 +243,7 @@ func (h *Handler) handleDeleteToken(c *gin.Context) {
 			break
 		}
 	}
-	
+
 	if tokenToDelete == nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "token not found"})
 		return

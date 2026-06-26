@@ -8,7 +8,8 @@ import { useQuery } from '@tanstack/react-query'
 import { Tree, Input, Empty, Spin, Button, Typography, Card, Collapse, Tag, Space, message } from 'antd'
 import { SearchOutlined, FolderOutlined, AppstoreOutlined, LoginOutlined, DownloadOutlined, CopyOutlined, CalendarOutlined, CheckCircleOutlined } from '@ant-design/icons'
 import { useNavigate } from 'react-router-dom'
-import { publicProjectsApi, Project, App, Version } from '../api/projects'
+import { publicInventoryApi } from '../api/inventory'
+import type { Project, App, Version } from '../api/projects'
 import { downloadsApi } from '../api/downloads'
 import ThemeToggle from '../components/ThemeToggle'
 import type { DataNode } from 'antd/es/tree'
@@ -94,133 +95,48 @@ const InventoryPage: React.FC = () => {
   }, [])
 
 
-  // Fetch all projects
-  const { data: allProjects, isLoading: projectsLoading } = useQuery({
-    queryKey: ['public-projects', 'all'],
-    queryFn: () => publicProjectsApi.list(10000, 0).then((res) => res.data),
+  // 一次请求获取完整制品树（替代 N+1 分次拉取）
+  const { data: inventory, isLoading: inventoryLoading } = useQuery({
+    queryKey: ['public-inventory'],
+    queryFn: () => publicInventoryApi.getComplete().then((res) => res.data),
     retry: 1,
-  })
-
-  // Fetch apps for all projects
-  const { data: allAppsData } = useQuery({
-    queryKey: ['public-all-apps', allProjects?.map((p) => p.name)],
-    queryFn: async () => {
-      if (!allProjects || allProjects.length === 0) return {}
-      const appsPromises = allProjects.map(async (project) => {
-        try {
-          const apps = await publicProjectsApi.getApps(project.name, 1000, 0).then((res) => res.data)
-          return { projectName: project.name, apps }
-          } catch (error) {
-            return { projectName: project.name, apps: [] }
-        }
-      })
-      const appsArrays = await Promise.all(appsPromises)
-      const appsMap: Record<string, App[]> = {}
-      appsArrays.forEach(({ projectName, apps }) => {
-        appsMap[projectName] = apps
-      })
-      return appsMap
-    },
-    enabled: !!allProjects && allProjects.length > 0,
-  })
-
-  // Fetch versions for all apps
-  const { data: allVersionsData } = useQuery({
-    queryKey: ['public-all-versions', allAppsData],
-    queryFn: async () => {
-      if (!allAppsData) return {}
-      const versionsMap: Record<string, Version[]> = {} // Key: "projectName/appName"
-      for (const projectName of Object.keys(allAppsData)) {
-        const apps = allAppsData[projectName]
-        for (const app of apps) {
-          try {
-            const versions = await publicProjectsApi
-              .getVersions(projectName, app.name, 1000, 0)
-              .then((res) => res.data)
-            versionsMap[`${projectName}/${app.name}`] = versions
-          } catch (error) {
-            versionsMap[`${projectName}/${app.name}`] = []
-          }
-        }
-      }
-      return versionsMap
-    },
-    enabled: !!allAppsData && Object.keys(allAppsData).length > 0,
   })
 
   // Build tree data structure with filtering
   const treeData = useMemo(() => {
-    if (!allProjects) return []
+    if (!inventory?.projects?.length) return []
 
     const searchTermLower = debouncedSearchTerm.toLowerCase().trim()
     const hasSearch = searchTermLower.length > 0
 
-    // Filter projects
-    let projectsToShow = allProjects
-    if (hasSearch) {
-      projectsToShow = allProjects.filter((project) =>
-        project.name.toLowerCase().includes(searchTermLower)
-      )
-    }
+    const nodes: TreeDataNode[] = inventory.projects
+      .map((projectInv) => {
+        const project = projectInv.project
+        const projectMatches = !hasSearch || project.name.toLowerCase().includes(searchTermLower)
 
-    // Get apps and versions for projects
-    const appsByProject: Record<string, App[]> = {}
-    const versionsByApp: Record<string, Version[]> = {}
-    const projectsWithMatchingItems = new Set<string>()
-
-    if (hasSearch) {
-      // When searching, check all projects for matching apps and versions
-      for (const project of allProjects) {
-        const apps = allAppsData?.[project.name] || []
-        const matchingApps: App[] = []
-        apps.forEach((app) => {
-          const appMatches = app.name.toLowerCase().includes(searchTermLower)
-          const versions = allVersionsData?.[`${project.name}/${app.name}`] || []
-          const matchingVersions = versions.filter((v) =>
-            v.version.toLowerCase().includes(searchTermLower)
-          )
-
-          if (appMatches || matchingVersions.length > 0) {
-            matchingApps.push(app)
-            if (matchingVersions.length > 0) {
-              versionsByApp[`${project.name}/${app.name}`] = matchingVersions
-            } else {
-              versionsByApp[`${project.name}/${app.name}`] = versions
-            }
-            projectsWithMatchingItems.add(project.name)
-          }
-        })
-
-        if (matchingApps.length > 0) {
-          appsByProject[project.name] = matchingApps
+        let appInventories = projectInv.apps
+        if (hasSearch && !projectMatches) {
+          appInventories = projectInv.apps.filter((appInv) => {
+            const appMatches = appInv.app.name.toLowerCase().includes(searchTermLower)
+            const versionMatches = appInv.versions.some((v) =>
+              v.version.toLowerCase().includes(searchTermLower)
+            )
+            return appMatches || versionMatches
+          })
+          if (appInventories.length === 0) return null
         }
-      }
 
-      // Also include projects that match by name
-      projectsToShow.forEach((p) => projectsWithMatchingItems.add(p.name))
-    } else {
-      // When not searching, show all data
-      if (allAppsData) {
-        Object.assign(appsByProject, allAppsData)
-      }
-      if (allVersionsData) {
-        Object.assign(versionsByApp, allVersionsData)
-      }
-      projectsToShow.forEach((p) => projectsWithMatchingItems.add(p.name))
-    }
+        const appNodes: TreeDataNode[] = appInventories.map((appInv) => {
+          const app = appInv.app
+          let versions = appInv.versions
+          if (hasSearch && !project.name.toLowerCase().includes(searchTermLower) &&
+              !app.name.toLowerCase().includes(searchTermLower)) {
+            versions = versions.filter((v) =>
+              v.version.toLowerCase().includes(searchTermLower)
+            )
+          }
 
-    // Build tree nodes
-    const nodes: TreeDataNode[] = Array.from(projectsWithMatchingItems)
-      .map((projectName) => {
-        const project = allProjects.find((p) => p.name === projectName)
-        if (!project) return null as any // Will be filtered out
-
-        const projectKey = `project-${project.id}`
-        const apps = appsByProject[project.name] || []
-
-        const appNodes: TreeDataNode[] = apps.map((app) => {
           const appKey = `app-${app.id}`
-          const versions = versionsByApp[`${project.name}/${app.name}`] || []
 
           const versionNodes: TreeDataNode[] = versions.map((version) => ({
             key: `version-${version.id}`,
@@ -289,6 +205,8 @@ const InventoryPage: React.FC = () => {
           }
         })
 
+        const projectKey = `project-${project.id}`
+
         return {
           key: projectKey,
             title: (
@@ -301,8 +219,8 @@ const InventoryPage: React.FC = () => {
               >
                 <FolderOutlined className={styles.projectIcon} />
                 <span className={styles.projectName}>{project.name}</span>
-                {apps.length > 0 && (
-                  <span className={styles.appCount}>{apps.length} 个应用</span>
+                {appInventories.length > 0 && (
+                  <span className={styles.appCount}>{appInventories.length} 个应用</span>
                 )}
               </div>
             ),
@@ -341,7 +259,7 @@ const InventoryPage: React.FC = () => {
       isLeaf: false,
     }
     return [rootNode]
-  }, [allProjects, allAppsData, allVersionsData, debouncedSearchTerm, formatDate])
+  }, [inventory, debouncedSearchTerm, formatDate, handleCopyVersion])
 
   // 搜索时展开整棵树（含根节点）以显示匹配项；无搜索时默认仅展开根节点
   useEffect(() => {
@@ -366,7 +284,7 @@ const InventoryPage: React.FC = () => {
     setSearchTerm(e.target.value)
   }, [])
 
-  const isLoading = projectsLoading
+  const isLoading = inventoryLoading
 
   const emptyText = debouncedSearchTerm.trim()
     ? `没有匹配 "${debouncedSearchTerm}" 的项目、应用或版本。请尝试其他关键词。`

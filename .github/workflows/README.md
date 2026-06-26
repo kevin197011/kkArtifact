@@ -1,124 +1,77 @@
 # GitHub Actions 工作流说明
 
-## build-and-release.yml
+## 概览
 
-此工作流用于构建和发布 kkArtifact 项目的所有组件。
+| 工作流 | 触发 | 作用 |
+|--------|------|------|
+| **CI** (`ci.yml`) | push/PR → `main` | 单元测试 + Web UI 构建 + Docker 集成测试 |
+| **Build and Release** (`build-and-release.yml`) | 推送标签 `v*` / 手动 | 构建并推送 GHCR 镜像，创建 Release |
 
-### 功能
+## 镜像地址（GHCR）
 
-1. **构建并推送 Docker 镜像**
-   - Server 镜像：推送到 `ghcr.io/<OWNER>/<REPO>/server`
-   - Web UI 镜像：推送到 `ghcr.io/<OWNER>/<REPO>/web-ui`
-   - 使用 GitHub Packages (ghcr.io) 作为容器镜像仓库
+统一命名（小写）：
 
-2. **构建 Agent 二进制文件**
-   - 支持多平台构建（Linux、macOS、Windows）
-   - 支持多架构（amd64、arm64）
+```
+ghcr.io/<owner>/kkartifact/server:<tag>
+ghcr.io/<owner>/kkartifact/web-ui:<tag>
+```
 
-3. **发布到 GitHub Releases**
-   - 自动创建 Release
-   - 上传所有平台的二进制文件
-   - 生成 SHA256 校验和文件
-
-### 触发条件
-
-- **自动触发**：推送版本标签（格式：`v*`，如 `v1.0.0`）
-- **手动触发**：在 GitHub Actions 页面手动运行工作流
-
-### 配置要求
-
-#### GitHub Packages 认证
-
-工作流使用 `GITHUB_TOKEN` 自动认证 GitHub Packages，无需额外配置。
-
-**注意**：确保仓库的 Actions 权限已启用：
-1. 进入仓库 Settings > Actions > General
-2. 在 "Workflow permissions" 部分选择 "Read and write permissions"
-3. 勾选 "Allow GitHub Actions to create and approve pull requests"
-
-#### 镜像仓库位置
-
-镜像会自动推送到 GitHub Packages，镜像地址格式：
-- `ghcr.io/<OWNER>/<REPO>/server:<tag>`
-- `ghcr.io/<OWNER>/<REPO>/web-ui:<tag>`
-
-其中 `<OWNER>/<REPO>` 自动从 `github.repository` 获取。
-
-### 使用示例
-
-#### 创建并推送版本标签
+示例：
 
 ```bash
-# 创建版本标签
-git tag -a v1.0.0 -m "Release version 1.0.0"
+docker pull ghcr.io/kevin197011/kkartifact/server:v1.0.0
+docker pull ghcr.io/kevin197011/kkartifact/web-ui:v1.0.0
+```
 
-# 推送标签到远程仓库
+Server 镜像内已包含多平台 Agent 二进制与安装脚本。
+
+## 发布流程（GitHub → 生产）
+
+```bash
+# 1. 打标签触发构建
+git tag v1.0.0
 git push origin v1.0.0
+
+# 2. Actions 自动：构建镜像 → 推送 GHCR → 创建 Release
+
+# 3. 生产服务器拉取并启动
+export KK_SERVER_IMAGE=ghcr.io/kevin197011/kkartifact/server:v1.0.0
+export KK_WEB_UI_IMAGE=ghcr.io/kevin197011/kkartifact/web-ui:v1.0.0
+docker compose -f docker-compose.prod.yml pull
+docker compose -f docker-compose.prod.yml up -d
 ```
 
-推送标签后，GitHub Actions 将自动：
-1. 构建并推送 Docker 镜像（带版本标签）
-2. 构建所有平台的 Agent 二进制文件
-3. 创建 GitHub Release 并上传所有文件
+手动触发：Actions → **Build and Release** → Run workflow
 
-#### 手动触发
-
-1. 访问 GitHub 仓库的 Actions 页面
-2. 选择 "Build and Release" 工作流
-3. 点击 "Run workflow" 按钮
-4. 选择分支并点击 "Run workflow"
-
-### 生成的标签
-
-#### Docker 镜像标签
-
-- `latest`（仅主分支）
-- `v1.0.0`（版本标签）
-- `1.0`（主版本.次版本）
-- `1`（主版本）
-- `<commit-sha>`（提交 SHA）
-
-#### GitHub Release
-
-- Release 名称：标签名称（如 `v1.0.0`）
-- 包含文件：
-  - `kkartifact-agent-linux-amd64`
-  - `kkartifact-agent-linux-arm64`
-  - `kkartifact-agent-darwin-amd64`
-  - `kkartifact-agent-darwin-arm64`
-  - `kkartifact-agent-windows-amd64.exe`
-  - `checksums.txt`（SHA256 校验和）
-
-### 注意事项
-
-1. **首次使用**：确保仓库 Actions 权限已正确配置（见"配置要求"部分）
-2. **镜像可见性**：GitHub Packages 镜像默认是私有的（如果是私有仓库），可以通过仓库的 Packages 页面设置为公开
-3. **版本标签**：使用语义化版本（SemVer）格式（如 `v1.0.0`）
-4. **预发布版本**：如果标签包含 `-`（如 `v1.0.0-beta.1`），Release 将被标记为预发布版本
-5. **拉取镜像**：从 GitHub Packages 拉取镜像需要使用 Personal Access Token（PAT）进行认证，详见 GitHub 文档
-
-### 使用镜像
-
-#### 从 GitHub Packages 拉取镜像
+## 本地开发（线下，不依赖 GitHub）
 
 ```bash
-# 登录 GitHub Packages（需要 Personal Access Token，scope: read:packages）
-echo $GITHUB_TOKEN | docker login ghcr.io -u USERNAME --password-stdin
+# 一键构建并启动
+ruby scripts/up.rb
 
-# 拉取镜像
-docker pull ghcr.io/OWNER/REPO/server:v1.0.0
-docker pull ghcr.io/OWNER/REPO/web-ui:v1.0.0
+# 构建 + 启动 + 集成测试
+ruby scripts/build.rb --test
+
+# 仅编译 agent
+ruby scripts/build.rb --agent
+
+# 强制无缓存重建 server
+ruby scripts/build.rb --server --no-cache --up
 ```
 
-#### 在 docker-compose.yml 中使用
+等价 Docker 命令：
 
-```yaml
-services:
-  server:
-    image: ghcr.io/OWNER/REPO/server:latest
-    # ...
-  web-ui:
-    image: ghcr.io/OWNER/REPO/web-ui:latest
-    # ...
+```bash
+docker compose build server web-ui
+docker compose up -d
+ruby scripts/test_integration.rb
 ```
 
+## CI 与本地测试对应关系
+
+| 本地命令 | CI 对应 |
+|----------|---------|
+| `cd server && go test ./...` | CI → Unit Tests (server) |
+| `cd agent && go test ./...` | CI → Unit Tests (agent) |
+| `cd web-ui && npm run build` | CI → Web UI |
+| `ruby scripts/build.rb --test` | CI → Integration |

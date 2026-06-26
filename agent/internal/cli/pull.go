@@ -6,7 +6,6 @@
 package cli
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -14,9 +13,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/spf13/cobra"
 	"github.com/kk/kkartifact-agent/internal/client"
 	"github.com/kk/kkartifact-agent/internal/config"
+	"github.com/spf13/cobra"
 )
 
 var pullCmd = &cobra.Command{
@@ -28,20 +27,20 @@ var pullCmd = &cobra.Command{
 }
 
 var (
-	pullProject    string
-	pullApp        string
-	pullVersion    string
-	pullPath       string
-	pullConfig     string
-	pullServerURL  string
-	pullToken      string
+	pullProject     string
+	pullApp         string
+	pullVersion     string
+	pullPath        string
+	pullConfig      string
+	pullServerURL   string
+	pullToken       string
 	pullConcurrency int
-	pullIgnore     []string
+	pullIgnore      []string
 )
 
 func init() {
 	rootCmd.AddCommand(pullCmd)
-	
+
 	pullCmd.Flags().StringVar(&pullProject, "project", "", "Project name (required)")
 	pullCmd.Flags().StringVar(&pullApp, "app", "", "App name (required)")
 	pullCmd.Flags().StringVar(&pullVersion, "version", "latest", "Version hash (use 'latest' for latest published version)")
@@ -51,14 +50,14 @@ func init() {
 	pullCmd.Flags().StringVar(&pullToken, "token", "", "Authentication token (overrides config file)")
 	pullCmd.Flags().IntVar(&pullConcurrency, "concurrency", 0, "Number of concurrent downloads (overrides config file, 0 = use config)")
 	pullCmd.Flags().StringArrayVar(&pullIgnore, "ignore", []string{}, "Ignore patterns (can be specified multiple times or comma-separated, merges with config file)")
-	
+
 	pullCmd.MarkFlagRequired("project")
 	pullCmd.MarkFlagRequired("app")
 }
 
 func runPull(cmd *cobra.Command, args []string) error {
 	startTime := time.Now()
-	
+
 	if pullProject == "" || pullApp == "" {
 		return fmt.Errorf("project and app are required")
 	}
@@ -79,7 +78,7 @@ func runPull(cmd *cobra.Command, args []string) error {
 	// Prepare command-line overrides
 	overrides := &config.Overrides{
 		ServerURL:   pullServerURL,
-		Token:        pullToken,
+		Token:       pullToken,
 		Concurrency: pullConcurrency,
 		Ignore:      ignorePatterns,
 	}
@@ -147,37 +146,19 @@ func runPull(cmd *cobra.Command, args []string) error {
 
 	// Get manifest
 	fmt.Println("Fetching manifest...")
-	manifestData, err := apiClient.GetManifest(pullProject, pullApp, actualVersion)
+	remoteManifest, err := apiClient.GetManifest(pullProject, pullApp, actualVersion)
 	if err != nil {
 		return fmt.Errorf("failed to get manifest: %w", err)
 	}
 
-	// Parse manifest (convert to map for now)
-	manifestBytes, err := json.Marshal(manifestData)
-	if err != nil {
-		return fmt.Errorf("failed to marshal manifest: %w", err)
-	}
-
-	var manifest struct {
-		Files []struct {
-			Path   string `json:"path"`
-			SHA256 string `json:"hash"` // Note: server returns "hash" not "sha256"
-			Size   int64  `json:"size"`
-		} `json:"files"`
-	}
-
-	if err := json.Unmarshal(manifestBytes, &manifest); err != nil {
-		return fmt.Errorf("failed to parse manifest: %w", err)
-	}
-
-	fmt.Printf("Found %d files in manifest\n", len(manifest.Files))
+	fmt.Printf("Found %d files in manifest\n", len(remoteManifest.Files))
 
 	// Download files concurrently with resume support
-	fmt.Printf("Downloading %d files with concurrency: %d (resume enabled)\n", len(manifest.Files), cfg.Concurrency)
-	
+	fmt.Printf("Downloading %d files with concurrency: %d (resume enabled)\n", len(remoteManifest.Files), cfg.Concurrency)
+
 	// Create progress bar
-	progressBar := NewProgressBar(len(manifest.Files))
-	
+	progressBar := NewProgressBar(len(remoteManifest.Files))
+
 	type downloadTask struct {
 		index        int
 		filePath     string
@@ -185,23 +166,23 @@ func runPull(cmd *cobra.Command, args []string) error {
 		expectedHash string
 		expectedSize int64
 	}
-	
-	tasks := make(chan downloadTask, len(manifest.Files))
-	errors := make(chan error, len(manifest.Files))
-	
+
+	tasks := make(chan downloadTask, len(remoteManifest.Files))
+	errors := make(chan error, len(remoteManifest.Files))
+
 	// Populate tasks
-	for i, file := range manifest.Files {
+	for i, file := range remoteManifest.Files {
 		localPath := filepath.Join(absPath, file.Path)
 		tasks <- downloadTask{
 			index:        i,
 			filePath:     file.Path,
 			localPath:    localPath,
-			expectedHash: file.SHA256,
+			expectedHash: file.Hash,
 			expectedSize: file.Size,
 		}
 	}
 	close(tasks)
-	
+
 	// Start worker goroutines
 	var wg sync.WaitGroup
 	for i := 0; i < cfg.Concurrency; i++ {
@@ -215,33 +196,33 @@ func runPull(cmd *cobra.Command, args []string) error {
 					errors <- fmt.Errorf("failed to check file %s: %w", task.filePath, err)
 					return
 				}
-				
+
 				if exists && matches {
 					// Skip file - update progress bar
 					progressBar.Update(1)
 					continue
 				}
-				
+
 				// Download file (with resume support if partial file exists)
 				if err := apiClient.DownloadFile(pullProject, pullApp, actualVersion, task.filePath, task.localPath, task.expectedHash, task.expectedSize); err != nil {
 					errors <- fmt.Errorf("failed to download file %s: %w", task.filePath, err)
 					return
 				}
-				
+
 				// Update progress bar
 				progressBar.Update(1)
 			}
 		}()
 	}
-	
+
 	// Wait for all workers to finish
 	wg.Wait()
-	
+
 	// Finish progress bar
 	progressBar.Finish()
-	
+
 	close(errors)
-	
+
 	// Check for errors
 	for err := range errors {
 		if err != nil {

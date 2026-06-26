@@ -21,15 +21,15 @@ import (
 
 // Handler handles HTTP requests
 type Handler struct {
-	db              *database.DB
-	storage         storage.Storage
-	artifactManager *storage.ArtifactManager
-	authenticator   *auth.TokenAuthenticator
-	projectRepo     *database.ProjectRepository
-	appRepo         *database.AppRepository
-	versionRepo     *database.VersionRepository
+	db               *database.DB
+	storage          storage.Storage
+	artifactManager  *storage.ArtifactManager
+	authenticator    *auth.TokenAuthenticator
+	projectRepo      *database.ProjectRepository
+	appRepo          *database.AppRepository
+	versionRepo      *database.VersionRepository
 	inventoryService *services.InventoryService
-	eventBus        events.EventBus
+	eventBus         events.EventBus
 }
 
 // NewHandler creates a new API handler
@@ -37,44 +37,45 @@ func NewHandler(db *database.DB, storageBackend storage.Storage, authenticator *
 	projectRepo := database.NewProjectRepository(db)
 	appRepo := database.NewAppRepository(db)
 	versionRepo := database.NewVersionRepository(db)
-	
+
 	// Initialize event bus (can be nil if not needed)
 	eventBus := events.NewMemoryEventBus()
-	
+
 	return &Handler{
-		db:              db,
-		storage:         storageBackend,
-		artifactManager: storage.NewArtifactManager(storageBackend),
-		authenticator:   authenticator,
-		projectRepo:     projectRepo,
-		appRepo:         appRepo,
-		versionRepo:     versionRepo,
+		db:               db,
+		storage:          storageBackend,
+		artifactManager:  storage.NewArtifactManager(storageBackend),
+		authenticator:    authenticator,
+		projectRepo:      projectRepo,
+		appRepo:          appRepo,
+		versionRepo:      versionRepo,
 		inventoryService: services.NewInventoryService(projectRepo, appRepo, versionRepo),
-		eventBus:        eventBus,
+		eventBus:         eventBus,
 	}
 }
 
 // RegisterRoutes registers all API routes
 func (h *Handler) RegisterRoutes(router *gin.Engine) {
 	api := router.Group("/api/v1")
-	
+
 	// Public routes
 	api.GET("/health", h.handleHealth)
 	api.HEAD("/health", h.handleHealth) // Support HEAD requests for health checks
-	
+
 	// Login endpoint (public)
 	api.POST("/login", h.handleLogin)
-	
-	// Token creation endpoint (public for initial setup, consider protecting in production)
-	// Register BEFORE protected routes to avoid conflicts
-	api.POST("/tokens", h.handleCreateToken)
-	
+
 	// Public read-only endpoints for inventory (no authentication required)
 	public := api.Group("/public")
 	{
-		public.GET("/projects", h.handlePublicListProjects)
-		public.GET("/projects/:project/apps", h.handlePublicListApps)
-		public.GET("/projects/:project/apps/:app/versions", h.handlePublicListVersions)
+		legacy := public.Group("")
+		legacy.Use(deprecatedPublicListMiddleware())
+		{
+			legacy.GET("/projects", h.handlePublicListProjects)
+			legacy.GET("/projects/:project/apps", h.handlePublicListApps)
+			legacy.GET("/projects/:project/apps/:app/versions", h.handlePublicListVersions)
+		}
+		public.GET("/inventory", h.handlePublicGetInventory)
 	}
 
 	// Public download endpoints (no authentication required)
@@ -85,7 +86,7 @@ func (h *Handler) RegisterRoutes(router *gin.Engine) {
 		downloads.GET("/server/version", h.handleGetServerVersion)
 		downloads.GET("/scripts/:filename", h.handleDownloadScript)
 	}
-	
+
 	// Protected routes
 	protected := api.Group("")
 	protected.Use(h.authenticator.AuthMiddleware())
@@ -94,51 +95,58 @@ func (h *Handler) RegisterRoutes(router *gin.Engine) {
 		protected.GET("/projects", h.handleListProjects)
 		protected.GET("/projects/:project/apps", h.handleListApps)
 		protected.GET("/projects/:project/apps/:app/versions", h.handleListVersions)
-		protected.GET("/projects/:project/apps/:app/latest", h.handleGetLatestVersion)
-		
-		// Delete endpoints
-		protected.DELETE("/projects/:project", h.handleDeleteProject)
-		protected.DELETE("/projects/:project/apps/:app", h.handleDeleteApp)
-		protected.DELETE("/projects/:project/apps/:app/versions/:version", h.handleDeleteVersion)
-		protected.GET("/manifest/:project/:app/:hash", h.handleGetManifest)
-		protected.GET("/file/:project/:app/:hash", h.handleGetFile)
-		
-		// Upload endpoints
+
+		// Pull artifact routes (pull permission + token scope)
+		pullRoutes := protected.Group("")
+		pullRoutes.Use(h.artifactPermissionMiddleware(auth.PermissionPull))
+		{
+			pullRoutes.GET("/projects/:project/apps/:app/latest", h.handleGetLatestVersion)
+			pullRoutes.GET("/manifest/:project/:app/:hash", h.handleGetManifest)
+			pullRoutes.GET("/file/:project/:app/:hash", h.handleGetFile)
+		}
+
+		// Push file upload (push permission + token scope; init/finish check in handler)
+		pushRoutes := protected.Group("")
+		pushRoutes.Use(h.artifactPermissionMiddleware(auth.PermissionPush))
+		{
+			pushRoutes.POST("/file/:project/:app/:hash", h.handleUploadFile)
+		}
+
 		protected.POST("/upload/init", h.handleInitUpload)
-		protected.POST("/file/:project/:app/:hash", h.handleUploadFile)
 		protected.POST("/upload/finish", h.handleFinishUpload)
-		
-		// Webhook endpoints
-		protected.POST("/webhooks", h.handleCreateWebhook)
-		protected.GET("/webhooks", h.handleListWebhooks)
-		protected.GET("/webhooks/:id", h.handleGetWebhook)
-		protected.PUT("/webhooks/:id", h.handleUpdateWebhook)
-		protected.DELETE("/webhooks/:id", h.handleDeleteWebhook)
-		
-		// Config endpoints
-		protected.GET("/config", h.handleGetConfig)
-		protected.PUT("/config", h.handleUpdateConfig)
-		
-		// Publish/Unpublish endpoints
+
+		// Publish/Unpublish (promote permission checked in handler from JSON body)
 		protected.POST("/publish", h.handlePublish)
 		protected.POST("/unpublish", h.handleUnpublish)
-		
-		// Audit logs endpoint
+
+		// Webhook read endpoints
+		protected.GET("/webhooks", h.handleListWebhooks)
+		protected.GET("/webhooks/:id", h.handleGetWebhook)
+
+		protected.GET("/config", h.handleGetConfig)
 		protected.GET("/audit-logs", h.handleListAuditLogs)
-		
-		// Token management endpoints (list and delete require auth)
 		protected.GET("/tokens", h.handleListTokens)
-		protected.DELETE("/tokens/:id", h.handleDeleteToken)
-		
-		// Storage sync endpoint (admin only - rebuilds database from storage)
-		protected.POST("/sync-storage", h.handleSyncStorage)
-		
-		// Admin inventory endpoints (require authentication)
-		admin := protected.Group("/admin")
+
+		// Admin-only routes
+		adminRoutes := protected.Group("")
+		adminRoutes.Use(h.adminMiddleware())
 		{
-			admin.GET("/inventory", h.handleGetInventory)
-			admin.GET("/inventory/:project", h.handleGetProjectInventory)
-			admin.GET("/inventory/summary", h.handleGetInventorySummary)
+			adminRoutes.DELETE("/projects/:project", h.handleDeleteProject)
+			adminRoutes.DELETE("/projects/:project/apps/:app", h.handleDeleteApp)
+			adminRoutes.DELETE("/projects/:project/apps/:app/versions/:version", h.handleDeleteVersion)
+
+			adminRoutes.POST("/webhooks", h.handleCreateWebhook)
+			adminRoutes.PUT("/webhooks/:id", h.handleUpdateWebhook)
+			adminRoutes.DELETE("/webhooks/:id", h.handleDeleteWebhook)
+
+			adminRoutes.PUT("/config", h.handleUpdateConfig)
+			adminRoutes.POST("/tokens", h.handleCreateToken)
+			adminRoutes.DELETE("/tokens/:id", h.handleDeleteToken)
+			adminRoutes.POST("/sync-storage", h.handleSyncStorage)
+
+			adminRoutes.GET("/admin/inventory", h.handleGetInventory)
+			adminRoutes.GET("/admin/inventory/:project", h.handleGetProjectInventory)
+			adminRoutes.GET("/admin/inventory/summary", h.handleGetInventorySummary)
 		}
 	}
 }
@@ -184,14 +192,14 @@ func (h *Handler) handleGetFile(c *gin.Context) {
 	app := c.Param("app")
 	hash := c.Param("hash")
 	filePath := c.Query("path")
-	
+
 	if filePath == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "path parameter is required"})
 		return
 	}
-	
+
 	fullPath := project + "/" + app + "/" + hash + "/" + filePath
-	
+
 	// Handle HEAD request for file existence check
 	if c.Request.Method == "HEAD" {
 		exists, err := h.storage.Exists(c.Request.Context(), fullPath)
@@ -202,14 +210,14 @@ func (h *Handler) handleGetFile(c *gin.Context) {
 		c.Status(http.StatusOK)
 		return
 	}
-	
+
 	reader, err := h.storage.Get(c.Request.Context(), fullPath)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 		return
 	}
 	defer reader.Close()
-	
+
 	// Support HTTP Range requests for resume download
 	rangeHeader := c.GetHeader("Range")
 	if rangeHeader != "" {
@@ -225,7 +233,7 @@ func (h *Handler) handleGetFile(c *gin.Context) {
 				}
 			}
 		}
-		
+
 		// Try to seek to start position if reader supports it
 		if seeker, ok := reader.(io.Seeker); ok {
 			if _, err := seeker.Seek(start, io.SeekStart); err == nil {
@@ -242,7 +250,7 @@ func (h *Handler) handleGetFile(c *gin.Context) {
 			}
 		}
 	}
-	
+
 	// Note: Audit log for pull operation is recorded in handleGetManifest
 	// to ensure one record per version, not per file
 
@@ -254,4 +262,3 @@ func (h *Handler) handleGetFile(c *gin.Context) {
 // authMiddleware is moved to auth.AuthMiddleware() which supports both JWT and API tokens
 
 // getIntQuery is moved to helpers.go
-

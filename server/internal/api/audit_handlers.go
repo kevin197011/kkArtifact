@@ -6,6 +6,7 @@
 package api
 
 import (
+	"database/sql"
 	"net/http"
 	"time"
 
@@ -35,14 +36,15 @@ type AuditLogsListResponse struct {
 
 // handleListAuditLogs godoc
 // @Summary      List audit logs
-// @Description  Get a list of audit logs with optional filtering by project and app. Returns paginated results with total count.
+// @Description  Get a list of audit logs with optional filtering by project, app, and operation. Returns paginated results with total count.
 // @Tags         audit
 // @Accept       json
 // @Produce      json
-// @Param        project_id  query     int  false  "Filter by project ID"
-// @Param        app_id      query     int  false  "Filter by app ID"
-// @Param        limit       query     int  false  "Limit number of results (default: 50)"
-// @Param        offset      query     int  false  "Offset for pagination (default: 0)"
+// @Param        project_id  query     int     false  "Filter by project ID"
+// @Param        app_id      query     int     false  "Filter by app ID"
+// @Param        operation   query     string  false  "Filter by operation (push, pull, publish, unpublish, token_create, token_delete, version_delete, etc.)"
+// @Param        limit       query     int     false  "Limit number of results (default: 50, max: 500)"
+// @Param        offset      query     int     false  "Offset for pagination (default: 0)"
 // @Success      200         {object}  AuditLogsListResponse
 // @Failure      401         {object}  ErrorResponse
 // @Failure      500         {object}  ErrorResponse
@@ -51,6 +53,7 @@ type AuditLogsListResponse struct {
 func (h *Handler) handleListAuditLogs(c *gin.Context) {
 	projectID := getIntQuery(c, "project_id", 0)
 	appID := getIntQuery(c, "app_id", 0)
+	operation := c.Query("operation")
 	limit := getIntQuery(c, "limit", 50)
 	offset := getIntQuery(c, "offset", 0)
 
@@ -63,80 +66,57 @@ func (h *Handler) handleListAuditLogs(c *gin.Context) {
 	}
 
 	auditRepo := database.NewAuditRepository(h.db)
-	
-	// Get total count with same filters
-	total, err := auditRepo.Count(projectIDPtr, appIDPtr)
+
+	total, err := auditRepo.Count(projectIDPtr, appIDPtr, operation)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	// Get paginated logs
-	logs, err := auditRepo.List(projectIDPtr, appIDPtr, limit, offset)
+	logs, err := auditRepo.List(projectIDPtr, appIDPtr, operation, limit, offset)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	// Convert to response format with properly formatted dates
 	responses := make([]AuditLogResponse, len(logs))
 	for i, log := range logs {
-		var projectID, appID *int
-		var projectName, appName *string
-		
-		if log.ProjectID.Valid {
-			pid := int(log.ProjectID.Int64)
-			projectID = &pid
-			// Get project name by querying database directly
-			var name string
-			query := `SELECT name FROM projects WHERE id = $1`
-			if err := h.db.QueryRow(query, pid).Scan(&name); err == nil {
-				projectName = &name
-			}
-		}
-		
-		if log.AppID.Valid {
-			aid := int(log.AppID.Int64)
-			appID = &aid
-			// Get app name by querying database directly
-			var name string
-			query := `SELECT name FROM apps WHERE id = $1`
-			if err := h.db.QueryRow(query, aid).Scan(&name); err == nil {
-				appName = &name
-			}
-		}
-
-		var versionHash, agentID, metadata *string
-		if log.VersionHash.Valid {
-			versionHash = &log.VersionHash.String
-		}
-		if log.AgentID.Valid {
-			agentID = &log.AgentID.String
-		}
-		if log.Metadata.Valid {
-			metadata = &log.Metadata.String
-		}
-
-		responses[i] = AuditLogResponse{
-			ID:          log.ID,
-			Operation:   log.Operation,
-			ProjectID:   projectID,
-			AppID:       appID,
-			ProjectName: projectName,
-			AppName:     appName,
-			VersionHash: versionHash,
-			AgentID:     agentID,
-			Metadata:    metadata,
-			CreatedAt:   log.CreatedAt.Format(time.RFC3339),
-		}
+		responses[i] = auditLogToResponse(log)
 	}
 
-	// Return paginated response with total count
 	c.JSON(http.StatusOK, AuditLogsListResponse{
 		Data:  responses,
 		Total: total,
 	})
 }
 
-// getIntParam is in helpers.go
+func auditLogToResponse(log *database.AuditLogWithNames) AuditLogResponse {
+	return AuditLogResponse{
+		ID:          log.ID,
+		Operation:   log.Operation,
+		ProjectID:   nullInt64Ptr(log.ProjectID),
+		AppID:       nullInt64Ptr(log.AppID),
+		ProjectName: nullStringPtr(log.ProjectName),
+		AppName:     nullStringPtr(log.AppName),
+		VersionHash: nullStringPtr(log.VersionHash),
+		AgentID:     nullStringPtr(log.AgentID),
+		Metadata:    nullStringPtr(log.Metadata),
+		CreatedAt:   log.CreatedAt.Format(time.RFC3339),
+	}
+}
 
+func nullInt64Ptr(v sql.NullInt64) *int {
+	if !v.Valid {
+		return nil
+	}
+	n := int(v.Int64)
+	return &n
+}
+
+func nullStringPtr(v sql.NullString) *string {
+	if !v.Valid {
+		return nil
+	}
+	s := v.String
+	return &s
+}

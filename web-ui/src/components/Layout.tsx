@@ -41,7 +41,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
       if (!token) {
         // No token, use public endpoint to check if service is available
         try {
-          await publicClient.get('/public/projects', { params: { limit: 1 } })
+          await publicClient.get('/health')
           // Service is available but user is not authenticated
           setIsAuthenticated(false)
           navigate('/login', { replace: true })
@@ -61,7 +61,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
         if (error.response?.status === 401) {
           // Token is invalid, try using public endpoint instead to avoid 401
           try {
-            await publicClient.get('/public/projects', { params: { limit: 1 } })
+            await publicClient.get('/health')
             // Public endpoint works, but user is not authenticated
             localStorage.removeItem('kkartifact_token')
             setIsAuthenticated(false)

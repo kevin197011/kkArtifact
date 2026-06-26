@@ -8,7 +8,6 @@ package api
 import (
 	"net/http"
 	"strconv"
-	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/kk/kkartifact-server/internal/database"
@@ -35,6 +34,7 @@ type CreateWebhookRequest struct {
 // @Success      201      {object}  WebhookResponse
 // @Failure      400      {object}  ErrorResponse
 // @Failure      401      {object}  ErrorResponse
+// @Failure      403      {object}  ErrorResponse
 // @Failure      500      {object}  ErrorResponse
 // @Security     Bearer
 // @Router       /webhooks [post]
@@ -61,66 +61,22 @@ func (h *Handler) handleCreateWebhook(c *gin.Context) {
 	}
 
 	// Convert to response format with project and app names
-	var projectID, appID *int
-	var projectName, appName *string
-
-	if webhook.ProjectID.Valid {
-		pid := int(webhook.ProjectID.Int64)
-		projectID = &pid
-		// Get project name
-		var name string
-		query := `SELECT name FROM projects WHERE id = $1`
-		if err := h.db.QueryRow(query, pid).Scan(&name); err == nil {
-			projectName = &name
-		}
-	}
-
-	if webhook.AppID.Valid {
-		aid := int(webhook.AppID.Int64)
-		appID = &aid
-		// Get app name
-		var name string
-		query := `SELECT name FROM apps WHERE id = $1`
-		if err := h.db.QueryRow(query, aid).Scan(&name); err == nil {
-			appName = &name
-		}
-	}
-
-	var headers *string
-	if webhook.Headers.Valid {
-		headers = &webhook.Headers.String
-	}
-
-	response := WebhookResponse{
-		ID:          webhook.ID,
-		Name:        webhook.Name,
-		EventTypes:  webhook.EventTypes,
-		URL:         webhook.URL,
-		Headers:     headers,
-		Enabled:     webhook.Enabled,
-		ProjectID:   projectID,
-		AppID:       appID,
-		ProjectName: projectName,
-		AppName:     appName,
-		CreatedAt:   webhook.CreatedAt.Format(time.RFC3339),
-	}
-
-	c.JSON(http.StatusCreated, response)
+	c.JSON(http.StatusCreated, h.webhookToResponse(webhook))
 }
 
 // WebhookResponse represents a webhook in API response
 type WebhookResponse struct {
-	ID         int     `json:"id"`
-	Name       string  `json:"name"`
-	EventTypes []string `json:"event_types"`
-	URL        string  `json:"url"`
-	Headers    *string `json:"headers,omitempty"`
-	Enabled    bool    `json:"enabled"`
-	ProjectID  *int    `json:"project_id,omitempty"`
-	AppID      *int    `json:"app_id,omitempty"`
-	ProjectName *string `json:"project_name,omitempty"`
-	AppName     *string `json:"app_name,omitempty"`
-	CreatedAt  string  `json:"created_at"`
+	ID          int      `json:"id"`
+	Name        string   `json:"name"`
+	EventTypes  []string `json:"event_types"`
+	URL         string   `json:"url"`
+	Headers     *string  `json:"headers,omitempty"`
+	Enabled     bool     `json:"enabled"`
+	ProjectID   *int     `json:"project_id,omitempty"`
+	AppID       *int     `json:"app_id,omitempty"`
+	ProjectName *string  `json:"project_name,omitempty"`
+	AppName     *string  `json:"app_name,omitempty"`
+	CreatedAt   string   `json:"created_at"`
 }
 
 // handleListWebhooks godoc
@@ -145,49 +101,7 @@ func (h *Handler) handleListWebhooks(c *gin.Context) {
 	// Convert to response format with project and app names
 	responses := make([]WebhookResponse, len(webhooks))
 	for i, webhook := range webhooks {
-		var projectID, appID *int
-		var projectName, appName *string
-
-		if webhook.ProjectID.Valid {
-			pid := int(webhook.ProjectID.Int64)
-			projectID = &pid
-			// Get project name
-			var name string
-			query := `SELECT name FROM projects WHERE id = $1`
-			if err := h.db.QueryRow(query, pid).Scan(&name); err == nil {
-				projectName = &name
-			}
-		}
-
-		if webhook.AppID.Valid {
-			aid := int(webhook.AppID.Int64)
-			appID = &aid
-			// Get app name
-			var name string
-			query := `SELECT name FROM apps WHERE id = $1`
-			if err := h.db.QueryRow(query, aid).Scan(&name); err == nil {
-				appName = &name
-			}
-		}
-
-		var headers *string
-		if webhook.Headers.Valid {
-			headers = &webhook.Headers.String
-		}
-
-		responses[i] = WebhookResponse{
-			ID:          webhook.ID,
-			Name:        webhook.Name,
-			EventTypes:  webhook.EventTypes,
-			URL:         webhook.URL,
-			Headers:     headers,
-			Enabled:     webhook.Enabled,
-			ProjectID:   projectID,
-			AppID:       appID,
-			ProjectName: projectName,
-			AppName:     appName,
-			CreatedAt:   webhook.CreatedAt.Format(time.RFC3339),
-		}
+		responses[i] = h.webhookToResponse(webhook)
 	}
 
 	c.JSON(http.StatusOK, responses)
@@ -214,51 +128,7 @@ func (h *Handler) handleGetWebhook(c *gin.Context) {
 	}
 
 	// Convert to response format with project and app names
-	var projectID, appID *int
-	var projectName, appName *string
-
-	if webhook.ProjectID.Valid {
-		pid := int(webhook.ProjectID.Int64)
-		projectID = &pid
-		// Get project name
-		var name string
-		query := `SELECT name FROM projects WHERE id = $1`
-		if err := h.db.QueryRow(query, pid).Scan(&name); err == nil {
-			projectName = &name
-		}
-	}
-
-	if webhook.AppID.Valid {
-		aid := int(webhook.AppID.Int64)
-		appID = &aid
-		// Get app name
-		var name string
-		query := `SELECT name FROM apps WHERE id = $1`
-		if err := h.db.QueryRow(query, aid).Scan(&name); err == nil {
-			appName = &name
-		}
-	}
-
-	var headers *string
-	if webhook.Headers.Valid {
-		headers = &webhook.Headers.String
-	}
-
-	response := WebhookResponse{
-		ID:          webhook.ID,
-		Name:        webhook.Name,
-		EventTypes:  webhook.EventTypes,
-		URL:         webhook.URL,
-		Headers:     headers,
-		Enabled:     webhook.Enabled,
-		ProjectID:   projectID,
-		AppID:       appID,
-		ProjectName: projectName,
-		AppName:     appName,
-		CreatedAt:   webhook.CreatedAt.Format(time.RFC3339),
-	}
-
-	c.JSON(http.StatusOK, response)
+	c.JSON(http.StatusOK, h.webhookToResponse(webhook))
 }
 
 // handleUpdateWebhook godoc
@@ -272,6 +142,7 @@ func (h *Handler) handleGetWebhook(c *gin.Context) {
 // @Success      200      {object}  WebhookResponse
 // @Failure      400      {object}  ErrorResponse
 // @Failure      401      {object}  ErrorResponse
+// @Failure      403      {object}  ErrorResponse
 // @Failure      404      {object}  ErrorResponse
 // @Failure      500      {object}  ErrorResponse
 // @Security     Bearer
@@ -359,7 +230,7 @@ func (h *Handler) handleUpdateWebhook(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, updated)
+	c.JSON(http.StatusOK, h.webhookToResponse(updated))
 }
 
 // handleDeleteWebhook godoc
@@ -371,6 +242,7 @@ func (h *Handler) handleUpdateWebhook(c *gin.Context) {
 // @Param        id   path      int  true  "Webhook ID"
 // @Success      200  {object}  map[string]string
 // @Failure      401  {object}  ErrorResponse
+// @Failure      403  {object}  ErrorResponse
 // @Failure      500  {object}  ErrorResponse
 // @Security     Bearer
 // @Router       /webhooks/{id} [delete]
@@ -390,4 +262,3 @@ func (h *Handler) handleDeleteWebhook(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"status": "deleted"})
 }
-

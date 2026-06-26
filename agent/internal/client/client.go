@@ -37,7 +37,7 @@ func New(serverURL, token string) (*Client, error) {
 		cleanToken = strings.TrimPrefix(cleanToken, "Bearer ")
 		cleanToken = strings.TrimSpace(cleanToken)
 	}
-	
+
 	// Validate token format before creating client (only if token is provided)
 	// Empty token is allowed for public endpoints (e.g., update command)
 	if cleanToken != "" {
@@ -297,7 +297,7 @@ func (c *Client) FinishUpload(req interface{}) error {
 }
 
 // GetManifest retrieves a manifest
-func (c *Client) GetManifest(project, app, version string) (interface{}, error) {
+func (c *Client) GetManifest(project, app, version string) (*Manifest, error) {
 	// Ensure token is set before making request
 	if c.token == "" {
 		return nil, fmt.Errorf("token is empty, cannot get manifest. Please check your config file (global: /etc/kkArtifact/config.yml or local: .kkartifact.yml)")
@@ -331,12 +331,44 @@ func (c *Client) GetManifest(project, app, version string) (interface{}, error) 
 		return nil, fmt.Errorf(errorMsg)
 	}
 
-	var manifest interface{}
+	var manifest Manifest
 	if err := json.NewDecoder(resp.Body).Decode(&manifest); err != nil {
 		return nil, err
 	}
 
-	return manifest, nil
+	return &manifest, nil
+}
+
+// ManifestFile represents a file entry in a remote manifest
+type ManifestFile struct {
+	Path string `json:"path"`
+	Hash string `json:"hash"`
+	Size int64  `json:"size"`
+}
+
+// Manifest represents a remote artifact manifest
+type Manifest struct {
+	Project   string         `json:"project"`
+	App       string         `json:"app"`
+	Version   string         `json:"version"`
+	GitCommit string         `json:"git_commit,omitempty"`
+	BuildTime string         `json:"build_time,omitempty"`
+	Builder   string         `json:"builder,omitempty"`
+	Files     []ManifestFile `json:"files"`
+}
+
+// FileHashes returns path -> lowercase hash map for comparison
+func (m *Manifest) FileHashes() map[string]string {
+	if m == nil {
+		return nil
+	}
+	result := make(map[string]string, len(m.Files))
+	for _, f := range m.Files {
+		if f.Path != "" && f.Hash != "" {
+			result[f.Path] = strings.ToLower(f.Hash)
+		}
+	}
+	return result
 }
 
 // LatestVersionResponse represents the latest version response
@@ -386,6 +418,46 @@ func (c *Client) GetLatestVersion(project, app string) (*LatestVersionResponse, 
 	}
 
 	return &latestResp, nil
+}
+
+// Publish marks a version as published (available via pull latest)
+func (c *Client) Publish(project, app, version string) error {
+	if c.token == "" {
+		return fmt.Errorf("token is empty, cannot publish. Please check your config file")
+	}
+
+	body, err := json.Marshal(map[string]string{
+		"project": project,
+		"app":     app,
+		"version": version,
+	})
+	if err != nil {
+		return err
+	}
+
+	httpReq, err := http.NewRequest("POST", c.serverURL+"/api/v1/publish", bytes.NewBuffer(body))
+	if err != nil {
+		return err
+	}
+
+	httpReq.Header.Set("Content-Type", "application/json")
+	httpReq.Header.Set("Authorization", "Bearer "+c.token)
+
+	resp, err := c.httpClient.Do(httpReq)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		respBody, _ := io.ReadAll(resp.Body)
+		if resp.StatusCode == http.StatusUnauthorized {
+			return fmt.Errorf("publish failed with status %d (unauthorized): %s", resp.StatusCode, string(respBody))
+		}
+		return fmt.Errorf("publish failed with status %d: %s", resp.StatusCode, string(respBody))
+	}
+
+	return nil
 }
 
 // AgentVersionInfo represents agent version information

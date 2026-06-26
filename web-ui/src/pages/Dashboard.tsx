@@ -8,8 +8,9 @@ import { useQuery } from '@tanstack/react-query'
 import { Row, Col, Card, Table, Typography, Spin } from 'antd'
 import { ProjectOutlined, AppstoreOutlined, TagOutlined, ClockCircleOutlined, HistoryOutlined } from '@ant-design/icons'
 import { useNavigate } from 'react-router-dom'
-import { projectsApi } from '../api/projects'
+import { inventoryApi } from '../api/inventory'
 import { auditApi, type AuditLog, type AuditLogsListResponse } from '../api/audit'
+import { formatAuditOperation } from '../constants/auditLabels'
 import type { ColumnType } from 'antd/es/table'
 import styles from './Dashboard.module.css'
 
@@ -18,10 +19,10 @@ const { Title } = Typography
 const Dashboard: React.FC = () => {
   const navigate = useNavigate()
   
-  // Fetch projects count
-  const { data: projectsData, isLoading: projectsLoading } = useQuery({
-    queryKey: ['projects', 'dashboard'],
-    queryFn: () => projectsApi.list(1000, 0).then((res) => res.data),
+  // 一次请求获取统计摘要
+  const { data: inventorySummary, isLoading: summaryLoading } = useQuery({
+    queryKey: ['inventory-summary', 'dashboard'],
+    queryFn: () => inventoryApi.getSummary().then((res) => res.data),
   })
 
   // Fetch audit logs for recent activity
@@ -34,45 +35,11 @@ const Dashboard: React.FC = () => {
     },
   })
 
-  // Fetch apps for all projects to calculate total count
-  const { data: allAppsData } = useQuery({
-    queryKey: ['all-apps', 'dashboard', projectsData?.map((p) => p.name)],
-    queryFn: async () => {
-      if (!projectsData || projectsData.length === 0) return []
-      const appsPromises = projectsData.map((project) =>
-        projectsApi.getApps(project.name, 1000, 0).then((res) => res.data)
-      )
-      const appsArrays = await Promise.all(appsPromises)
-      return appsArrays.flat()
-    },
-    enabled: !!projectsData && projectsData.length > 0,
-  })
-
-  // Fetch versions for all apps to calculate total count
-  const { data: allVersionsData } = useQuery({
-    queryKey: ['all-versions', 'dashboard', allAppsData?.map((a) => `${a.project_id}/${a.name}`)],
-    queryFn: async () => {
-      if (!allAppsData || !projectsData || allAppsData.length === 0) return []
-      // Create a map from project_id to project name
-      const projectMap = new Map(projectsData.map((p) => [p.id, p.name]))
-      const versionsPromises = allAppsData.map((app) => {
-        const projectName = projectMap.get(app.project_id)
-        if (!projectName) {
-          return Promise.resolve([] as any[])
-        }
-        return projectsApi.getVersions(projectName, app.name, 1000, 0).then((res) => res.data)
-      })
-      const versionsArrays = await Promise.all(versionsPromises)
-      return versionsArrays.flat()
-    },
-    enabled: !!allAppsData && !!projectsData && allAppsData.length > 0,
-  })
-
   // Calculate statistics
-  const projectsCount = projectsData?.length || 0
-  const appsCount = allAppsData?.length || 0
-  const versionsCount = allVersionsData?.length || 0
-  const isLoading = projectsLoading || auditLogsLoading
+  const projectsCount = inventorySummary?.total_projects || 0
+  const appsCount = inventorySummary?.total_apps || 0
+  const versionsCount = inventorySummary?.total_versions || 0
+  const isLoading = summaryLoading || auditLogsLoading
 
   // Audit logs columns
   const auditColumns: ColumnType<AuditLog>[] = [
@@ -91,22 +58,11 @@ const Dashboard: React.FC = () => {
       dataIndex: 'operation',
       key: 'operation',
       width: 120,
-      render: (text: string) => {
-        const labels: Record<string, string> = {
-          push: '推送',
-          pull: '拉取',
-          publish: '发布',
-          unpublish: '取消发布',
-          token_create: '创建令牌',
-          token_delete: '删除令牌',
-          version_delete: '删除',
-        }
-        return (
-          <span className={`${styles.operationBadge} ${styles[text] || ''}`}>
-            {labels[text] || text}
-          </span>
-        )
-      },
+      render: (text: string) => (
+        <span className={`${styles.operationBadge} ${styles[text] || ''}`}>
+          {formatAuditOperation(text)}
+        </span>
+      ),
     },
     {
       title: '代理ID',

@@ -25,9 +25,9 @@ type ManifestResponse struct {
 
 // ManifestFileResponse represents a file in manifest response
 type ManifestFileResponse struct {
-	Path   string `json:"path"`
-	Hash   string `json:"hash"`   // SHA256 hash
-	Size   int64  `json:"size"`
+	Path string `json:"path"`
+	Hash string `json:"hash"` // SHA256 hash
+	Size int64  `json:"size"`
 }
 
 // handleGetManifest godoc
@@ -113,4 +113,3 @@ func (h *Handler) handleGetManifest(c *gin.Context) {
 
 	c.JSON(http.StatusOK, response)
 }
-

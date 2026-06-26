@@ -36,14 +36,14 @@ type Version struct {
 
 // Token represents a token in the database
 type Token struct {
-	ID         int            `db:"id"`
-	TokenHash  string         `db:"token_hash"`
-	Name       sql.NullString `db:"name"`
-	ProjectID  sql.NullInt64  `db:"project_id"`
-	AppID      sql.NullInt64  `db:"app_id"`
-	Permissions []string      `db:"permissions"`
-	ExpiresAt  sql.NullTime   `db:"expires_at"`
-	CreatedAt  time.Time      `db:"created_at"`
+	ID          int            `db:"id"`
+	TokenHash   string         `db:"token_hash"`
+	Name        sql.NullString `db:"name"`
+	ProjectID   sql.NullInt64  `db:"project_id"`
+	AppID       sql.NullInt64  `db:"app_id"`
+	Permissions []string       `db:"permissions"`
+	ExpiresAt   sql.NullTime   `db:"expires_at"`
+	CreatedAt   time.Time      `db:"created_at"`
 }
 
 // Webhook represents a webhook in the database
@@ -71,6 +71,13 @@ type AuditLog struct {
 	CreatedAt   time.Time      `db:"created_at"`
 }
 
+// AuditLogWithNames extends AuditLog with joined project/app names
+type AuditLogWithNames struct {
+	AuditLog
+	ProjectName sql.NullString `db:"project_name"`
+	AppName     sql.NullString `db:"app_name"`
+}
+
 // Config represents a global configuration entry
 type Config struct {
 	ID        int       `db:"id"`
@@ -78,4 +85,3 @@ type Config struct {
 	Value     string    `db:"value"`
 	UpdatedAt time.Time `db:"updated_at"`
 }
-

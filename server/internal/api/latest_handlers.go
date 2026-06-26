@@ -56,4 +56,3 @@ func (h *Handler) handleGetLatestVersion(c *gin.Context) {
 		"version": latestVersion.Hash,
 	})
 }
-

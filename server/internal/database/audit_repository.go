@@ -34,7 +34,7 @@ func (r *AuditRepository) Create(operation string, projectID, appID *int, versio
 
 	query := `INSERT INTO audit_logs (operation, project_id, app_id, version_hash, agent_id, metadata)
 	          VALUES ($1, $2, $3, $4, $5, $6)`
-	
+
 	_, err := r.db.Exec(
 		query,
 		operation,
@@ -47,36 +47,30 @@ func (r *AuditRepository) Create(operation string, projectID, appID *int, versio
 	return err
 }
 
-// List lists audit logs with optional filters
-func (r *AuditRepository) List(projectID, appID *int, limit, offset int) ([]*AuditLog, error) {
-	query := `SELECT id, operation, project_id, app_id, version_hash, agent_id, metadata, created_at
-	          FROM audit_logs 
-	          WHERE ($1::int IS NULL OR project_id = $1)
-	          AND ($2::int IS NULL OR app_id = $2)
-	          ORDER BY created_at DESC 
-	          LIMIT $3 OFFSET $4`
-	
-	var projectIDVal, appIDVal interface{}
-	if projectID != nil {
-		projectIDVal = *projectID
-	} else {
-		projectIDVal = nil
-	}
-	if appID != nil {
-		appIDVal = *appID
-	} else {
-		appIDVal = nil
-	}
+// List lists audit logs with optional filters (includes project/app names via JOIN)
+func (r *AuditRepository) List(projectID, appID *int, operation string, limit, offset int) ([]*AuditLogWithNames, error) {
+	query := `SELECT al.id, al.operation, al.project_id, al.app_id, al.version_hash, al.agent_id, al.metadata, al.created_at,
+	                 p.name AS project_name, a.name AS app_name
+	          FROM audit_logs al
+	          LEFT JOIN projects p ON al.project_id = p.id
+	          LEFT JOIN apps a ON al.app_id = a.id
+	          WHERE ($1::int IS NULL OR al.project_id = $1)
+	          AND ($2::int IS NULL OR al.app_id = $2)
+	          AND ($3::text IS NULL OR $3 = '' OR al.operation = $3)
+	          ORDER BY al.created_at DESC
+	          LIMIT $4 OFFSET $5`
 
-	rows, err := r.db.Query(query, projectIDVal, appIDVal, limit, offset)
+	projectIDVal, appIDVal := auditFilterIDs(projectID, appID)
+
+	rows, err := r.db.Query(query, projectIDVal, appIDVal, operation, limit, offset)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list audit logs: %w", err)
 	}
 	defer rows.Close()
 
-	var logs []*AuditLog
+	var logs []*AuditLogWithNames
 	for rows.Next() {
-		var log AuditLog
+		var log AuditLogWithNames
 		if err := rows.Scan(
 			&log.ID,
 			&log.Operation,
@@ -86,6 +80,8 @@ func (r *AuditRepository) List(projectID, appID *int, limit, offset int) ([]*Aud
 			&log.AgentID,
 			&log.Metadata,
 			&log.CreatedAt,
+			&log.ProjectName,
+			&log.AppName,
 		); err != nil {
 			return nil, err
 		}
@@ -94,27 +90,28 @@ func (r *AuditRepository) List(projectID, appID *int, limit, offset int) ([]*Aud
 	return logs, rows.Err()
 }
 
-// Count counts audit logs with optional filters
-func (r *AuditRepository) Count(projectID, appID *int) (int, error) {
-	query := `SELECT COUNT(*) 
-	          FROM audit_logs 
-	          WHERE ($1::int IS NULL OR project_id = $1)
-	          AND ($2::int IS NULL OR app_id = $2)`
-	
-	var projectIDVal, appIDVal interface{}
+func auditFilterIDs(projectID, appID *int) (projectIDVal, appIDVal interface{}) {
 	if projectID != nil {
 		projectIDVal = *projectID
-	} else {
-		projectIDVal = nil
 	}
 	if appID != nil {
 		appIDVal = *appID
-	} else {
-		appIDVal = nil
 	}
+	return projectIDVal, appIDVal
+}
+
+// Count counts audit logs with optional filters
+func (r *AuditRepository) Count(projectID, appID *int, operation string) (int, error) {
+	query := `SELECT COUNT(*) 
+	          FROM audit_logs 
+	          WHERE ($1::int IS NULL OR project_id = $1)
+	          AND ($2::int IS NULL OR app_id = $2)
+	          AND ($3::text IS NULL OR $3 = '' OR operation = $3)`
+
+	projectIDVal, appIDVal := auditFilterIDs(projectID, appID)
 
 	var count int
-	err := r.db.QueryRow(query, projectIDVal, appIDVal).Scan(&count)
+	err := r.db.QueryRow(query, projectIDVal, appIDVal, operation).Scan(&count)
 	if err != nil {
 		return 0, fmt.Errorf("failed to count audit logs: %w", err)
 	}
@@ -141,4 +138,3 @@ func toNullString(s string) sql.NullString {
 	}
 	return sql.NullString{String: s, Valid: true}
 }
-

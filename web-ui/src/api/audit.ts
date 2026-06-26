@@ -23,8 +23,18 @@ export interface AuditLogsListResponse {
   total: number
 }
 
+export interface AuditLogsListParams {
+  limit?: number
+  offset?: number
+  project_id?: number
+  app_id?: number
+  operation?: string
+}
+
 export const auditApi = {
-  list: (limit = 50, offset = 0) =>
-    client.get<AuditLogsListResponse>('/audit-logs', { params: { limit, offset } }),
+  list: (limit = 50, offset = 0, filters: Omit<AuditLogsListParams, 'limit' | 'offset'> = {}) =>
+    client.get<AuditLogsListResponse>('/audit-logs', {
+      params: { limit, offset, ...filters },
+    }),
 }
 

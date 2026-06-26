@@ -15,6 +15,7 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
+	"github.com/kk/kkartifact-server/internal/auth"
 	"github.com/kk/kkartifact-server/internal/storage"
 )
 
@@ -60,6 +61,10 @@ func (h *Handler) handleInitUpload(c *gin.Context) {
 		return
 	}
 
+	if !h.requireArtifactAccess(c, req.Project, req.App, auth.PermissionPush) {
+		return
+	}
+
 	// Get or create project and app
 	project, err := h.projectRepo.CreateOrGet(req.Project)
 	if err != nil {
@@ -93,7 +98,7 @@ func (h *Handler) handleInitUpload(c *gin.Context) {
 
 	// For now, return a simple upload ID (in production, use UUID)
 	uploadID := fmt.Sprintf("%s-%s-%s", req.Project, req.App, req.Version)
-	
+
 	c.JSON(http.StatusOK, UploadInitResponse{
 		UploadID: uploadID,
 	})
@@ -174,14 +179,18 @@ func (h *Handler) handleUploadFile(c *gin.Context) {
 // @Router       /upload/finish [post]
 func (h *Handler) handleFinishUpload(c *gin.Context) {
 	var req struct {
-		Project   string                  `json:"project" binding:"required"`
-		App       string                  `json:"app" binding:"required"`
-		Version   string                  `json:"version" binding:"required"`
-		Manifest  *storage.Manifest       `json:"manifest" binding:"required"`
+		Project  string            `json:"project" binding:"required"`
+		App      string            `json:"app" binding:"required"`
+		Version  string            `json:"version" binding:"required"`
+		Manifest *storage.Manifest `json:"manifest" binding:"required"`
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	if !h.requireArtifactAccess(c, req.Project, req.App, auth.PermissionPush) {
 		return
 	}
 
@@ -254,4 +263,3 @@ func (h *Handler) handleFinishUpload(c *gin.Context) {
 		"version": req.Version,
 	})
 }
-

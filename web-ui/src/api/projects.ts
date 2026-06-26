@@ -3,7 +3,7 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
-import client, { publicClient } from './client'
+import client from './client'
 
 export interface Project {
   id: number
@@ -53,17 +53,4 @@ export const projectsApi = {
     client.delete(`/projects/${project}/apps/${app}/versions/${version}`),
 }
 
-// Public API (no authentication required)
-export const publicProjectsApi = {
-  list: (limit = 50, offset = 0) =>
-    publicClient.get<Project[]>('/public/projects', { params: { limit, offset } }),
-  
-  getApps: (project: string, limit = 50, offset = 0) =>
-    publicClient.get<App[]>(`/public/projects/${project}/apps`, { params: { limit, offset } }),
-  
-  getVersions: (project: string, app: string, limit = 50, offset = 0) =>
-    publicClient.get<Version[]>(`/public/projects/${project}/apps/${app}/versions`, {
-      params: { limit, offset },
-    }),
-}
-
+// 公开清单请使用 publicInventoryApi.getComplete()（见 api/inventory.ts）

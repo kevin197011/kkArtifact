@@ -27,7 +27,7 @@ import (
 // @Router       /config [get]
 func (h *Handler) handleGetConfig(c *gin.Context) {
 	configRepo := database.NewConfigRepository(h.db)
-	
+
 	// Get version retention limit
 	retentionLimit, err := configRepo.Get("version_retention_limit")
 	if err != nil {
@@ -36,18 +36,18 @@ func (h *Handler) handleGetConfig(c *gin.Context) {
 	}
 
 	limit, _ := strconv.Atoi(retentionLimit)
-	
+
 	// Get audit log retention days
 	auditRetentionDays, err := configRepo.Get("audit_log_retention_days")
 	if err != nil {
 		// If not set, use default
 		auditRetentionDays = "90"
 	}
-	
+
 	auditDays, _ := strconv.Atoi(auditRetentionDays)
-	
+
 	c.JSON(http.StatusOK, gin.H{
-		"version_retention_limit": limit,
+		"version_retention_limit":  limit,
 		"audit_log_retention_days": auditDays,
 	})
 }
@@ -103,4 +103,3 @@ func (h *Handler) handleUpdateConfig(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"status": "updated"})
 }
-

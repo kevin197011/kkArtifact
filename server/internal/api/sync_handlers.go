@@ -56,9 +56,9 @@ func (h *Handler) handleSyncStorage(c *gin.Context) {
 	log.Printf("Starting storage sync from: %s", basePath)
 
 	// Maps to track what exists in storage
-	storageProjects := make(map[string]bool)                         // project name -> exists
-	storageApps := make(map[string]bool)                              // "project/app" -> exists
-	storageVersions := make(map[string]map[string]map[string]bool)    // project -> app -> version hash -> exists
+	storageProjects := make(map[string]bool)                       // project name -> exists
+	storageApps := make(map[string]bool)                           // "project/app" -> exists
+	storageVersions := make(map[string]map[string]map[string]bool) // project -> app -> version hash -> exists
 
 	projectCount := 0
 	appCount := 0
@@ -227,7 +227,7 @@ func (h *Handler) handleSyncStorage(c *gin.Context) {
 				versionCount++
 				log.Printf("    Added version: %s/%s/%s", projectName, appName, versionHash)
 			}
-			
+
 			// Skip deeper traversal into version directory to avoid processing subdirectories
 			return filepath.SkipDir
 		} else if len(parts) > 3 {
@@ -344,4 +344,3 @@ func (h *Handler) handleSyncStorage(c *gin.Context) {
 		Versions: versionCount,
 	})
 }
-

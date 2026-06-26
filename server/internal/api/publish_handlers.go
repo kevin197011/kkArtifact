@@ -9,6 +9,8 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/kk/kkartifact-server/internal/auth"
+	"github.com/kk/kkartifact-server/internal/database"
 )
 
 // PublishRequest represents a publish request
@@ -18,7 +20,6 @@ type PublishRequest struct {
 	Version string `json:"version" binding:"required"`
 }
 
-// handlePublish publishes a version (marks it as published)
 // handlePublish godoc
 // @Summary      Publish version
 // @Description  Mark a version as published so it can be retrieved via pull latest
@@ -40,71 +41,29 @@ func (h *Handler) handlePublish(c *gin.Context) {
 		return
 	}
 
-	// Get project and app
-	project, err := h.projectRepo.GetByName(req.Project)
-	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "project not found"})
+	app, ok := h.resolvePublishApp(c, req)
+	if !ok {
 		return
 	}
 
-	app, err := h.appRepo.GetByName(project.ID, req.App)
-	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "app not found"})
-		return
-	}
-
-	// Verify version exists in database
-	versions, err := h.versionRepo.ListByApp(app.ID, 10000, 0)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-
-	var versionExists bool
-	for _, v := range versions {
-		if v.Hash == req.Version {
-			versionExists = true
-			break
-		}
-	}
-
-	if !versionExists {
-		c.JSON(http.StatusNotFound, gin.H{"error": "version not found"})
-		return
-	}
-
-	// Verify version exists in storage
-	_, err = h.artifactManager.GetManifest(c.Request.Context(), req.Project, req.App, req.Version)
-	if err != nil {
+	if _, err := h.artifactManager.GetManifest(c.Request.Context(), req.Project, req.App, req.Version); err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "version not found in storage"})
 		return
 	}
 
-	// Unpublish all other versions for this app (only one version can be published at a time)
 	if err := h.versionRepo.UnpublishAllVersions(app.ID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	// Mark version as published
 	if err := h.versionRepo.SetPublished(app.ID, req.Version, true); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	// Publish publish event with context to extract agent ID
-	metadata := make(map[string]interface{})
-	metadata["target_version"] = req.Version
-
-	h.publishEventWithContext(
-		c,
-		"publish",
-		req.Project,
-		req.App,
-		req.Version,
-		"",
-		metadata,
-	)
+	h.publishEventWithContext(c, "publish", req.Project, req.App, req.Version, "", map[string]interface{}{
+		"target_version": req.Version,
+	})
 
 	c.JSON(http.StatusOK, gin.H{
 		"status":  "published",
@@ -114,7 +73,6 @@ func (h *Handler) handlePublish(c *gin.Context) {
 	})
 }
 
-// handleUnpublish unpublishes a version (marks it as not published)
 // handleUnpublish godoc
 // @Summary      Unpublish version
 // @Description  Mark a version as unpublished
@@ -136,58 +94,19 @@ func (h *Handler) handleUnpublish(c *gin.Context) {
 		return
 	}
 
-	// Get project and app
-	project, err := h.projectRepo.GetByName(req.Project)
-	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "project not found"})
+	app, ok := h.resolvePublishApp(c, req)
+	if !ok {
 		return
 	}
 
-	app, err := h.appRepo.GetByName(project.ID, req.App)
-	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "app not found"})
-		return
-	}
-
-	// Verify version exists in database
-	versions, err := h.versionRepo.ListByApp(app.ID, 10000, 0)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-
-	var versionExists bool
-	for _, v := range versions {
-		if v.Hash == req.Version {
-			versionExists = true
-			break
-		}
-	}
-
-	if !versionExists {
-		c.JSON(http.StatusNotFound, gin.H{"error": "version not found"})
-		return
-	}
-
-	// Mark version as unpublished
 	if err := h.versionRepo.SetPublished(app.ID, req.Version, false); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	// Publish unpublish event with context to extract agent ID
-	metadata := make(map[string]interface{})
-	metadata["target_version"] = req.Version
-
-	h.publishEventWithContext(
-		c,
-		"unpublish",
-		req.Project,
-		req.App,
-		req.Version,
-		"",
-		metadata,
-	)
+	h.publishEventWithContext(c, "unpublish", req.Project, req.App, req.Version, "", map[string]interface{}{
+		"target_version": req.Version,
+	})
 
 	c.JSON(http.StatusOK, gin.H{
 		"status":  "unpublished",
@@ -195,4 +114,30 @@ func (h *Handler) handleUnpublish(c *gin.Context) {
 		"app":     req.App,
 		"version": req.Version,
 	})
+}
+
+// resolvePublishApp validates promote permission and resolves app + version for publish/unpublish.
+func (h *Handler) resolvePublishApp(c *gin.Context, req PublishRequest) (*database.App, bool) {
+	if !h.requireArtifactAccess(c, req.Project, req.App, auth.PermissionPromote) {
+		return nil, false
+	}
+
+	project, err := h.projectRepo.GetByName(req.Project)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "project not found"})
+		return nil, false
+	}
+
+	app, err := h.appRepo.GetByName(project.ID, req.App)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "app not found"})
+		return nil, false
+	}
+
+	if _, err := h.versionRepo.GetByHash(app.ID, req.Version); err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "version not found"})
+		return nil, false
+	}
+
+	return app, true
 }

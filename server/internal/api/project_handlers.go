@@ -270,7 +270,7 @@ func (h *Handler) handleDeleteApp(c *gin.Context) {
 	appID := app.ID
 	_ = auditRepo.Create("app_delete", &projectID, &appID, "", "", map[string]interface{}{
 		"project_name": projectName,
-		"app_name":      appName,
+		"app_name":     appName,
 	})
 
 	c.JSON(http.StatusOK, gin.H{"status": "deleted"})
@@ -326,8 +326,8 @@ func (h *Handler) handleDeleteVersion(c *gin.Context) {
 	appID := app.ID
 	_ = auditRepo.Create("version_delete", &projectID, &appID, versionHash, "", map[string]interface{}{
 		"project_name": projectName,
-		"app_name":      appName,
-		"version":       versionHash,
+		"app_name":     appName,
+		"version":      versionHash,
 	})
 
 	c.JSON(http.StatusOK, gin.H{"status": "deleted"})

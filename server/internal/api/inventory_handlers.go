@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/kk/kkartifact-server/internal/services"
 )
 
 // InventoryResponse represents the inventory API response
@@ -19,14 +20,14 @@ type InventoryResponse struct {
 
 // ProjectInventoryResponse represents project inventory in API response
 type ProjectInventoryResponse struct {
-	Project ProjectResponse           `json:"project"`
-	Apps    []AppInventoryResponse    `json:"apps"`
+	Project ProjectResponse        `json:"project"`
+	Apps    []AppInventoryResponse `json:"apps"`
 }
 
 // AppInventoryResponse represents app inventory in API response
 type AppInventoryResponse struct {
-	App      AppResponse          `json:"app"`
-	Versions []VersionResponse    `json:"versions"`
+	App      AppResponse       `json:"app"`
+	Versions []VersionResponse `json:"versions"`
 }
 
 // handleGetInventory godoc
@@ -41,13 +42,33 @@ type AppInventoryResponse struct {
 // @Security     Bearer
 // @Router       /admin/inventory [get]
 func (h *Handler) handleGetInventory(c *gin.Context) {
+	h.respondInventory(c)
+}
+
+func (h *Handler) respondInventory(c *gin.Context) {
 	inventory, err := h.inventoryService.GetCompleteInventory()
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
+	c.JSON(http.StatusOK, buildInventoryResponse(inventory))
+}
 
-	// Convert to API response format
+// handlePublicGetInventory godoc
+// @Summary      Get complete public inventory
+// @Description  Get complete read-only inventory (projects, apps, versions) without authentication
+// @Tags         public
+// @Accept       json
+// @Produce      json
+// @Success      200  {object}  InventoryResponse
+// @Failure      500  {object}  ErrorResponse
+// @Router       /public/inventory [get]
+func (h *Handler) handlePublicGetInventory(c *gin.Context) {
+	h.respondInventory(c)
+}
+
+// buildInventoryResponse converts service inventory to API response format
+func buildInventoryResponse(inventory *services.Inventory) InventoryResponse {
 	response := InventoryResponse{
 		Projects: make([]ProjectInventoryResponse, len(inventory.Projects)),
 	}
@@ -78,16 +99,16 @@ func (h *Handler) handleGetInventory(c *gin.Context) {
 		}
 
 		response.Projects[i] = ProjectInventoryResponse{
-		Project: ProjectResponse{
-			ID:        projectInventory.Project.ID,
-			Name:      projectInventory.Project.Name,
-			CreatedAt: projectInventory.Project.CreatedAt.Format(time.RFC3339),
-		},
+			Project: ProjectResponse{
+				ID:        projectInventory.Project.ID,
+				Name:      projectInventory.Project.Name,
+				CreatedAt: projectInventory.Project.CreatedAt.Format(time.RFC3339),
+			},
 			Apps: appInventories,
 		}
 	}
 
-	c.JSON(http.StatusOK, response)
+	return response
 }
 
 // handleGetProjectInventory godoc
@@ -169,4 +190,3 @@ func (h *Handler) handleGetInventorySummary(c *gin.Context) {
 
 	c.JSON(http.StatusOK, summary)
 }
-

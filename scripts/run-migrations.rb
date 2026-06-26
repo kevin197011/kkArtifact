@@ -30,7 +30,7 @@ db_password = ENV['DB_PASSWORD'] || 'kkartifact'
 db_sslmode = ENV['DB_SSLMODE'] || 'disable'
 
 db_url = "postgres://#{db_user}:#{db_password}@#{db_host}:#{db_port}/#{db_name}?sslmode=#{db_sslmode}"
-migrations_path = File.join(Dir.pwd, "server/migrations/migrations")
+migrations_path = File.join(Dir.pwd, "server/migrations")
 
 puts "📦 数据库: #{db_host}:#{db_port}/#{db_name}"
 puts "📁 迁移路径: #{migrations_path}"
