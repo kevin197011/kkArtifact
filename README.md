@@ -2,7 +2,7 @@
 
 替代 `rsync + SSH` 的 Artifact 管理与同步系统，支持多项目 / 多应用 / Hash 版本、Token 鉴权、Web UI 与审计日志。
 
-生产实例：<https://packages.slileisure.com/>
+生产实例：<https://packages.devops.com/>
 
 ## 特性
 
@@ -47,8 +47,8 @@ docker compose down     # 停止
 curl -fsSL http://localhost:8080/api/v1/downloads/scripts/install-agent.sh | bash
 
 # 指定服务器地址
-curl -fsSL https://packages.slileisure.com/api/v1/downloads/scripts/install-agent.sh \
-  | server_url="https://packages.slileisure.com" bash
+curl -fsSL https://packages.devops.com/api/v1/downloads/scripts/install-agent.sh \
+  | server_url="https://packages.devops.com" bash
 ```
 
 **其他方式**：从 [GitHub Releases](https://github.com/kevin197011/kkArtifact/releases) 下载对应平台二进制，或 `cd agent && go build -o kkartifact-agent .`
@@ -60,7 +60,7 @@ curl -fsSL https://packages.slileisure.com/api/v1/downloads/scripts/install-agen
 复制 `.kkartifact.yml.sample` 为 `.kkartifact.yml`：
 
 ```yaml
-server_url: https://packages.slileisure.com
+server_url: https://packages.devops.com
 token: YOUR_TOKEN          # Web UI → Token 管理 创建
 project: g02               # 默认项目，可省略 --project
 concurrency: 50            # 本地 30–50，远程 50–100
@@ -139,7 +139,7 @@ ruby scripts/push-tree.rb /data/vcs/G02/tidb --project g02 --dry-run
 ruby scripts/push-tree.rb /data/vcs/G02/tidb --project g02 --skip-existing --publish
 ```
 
-5. 在 https://packages.slileisure.com/ 公开清单或管理后台核对版本
+5. 在 https://packages.devops.com/ 公开清单或管理后台核对版本
 
 ## Web UI
 
